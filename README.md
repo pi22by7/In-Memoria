@@ -48,7 +48,7 @@ SQLite Database + ChromaDB Vector Store
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/code-cartographer.git
+git clone https://github.com/pi22by7/Code-Cartographer.git
 cd code-cartographer
 
 # Install dependencies
@@ -288,7 +288,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ```bash
 # Clone and install
-git clone https://github.com/your-org/code-cartographer.git
+git clone https://github.com/pi22by7/Code-Cartographer.git
 cd code-cartographer
 npm install
 
@@ -324,10 +324,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 🔗 Links
 
-- **Documentation**: [docs.code-cartographer.dev](https://docs.code-cartographer.dev)
-- **GitHub**: [github.com/code-cartographer/core](https://github.com/code-cartographer/core)
-- **Discord**: [discord.gg/code-cartographer](https://discord.gg/code-cartographer)
-- **Twitter**: [@CodeCartographer](https://twitter.com/CodeCartographer)
+- **GitHub**: [github.com/pi22by7/Code-Cartographer](https://github.com/pi22by7/Code-Cartographer)
+- **Contact**: [talk@pi22by7.me](mailto:talk@pi22by7.me)
 
 ## 🙏 Acknowledgments
 
