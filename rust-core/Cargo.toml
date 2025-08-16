@@ -1,0 +1,24 @@
+[package]
+name = "code-cartographer-core"
+version = "1.0.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = { version = "2.0", default-features = false, features = ["napi4", "async", "tokio_rt"] }
+napi-derive = "2.0"
+tree-sitter = "0.24"
+streaming-iterator = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4"] }
+anyhow = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+walkdir = "2.4"
+regex = "1.10"
+
+[build-dependencies]
+napi-build = "2.0"
