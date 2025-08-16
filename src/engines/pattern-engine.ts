@@ -53,6 +53,133 @@ export class PatternEngine {
     }
   }
 
+  async analyzeFilePatterns(filePath: string, content: string): Promise<Array<{
+    type: string;
+    description: string;
+    confidence: number;
+  }>> {
+    try {
+      // Use the change analysis to detect patterns in the file
+      const change = {
+        type: 'change' as const,
+        path: filePath,
+        content,
+        language: this.detectLanguage(filePath),
+        hash: this.generateContentHash(content)
+      };
+
+      const analysis = await this.analyzeFileChange(change);
+      
+      return analysis.detected.map(patternType => {
+        const pattern = this.getPatternByType(patternType);
+        return {
+          type: patternType,
+          description: pattern?.description || `${patternType} pattern detected`,
+          confidence: pattern?.confidence || 0.7
+        };
+      });
+    } catch (error) {
+      console.error('File pattern analysis error:', error);
+      return this.fallbackFilePatternAnalysis(content, filePath);
+    }
+  }
+
+  private detectLanguage(filePath: string): string {
+    const ext = filePath.split('.').pop()?.toLowerCase();
+    const languageMap: Record<string, string> = {
+      'ts': 'typescript',
+      'tsx': 'typescript', 
+      'js': 'javascript',
+      'jsx': 'javascript',
+      'py': 'python',
+      'rs': 'rust',
+      'go': 'go',
+      'java': 'java'
+    };
+    return languageMap[ext || ''] || 'unknown';
+  }
+
+  private generateContentHash(content: string): string {
+    // Simple hash function for content
+    let hash = 0;
+    for (let i = 0; i < content.length; i++) {
+      const char = content.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return hash.toString(16);
+  }
+
+  private getPatternByType(patternType: string): { description: string; confidence: number } | null {
+    const patternDescriptions: Record<string, { description: string; confidence: number }> = {
+      'camelCase_function_naming': { description: 'Functions use camelCase naming convention', confidence: 0.8 },
+      'PascalCase_class_naming': { description: 'Classes use PascalCase naming convention', confidence: 0.8 },
+      'snake_case_naming': { description: 'Variables use snake_case naming convention', confidence: 0.7 },
+      'testing': { description: 'Testing pattern with describe/it blocks', confidence: 0.9 },
+      'api_design': { description: 'RESTful API design pattern', confidence: 0.7 },
+      'dependency_injection': { description: 'Dependency injection pattern detected', confidence: 0.8 },
+      'factory': { description: 'Factory pattern for object creation', confidence: 0.8 },
+      'singleton': { description: 'Singleton pattern implementation', confidence: 0.9 },
+      'observer': { description: 'Observer pattern for event handling', confidence: 0.7 }
+    };
+    
+    return patternDescriptions[patternType] || null;
+  }
+
+  private fallbackFilePatternAnalysis(content: string, filePath: string): Array<{
+    type: string;
+    description: string;
+    confidence: number;
+  }> {
+    const patterns: Array<{ type: string; description: string; confidence: number }> = [];
+    
+    // Check for naming conventions
+    if (/function\s+[a-z][a-zA-Z]*/.test(content)) {
+      patterns.push({
+        type: 'camelCase_function_naming',
+        description: 'Functions use camelCase naming convention',
+        confidence: 0.8
+      });
+    }
+    
+    if (/class\s+[A-Z][a-zA-Z]*/.test(content)) {
+      patterns.push({
+        type: 'PascalCase_class_naming', 
+        description: 'Classes use PascalCase naming convention',
+        confidence: 0.8
+      });
+    }
+    
+    // Check for testing patterns
+    if (/describe|it|test|expect/.test(content)) {
+      patterns.push({
+        type: 'testing',
+        description: 'Testing pattern with describe/it blocks',
+        confidence: 0.9
+      });
+    }
+    
+    // Check for API patterns
+    if (/app\.(get|post|put|delete)/.test(content) || /router\.(get|post|put|delete)/.test(content)) {
+      patterns.push({
+        type: 'api_design',
+        description: 'RESTful API design pattern',
+        confidence: 0.7
+      });
+    }
+    
+    // Check for dependency injection
+    if (/constructor\([^)]*private/.test(content) || /@Injectable/.test(content)) {
+      patterns.push({
+        type: 'dependency_injection',
+        description: 'Dependency injection pattern detected',
+        confidence: 0.8
+      });
+    }
+    
+    return patterns;
+  }
+
   async learnFromCodebase(path: string): Promise<Array<{
     id: string;
     type: string;

@@ -114,7 +114,11 @@ Thumbs.db
 
 # Code Cartographer specific
 code-cartographer.db
+code-cartographer-*.db
 .code-cartographer/cache/
+data/*.json
+vector-store.json
+*-vectors.json
 
 # Claude configuration
 .claude/

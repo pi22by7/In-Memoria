@@ -1,7 +1,10 @@
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
 use tree_sitter::{Language, Parser, Tree, Node};
+use walkdir::WalkDir;
 
 extern "C" {
     fn tree_sitter_typescript() -> Language;
@@ -153,32 +156,317 @@ impl SemanticAnalyzer {
         Ok(())
     }
 
-    async fn detect_languages(&self, _path: &str) -> napi::Result<Vec<String>> {
-        // Placeholder implementation - would scan directory for file extensions
-        Ok(vec!["typescript".to_string(), "javascript".to_string()])
-    }
-
-    async fn detect_frameworks(&self, _path: &str) -> napi::Result<Vec<String>> {
-        // Placeholder implementation - would analyze package.json, Cargo.toml, etc.
-        Ok(vec!["react".to_string(), "node".to_string()])
-    }
-
-    async fn extract_concepts(&mut self, _path: &str) -> napi::Result<Vec<SemanticConcept>> {
-        // Placeholder implementation - would walk directory and analyze files
-        let concepts = vec![
-            SemanticConcept {
-                id: format!("concept_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()),
-                name: "ExampleClass".to_string(),
-                concept_type: "class".to_string(),
-                confidence: 0.95,
-                file_path: "src/example.ts".to_string(),
-                line_range: LineRange { start: 1, end: 20 },
-                relationships: HashMap::new(),
-                metadata: HashMap::new(),
+    async fn detect_languages(&self, path: &str) -> napi::Result<Vec<String>> {
+        let mut languages = std::collections::HashSet::new();
+        
+        for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
+            if entry.file_type().is_file() {
+                if let Some(extension) = entry.path().extension().and_then(|s| s.to_str()) {
+                    let language = match extension.to_lowercase().as_str() {
+                        "ts" | "tsx" => Some("typescript"),
+                        "js" | "jsx" => Some("javascript"),
+                        "rs" => Some("rust"),
+                        "py" => Some("python"),
+                        "go" => Some("go"),
+                        "java" => Some("java"),
+                        "cpp" | "cc" | "cxx" => Some("cpp"),
+                        "c" => Some("c"),
+                        "cs" => Some("csharp"),
+                        _ => None,
+                    };
+                    
+                    if let Some(lang) = language {
+                        languages.insert(lang.to_string());
+                    }
+                }
             }
-        ];
+        }
+        
+        Ok(languages.into_iter().collect())
+    }
 
-        Ok(concepts)
+    async fn detect_frameworks(&self, path: &str) -> napi::Result<Vec<String>> {
+        let mut frameworks = std::collections::HashSet::new();
+        
+        // Check package.json for JavaScript/TypeScript frameworks
+        let package_json_path = Path::new(path).join("package.json");
+        if package_json_path.exists() {
+            if let Ok(content) = fs::read_to_string(&package_json_path) {
+                if content.contains("\"react\"") || content.contains("\"@types/react\"") {
+                    frameworks.insert("React".to_string());
+                }
+                if content.contains("\"vue\"") || content.contains("\"@vue/\"") {
+                    frameworks.insert("Vue".to_string());
+                }
+                if content.contains("\"@angular/\"") {
+                    frameworks.insert("Angular".to_string());
+                }
+                if content.contains("\"express\"") {
+                    frameworks.insert("Express".to_string());
+                }
+                if content.contains("\"next\"") {
+                    frameworks.insert("Next.js".to_string());
+                }
+                if content.contains("\"gatsby\"") {
+                    frameworks.insert("Gatsby".to_string());
+                }
+            }
+        }
+        
+        // Check Cargo.toml for Rust frameworks
+        let cargo_toml_path = Path::new(path).join("Cargo.toml");
+        if cargo_toml_path.exists() {
+            if let Ok(content) = fs::read_to_string(&cargo_toml_path) {
+                if content.contains("tokio") {
+                    frameworks.insert("Tokio".to_string());
+                }
+                if content.contains("actix-web") {
+                    frameworks.insert("Actix-web".to_string());
+                }
+                if content.contains("warp") {
+                    frameworks.insert("Warp".to_string());
+                }
+                if content.contains("rocket") {
+                    frameworks.insert("Rocket".to_string());
+                }
+            }
+        }
+        
+        // Check requirements.txt or setup.py for Python frameworks
+        let requirements_path = Path::new(path).join("requirements.txt");
+        if requirements_path.exists() {
+            if let Ok(content) = fs::read_to_string(&requirements_path) {
+                if content.contains("django") {
+                    frameworks.insert("Django".to_string());
+                }
+                if content.contains("flask") {
+                    frameworks.insert("Flask".to_string());
+                }
+                if content.contains("fastapi") {
+                    frameworks.insert("FastAPI".to_string());
+                }
+            }
+        }
+        
+        Ok(frameworks.into_iter().collect())
+    }
+
+    async fn extract_concepts(&mut self, path: &str) -> napi::Result<Vec<SemanticConcept>> {
+        let mut all_concepts = Vec::new();
+        
+        for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
+            if entry.file_type().is_file() {
+                let file_path = entry.path();
+                
+                // Skip non-source files and common directories
+                if self.should_analyze_file(file_path) {
+                    match fs::read_to_string(file_path) {
+                        Ok(content) => {
+                            let language = self.detect_language_from_path(file_path.to_str().unwrap_or(""));
+                            
+                            match self.parse_file_content(
+                                file_path.to_str().unwrap_or(""),
+                                &content,
+                                &language
+                            ).await {
+                                Ok(mut concepts) => {
+                                    all_concepts.append(&mut concepts);
+                                }
+                                Err(e) => {
+                                    // Fallback to regex-based extraction if tree-sitter fails
+                                    let fallback_concepts = self.fallback_extract_concepts(
+                                        file_path.to_str().unwrap_or(""),
+                                        &content
+                                    );
+                                    all_concepts.extend(fallback_concepts);
+                                }
+                            }
+                        }
+                        Err(_) => {
+                            // Skip files that can't be read
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
+        
+        Ok(all_concepts)
+    }
+    
+    fn should_analyze_file(&self, file_path: &Path) -> bool {
+        // Skip common non-source directories
+        let path_str = file_path.to_string_lossy();
+        if path_str.contains("node_modules") ||
+           path_str.contains(".git") ||
+           path_str.contains("target") ||
+           path_str.contains("dist") ||
+           path_str.contains("build") ||
+           path_str.contains(".next") ||
+           path_str.contains("__pycache__") {
+            return false;
+        }
+        
+        // Check if file extension is supported
+        if let Some(extension) = file_path.extension().and_then(|s| s.to_str()) {
+            matches!(extension.to_lowercase().as_str(),
+                "ts" | "tsx" | "js" | "jsx" | "rs" | "py" | "go" | "java" | "cpp" | "c" | "cs")
+        } else {
+            false
+        }
+    }
+    
+    fn fallback_extract_concepts(&self, file_path: &str, content: &str) -> Vec<SemanticConcept> {
+        let mut concepts = Vec::new();
+        let lines: Vec<&str> = content.lines().collect();
+        
+        for (line_num, line) in lines.iter().enumerate() {
+            let line_number = (line_num + 1) as u32;
+            
+            // Simple regex patterns for common language constructs
+            
+            // Function patterns
+            if let Some(name) = self.extract_function_name(line) {
+                concepts.push(SemanticConcept {
+                    id: format!("func_{}_{}", file_path.replace(['/', '\\'], "_"), name),
+                    name,
+                    concept_type: "function".to_string(),
+                    confidence: 0.7,
+                    file_path: file_path.to_string(),
+                    line_range: LineRange {
+                        start: line_number,
+                        end: line_number,
+                    },
+                    relationships: HashMap::new(),
+                    metadata: HashMap::new(),
+                });
+            }
+            
+            // Class patterns
+            if let Some(name) = self.extract_class_name(line) {
+                concepts.push(SemanticConcept {
+                    id: format!("class_{}_{}", file_path.replace(['/', '\\'], "_"), name),
+                    name,
+                    concept_type: "class".to_string(),
+                    confidence: 0.8,
+                    file_path: file_path.to_string(),
+                    line_range: LineRange {
+                        start: line_number,
+                        end: line_number,
+                    },
+                    relationships: HashMap::new(),
+                    metadata: HashMap::new(),
+                });
+            }
+            
+            // Interface patterns (TypeScript)
+            if let Some(name) = self.extract_interface_name(line) {
+                concepts.push(SemanticConcept {
+                    id: format!("interface_{}_{}", file_path.replace(['/', '\\'], "_"), name),
+                    name,
+                    concept_type: "interface".to_string(),
+                    confidence: 0.8,
+                    file_path: file_path.to_string(),
+                    line_range: LineRange {
+                        start: line_number,
+                        end: line_number,
+                    },
+                    relationships: HashMap::new(),
+                    metadata: HashMap::new(),
+                });
+            }
+        }
+        
+        concepts
+    }
+    
+    fn extract_function_name(&self, line: &str) -> Option<String> {
+        // TypeScript/JavaScript function patterns
+        if line.contains("function ") {
+            if let Some(start) = line.find("function ") {
+                let after_function = &line[start + 9..];
+                if let Some(end) = after_function.find('(') {
+                    let name = after_function[..end].trim();
+                    if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                        return Some(name.to_string());
+                    }
+                }
+            }
+        }
+        
+        // Arrow function patterns - simplified
+        if line.contains(" = ") && line.contains("=>") {
+            if let Some(equal_pos) = line.find(" = ") {
+                let before_equal = &line[..equal_pos];
+                if let Some(start) = before_equal.rfind(char::is_whitespace) {
+                    let name = before_equal[start..].trim();
+                    if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                        return Some(name.to_string());
+                    }
+                }
+            }
+        }
+        
+        // Python function patterns
+        if line.trim_start().starts_with("def ") {
+            if let Some(start) = line.find("def ") {
+                let after_def = &line[start + 4..];
+                if let Some(end) = after_def.find('(') {
+                    let name = after_def[..end].trim();
+                    if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                        return Some(name.to_string());
+                    }
+                }
+            }
+        }
+        
+        // Rust function patterns
+        if line.contains("fn ") {
+            if let Some(start) = line.find("fn ") {
+                let after_fn = &line[start + 3..];
+                if let Some(end) = after_fn.find('(') {
+                    let name = after_fn[..end].trim();
+                    if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                        return Some(name.to_string());
+                    }
+                }
+            }
+        }
+        
+        None
+    }
+    
+    fn extract_class_name(&self, line: &str) -> Option<String> {
+        if line.contains("class ") {
+            if let Some(start) = line.find("class ") {
+                let after_class = &line[start + 6..];
+                let end = after_class.find(char::is_whitespace)
+                    .or_else(|| after_class.find('{'))
+                    .or_else(|| after_class.find('('))
+                    .unwrap_or(after_class.len());
+                let name = after_class[..end].trim();
+                if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                    return Some(name.to_string());
+                }
+            }
+        }
+        None
+    }
+    
+    fn extract_interface_name(&self, line: &str) -> Option<String> {
+        if line.contains("interface ") {
+            if let Some(start) = line.find("interface ") {
+                let after_interface = &line[start + 10..];
+                let end = after_interface.find(char::is_whitespace)
+                    .or_else(|| after_interface.find('{'))
+                    .unwrap_or(after_interface.len());
+                let name = after_interface[..end].trim();
+                if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                    return Some(name.to_string());
+                }
+            }
+        }
+        None
     }
 
     async fn parse_file_content(

@@ -22,24 +22,25 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "chokidar": "^3.5.3",
     "better-sqlite3": "^8.7.0",
+    "chokidar": "^3.5.3",
     "chromadb": "^1.5.0",
+    "eventemitter3": "^5.0.1",
+    "glob": "^11.0.3",
+    "nanoid": "^5.0.0",
     "tree-sitter": "^0.21.1",
-    "tree-sitter-typescript": "^0.21.2",
     "tree-sitter-javascript": "^0.21.4",
     "tree-sitter-python": "^0.21.0",
     "tree-sitter-rust": "^0.21.0",
-    "eventemitter3": "^5.0.1",
-    "nanoid": "^5.0.0",
+    "tree-sitter-typescript": "^0.21.2",
     "zod": "^3.22.0"
   },
   "devDependencies": {
     "@napi-rs/cli": "^2.16.0",
     "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^20.0.0",
-    "typescript": "^5.0.0",
     "tsx": "^4.0.0",
+    "typescript": "^5.0.0",
     "vitest": "^1.0.0"
   }
 }

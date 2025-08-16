@@ -1,21 +1,262 @@
-// import { ChromaApi, OpenAIEmbeddingFunction, Collection } from 'chromadb';
+import * as fs from 'fs';
+import * as path from 'path';
+import { createHash } from 'crypto';
 
-// Temporary mock for ChromaDB until we have proper configuration
-class MockChromaApi {
-  async getCollection(options: any) { return new MockCollection(); }
-  async createCollection(options: any) { return new MockCollection(); }
+// Simple local vector storage implementation
+// This provides semantic search without requiring external APIs
+class LocalVectorStore {
+  private vectors: Map<string, { embedding: number[], metadata: any, document: string }> = new Map();
+  private storePath: string;
+  
+  constructor(storePath: string = './vector-store.json') {
+    this.storePath = storePath;
+    this.loadFromDisk();
+  }
+  
+  async add(data: { documents: string[], metadatas: any[], ids: string[] }) {
+    for (let i = 0; i < data.documents.length; i++) {
+      const embedding = this.generateEmbedding(data.documents[i]);
+      this.vectors.set(data.ids[i], {
+        embedding,
+        metadata: data.metadatas[i],
+        document: data.documents[i]
+      });
+    }
+    this.saveToDisk();
+  }
+  
+  async query(params: { queryTexts: string[], nResults: number, where?: any }) {
+    const queryEmbedding = this.generateEmbedding(params.queryTexts[0]);
+    const results: Array<{ id: string, distance: number, document: string, metadata: any }> = [];
+    
+    for (const [id, data] of this.vectors) {
+      // Apply filters if specified
+      if (params.where) {
+        let matches = true;
+        for (const [key, value] of Object.entries(params.where)) {
+          if (data.metadata[key] !== value) {
+            matches = false;
+            break;
+          }
+        }
+        if (!matches) continue;
+      }
+      
+      const distance = this.cosineSimilarity(queryEmbedding, data.embedding);
+      results.push({ id, distance, document: data.document, metadata: data.metadata });
+    }
+    
+    // Sort by similarity (lower distance = higher similarity)
+    results.sort((a, b) => a.distance - b.distance);
+    const topResults = results.slice(0, params.nResults);
+    
+    return {
+      documents: [topResults.map(r => r.document)],
+      metadatas: [topResults.map(r => r.metadata)],
+      distances: [topResults.map(r => r.distance)],
+      ids: [topResults.map(r => r.id)]
+    };
+  }
+  
+  async update(params: { ids: string[], documents: string[], metadatas: any[] }) {
+    for (let i = 0; i < params.ids.length; i++) {
+      const embedding = this.generateEmbedding(params.documents[i]);
+      this.vectors.set(params.ids[i], {
+        embedding,
+        metadata: params.metadatas[i],
+        document: params.documents[i]
+      });
+    }
+    this.saveToDisk();
+  }
+  
+  async delete(params: { ids?: string[], where?: any }) {
+    if (params.ids) {
+      for (const id of params.ids) {
+        this.vectors.delete(id);
+      }
+    } else if (params.where) {
+      const toDelete: string[] = [];
+      for (const [id, data] of this.vectors) {
+        let matches = true;
+        for (const [key, value] of Object.entries(params.where)) {
+          if (data.metadata[key] !== value) {
+            matches = false;
+            break;
+          }
+        }
+        if (matches) toDelete.push(id);
+      }
+      for (const id of toDelete) {
+        this.vectors.delete(id);
+      }
+    }
+    this.saveToDisk();
+  }
+  
+  async count() {
+    return this.vectors.size;
+  }
+  
+  // Simple TF-IDF based embedding generation
+  private generateEmbedding(text: string): number[] {
+    // Tokenize and clean text
+    const tokens = text.toLowerCase()
+      .replace(/[^a-zA-Z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter(token => token.length > 2);
+    
+    // Create a fixed-size vocabulary for consistent embeddings
+    const vocabulary = this.getVocabulary();
+    const embedding = new Array(vocabulary.length).fill(0);
+    
+    // Calculate term frequency
+    const termFreq = new Map<string, number>();
+    for (const token of tokens) {
+      termFreq.set(token, (termFreq.get(token) || 0) + 1);
+    }
+    
+    // Generate embedding vector
+    for (const [term, freq] of termFreq) {
+      const index = vocabulary.indexOf(term);
+      if (index !== -1) {
+        embedding[index] = freq / tokens.length; // Normalized frequency
+      }
+    }
+    
+    return embedding;
+  }
+  
+  private getVocabulary(): string[] {
+    // Common programming terms vocabulary (this could be expanded)
+    return [
+      'function', 'class', 'method', 'variable', 'const', 'let', 'var', 'return',
+      'if', 'else', 'for', 'while', 'loop', 'array', 'object', 'string', 'number',
+      'boolean', 'null', 'undefined', 'true', 'false', 'import', 'export', 'from',
+      'default', 'async', 'await', 'promise', 'callback', 'event', 'handler',
+      'component', 'props', 'state', 'render', 'dom', 'element', 'node', 'tree',
+      'data', 'type', 'interface', 'enum', 'struct', 'trait', 'impl', 'pub',
+      'private', 'public', 'protected', 'static', 'final', 'abstract', 'virtual',
+      'override', 'extends', 'implements', 'constructor', 'destructor', 'this',
+      'self', 'super', 'new', 'delete', 'malloc', 'free', 'memory', 'pointer',
+      'reference', 'value', 'copy', 'move', 'clone', 'borrow', 'lifetime',
+      'generic', 'template', 'macro', 'annotation', 'decorator', 'attribute',
+      'property', 'field', 'member', 'parameter', 'argument', 'result', 'error',
+      'exception', 'try', 'catch', 'finally', 'throw', 'raise', 'panic',
+      'test', 'assert', 'debug', 'log', 'print', 'console', 'output', 'input',
+      'file', 'path', 'directory', 'folder', 'read', 'write', 'create', 'delete',
+      'update', 'insert', 'select', 'query', 'database', 'table', 'column',
+      'index', 'key', 'value', 'pair', 'map', 'set', 'list', 'vector', 'stack',
+      'queue', 'heap', 'tree', 'graph', 'node', 'edge', 'vertex', 'algorithm',
+      'sort', 'search', 'find', 'filter', 'reduce', 'map', 'foreach', 'iterate',
+      'recursive', 'iteration', 'condition', 'check', 'validate', 'verify',
+      'process', 'thread', 'sync', 'async', 'parallel', 'concurrent', 'mutex',
+      'lock', 'atomic', 'volatile', 'safe', 'unsafe', 'security', 'encrypt',
+      'decrypt', 'hash', 'random', 'uuid', 'token', 'auth', 'login', 'logout'
+    ];
+  }
+  
+  private cosineSimilarity(a: number[], b: number[]): number {
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+    
+    for (let i = 0; i < a.length; i++) {
+      dotProduct += a[i] * b[i];
+      normA += a[i] * a[i];
+      normB += b[i] * b[i];
+    }
+    
+    if (normA === 0 || normB === 0) return 1; // Maximum distance for zero vectors
+    
+    return 1 - (dotProduct / (Math.sqrt(normA) * Math.sqrt(normB))); // Convert similarity to distance
+  }
+  
+  private loadFromDisk() {
+    try {
+      if (fs.existsSync(this.storePath)) {
+        const data = JSON.parse(fs.readFileSync(this.storePath, 'utf8'));
+        this.vectors = new Map(data.vectors || []);
+      }
+    } catch (error) {
+      console.warn('Failed to load vector store from disk:', error);
+      this.vectors = new Map();
+    }
+  }
+  
+  private saveToDisk() {
+    try {
+      const data = {
+        vectors: Array.from(this.vectors.entries()),
+        lastSaved: new Date().toISOString()
+      };
+      fs.writeFileSync(this.storePath, JSON.stringify(data, null, 2));
+    } catch (error) {
+      console.warn('Failed to save vector store to disk:', error);
+    }
+  }
 }
 
-class MockCollection {
-  metadata = {};
-  async add(data: any) {}
-  async query(params: any) { return { documents: [[]], metadatas: [[]], distances: [[]], ids: [[]] }; }
-  async update(params: any) {}
-  async delete(params: any) {}
-  async count() { return 0; }
+class LocalVectorCollection {
+  private store: LocalVectorStore;
+  public metadata: any;
+  
+  constructor(name: string, metadata: any = {}) {
+    this.store = new LocalVectorStore(`./data/${name}-vectors.json`);
+    this.metadata = metadata;
+  }
+  
+  async add(data: { documents: string[], metadatas: any[], ids: string[] }) {
+    return this.store.add(data);
+  }
+  
+  async query(params: { queryTexts: string[], nResults: number, where?: any }) {
+    return this.store.query(params);
+  }
+  
+  async update(params: { ids: string[], documents: string[], metadatas: any[] }) {
+    return this.store.update(params);
+  }
+  
+  async delete(params: { ids?: string[], where?: any }) {
+    return this.store.delete(params);
+  }
+  
+  async count() {
+    return this.store.count();
+  }
 }
 
-class MockEmbeddingFunction {}
+class LocalVectorClient {
+  private collections: Map<string, LocalVectorCollection> = new Map();
+  
+  async getCollection(options: { name: string }) {
+    if (!this.collections.has(options.name)) {
+      throw new Error(`Collection ${options.name} does not exist`);
+    }
+    return this.collections.get(options.name)!;
+  }
+  
+  async createCollection(options: { name: string, metadata?: any }) {
+    if (this.collections.has(options.name)) {
+      return this.collections.get(options.name)!;
+    }
+    
+    // Ensure data directory exists
+    const dataDir = './data';
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    
+    const collection = new LocalVectorCollection(options.name, options.metadata);
+    this.collections.set(options.name, collection);
+    return collection;
+  }
+}
+
+class LocalEmbeddingFunction {
+  // Local embedding function placeholder
+}
 
 export interface CodeMetadata {
   id: string;
@@ -36,26 +277,24 @@ export interface SemanticSearchResult {
 }
 
 export class SemanticVectorDB {
-  private client: MockChromaApi;
-  private collection: MockCollection | null = null;
-  private embeddingFunction: MockEmbeddingFunction;
+  private client: LocalVectorClient;
+  private collection: LocalVectorCollection | null = null;
+  private embeddingFunction: LocalEmbeddingFunction;
 
-  constructor(apiKey?: string) {
-    this.client = new MockChromaApi();
-    this.embeddingFunction = new MockEmbeddingFunction();
+  constructor(_apiKey?: string) {
+    this.client = new LocalVectorClient();
+    this.embeddingFunction = new LocalEmbeddingFunction();
   }
 
   async initialize(collectionName: string = 'code-cartographer'): Promise<void> {
     try {
       this.collection = await this.client.getCollection({
-        name: collectionName,
-        embeddingFunction: this.embeddingFunction
+        name: collectionName
       });
     } catch (error) {
       // Collection doesn't exist, create it
       this.collection = await this.client.createCollection({
         name: collectionName,
-        embeddingFunction: this.embeddingFunction,
         metadata: {
           description: 'Code Cartographer semantic code embeddings'
         }
