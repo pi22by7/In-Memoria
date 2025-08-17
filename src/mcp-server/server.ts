@@ -27,7 +27,7 @@ export class CodeCartographerMCP {
     this.server = new Server(
       {
         name: 'in-memoria',
-        version: '0.2.2',
+        version: '0.2.4',
       },
       {
         capabilities: {
@@ -41,14 +41,29 @@ export class CodeCartographerMCP {
 
   private async initializeComponents(): Promise<void> {
     try {
-      // Initialize storage with better path handling
+      console.error('Initializing In Memoria components...');
+      
+      // Initialize storage with better path handling and fallback
       const dbPath = process.env.IN_MEMORIA_DB_PATH || './in-memoria.db';
-      this.database = new SQLiteDatabase(dbPath);
+      console.error(`Attempting to initialize database at: ${dbPath}`);
+      
+      try {
+        this.database = new SQLiteDatabase(dbPath);
+        console.error('SQLite database initialized successfully');
+      } catch (dbError) {
+        console.error('Failed to initialize SQLite database:', dbError);
+        console.error('This might be due to native binary compatibility issues with Node.js 24');
+        console.error('The MCP server will continue with limited functionality');
+        throw new Error(`Database initialization failed: ${dbError.message}`);
+      }
+
       this.vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
+      console.error('Vector database initialized');
 
       // Initialize engines
       this.semanticEngine = new SemanticEngine(this.database, this.vectorDB);
       this.patternEngine = new PatternEngine(this.database);
+      console.error('Analysis engines initialized');
 
       // Initialize tool collections
       this.coreTools = new CoreAnalysisTools(this.semanticEngine, this.patternEngine, this.database);
@@ -57,10 +72,12 @@ export class CodeCartographerMCP {
         this.patternEngine,
         this.database
       );
+      console.error('Tool collections initialized');
 
       console.error('In Memoria components initialized successfully');
     } catch (error) {
       console.error('Failed to initialize In Memoria components:', error);
+      console.error('Stack trace:', error.stack);
       throw error;
     }
   }
@@ -152,7 +169,7 @@ export class CodeCartographerMCP {
 
   async start(): Promise<void> {
     await this.initializeComponents();
-    
+
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
 
