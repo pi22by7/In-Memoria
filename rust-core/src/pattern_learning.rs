@@ -92,7 +92,7 @@ impl PatternLearner {
     }
 
     /// Learns patterns from analyzing an entire codebase
-    /// 
+    ///
     /// # Safety
     /// This function uses unsafe because it needs to interact with the Node.js runtime
     /// through N-API bindings. The caller must ensure the path exists and is readable.
@@ -225,7 +225,7 @@ impl PatternLearner {
     }
 
     /// Updates patterns based on analysis data
-    /// 
+    ///
     /// # Safety
     /// This function uses unsafe because it needs to interact with the Node.js runtime
     /// through N-API bindings. The caller must ensure the analysis data is valid JSON.
@@ -240,7 +240,7 @@ impl PatternLearner {
     }
 
     /// Updates patterns based on file changes
-    /// 
+    ///
     /// # Safety
     /// This function uses unsafe because it needs to interact with the Node.js runtime
     /// through N-API bindings. The caller must ensure the change data is valid JSON.

@@ -1,4 +1,4 @@
-# Code Cartographer - Implementation Status & Future Roadmap
+# In Memoria - Implementation Status & Future Roadmap
 
 This document tracks the current implementation status and identifies areas for improvement.
 

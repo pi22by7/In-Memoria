@@ -1,16 +1,30 @@
 {
-  "name": "code-cartographer",
-  "version": "1.0.0",
+  "name": "in-memoria",
+  "version": "0.1.0",
   "description": "Persistent intelligence infrastructure for agentic development",
   "main": "dist/index.js",
   "type": "module",
+  "bin": {
+    "in-memoria": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "schemas",
+    "*.node",
+    "rust-core/*.node"
+  ],
   "scripts": {
     "build": "tsc && npm run build:rust && npm run copy-assets",
     "copy-assets": "cp src/storage/schema.sql dist/storage/",
     "build:rust": "cd rust-core && napi build --platform --release",
     "dev": "tsx watch src/index.ts",
     "test": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js server",
+    "prepublishOnly": "npm run build",
+    "debug": "npx @modelcontextprotocol/inspector node dist/index.js server"
   },
   "keywords": [
     "ai",
@@ -19,8 +33,11 @@
     "intelligent-tools",
     "developer-assistant"
   ],
-  "author": "Code Cartographer Team",
+  "author": "Piyush Airani",
   "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0 <22.0.0"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@surrealdb/node": "^1.0.0-beta.3",

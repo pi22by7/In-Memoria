@@ -1,10 +1,10 @@
-# Contributing to Code Cartographer
+# Contributing to In Memoria
 
-Welcome! We're excited that you're interested in contributing to Code Cartographer. This document provides guidelines and information for contributors.
+Welcome! We're excited that you're interested in contributing to In Memoria. This document provides guidelines and information for contributors.
 
 ## 🎯 Project Vision
 
-Code Cartographer is building the future of persistent AI intelligence for development. We're creating revolutionary infrastructure that enables AI agents to maintain smart, cumulative understanding of codebases across sessions.
+In Memoria is building the future of persistent AI intelligence for development. We're creating revolutionary infrastructure that enables AI agents to maintain smart, cumulative understanding of codebases across sessions.
 
 ### Core Principles
 - **Performance First**: Rust for compute-intensive operations, TypeScript for integration
@@ -25,8 +25,8 @@ Code Cartographer is building the future of persistent AI intelligence for devel
 
 ```bash
 # 1. Fork and clone the repository
-git clone https://github.com/YOUR-USERNAME/code-cartographer.git
-cd code-cartographer
+git clone https://github.com/YOUR-USERNAME/in-memoria.git
+cd in-memoria
 
 # 2. Switch to Node.js 20 LTS (if using nvm)
 nvm use 20
@@ -51,7 +51,7 @@ npm run dev
 ### Project Structure Overview
 
 ```
-code-cartographer/
+in-memoria/
 ├── src/                          # TypeScript source code
 │   ├── mcp-server/              # MCP server and tools
 │   ├── engines/                 # TypeScript interfaces to Rust  
@@ -277,7 +277,7 @@ If applicable, add screenshots or code examples.
 3. Collect relevant information:
    - Operating system and version
    - Node.js and Rust versions
-   - Code Cartographer version
+   - In Memoria version
    - Steps to reproduce
    - Expected vs actual behavior
 
@@ -300,7 +300,7 @@ A clear and concise description of what you expected to happen.
 - OS: [e.g. macOS 13.0]
 - Node.js: [e.g. 20.5.0]
 - Rust: [e.g. 1.72.0]
-- Code Cartographer: [e.g. 1.0.0]
+- In Memoria: [e.g. 0.1.0]
 
 **Additional Context**
 Add any other context about the problem here.
@@ -391,8 +391,8 @@ Contributors are recognized in several ways:
 
 ## 📄 License
 
-By contributing to Code Cartographer, you agree that your contributions will be licensed under the MIT License. See [LICENSE](LICENSE) file for details.
+By contributing to In Memoria, you agree that your contributions will be licensed under the MIT License. See [LICENSE](LICENSE) file for details.
 
 ---
 
-Thank you for contributing to Code Cartographer! Together, we're building the future of persistent AI intelligence for development. 🚀
+Thank you for contributing to In Memoria! Together, we're building the future of persistent AI intelligence for development. 🚀

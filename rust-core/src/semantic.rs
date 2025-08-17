@@ -71,7 +71,7 @@ impl SemanticAnalyzer {
     }
 
     /// Analyzes an entire codebase for semantic concepts and patterns
-    /// 
+    ///
     /// # Safety
     /// This function uses unsafe because it needs to interact with the Node.js runtime
     /// through N-API bindings. The caller must ensure the path exists and is readable.
@@ -94,7 +94,7 @@ impl SemanticAnalyzer {
     }
 
     /// Analyzes the content of a specific file for semantic concepts
-    /// 
+    ///
     /// # Safety
     /// This function uses unsafe because it needs to interact with the Node.js runtime
     /// through N-API bindings. The caller must ensure the file content is valid UTF-8.
@@ -126,7 +126,7 @@ impl SemanticAnalyzer {
     }
 
     /// Learns semantic concepts from analyzing an entire codebase
-    /// 
+    ///
     /// # Safety
     /// This function uses unsafe because it needs to interact with the Node.js runtime
     /// through N-API bindings. The caller must ensure the path exists and is readable.
@@ -149,7 +149,7 @@ impl SemanticAnalyzer {
     }
 
     /// Updates the analyzer's internal state from analysis data
-    /// 
+    ///
     /// # Safety
     /// This function uses unsafe because it needs to interact with the Node.js runtime
     /// through N-API bindings. The caller must ensure the analysis data is valid JSON.

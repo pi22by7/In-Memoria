@@ -1,229 +1,155 @@
-# Code Cartographer
+# In Memoria
 
-Persistent, embedded intelligence infrastructure for AI coding agents.
+**Persistent intelligence infrastructure for agentic development**
 
----
+## The Problem: AI Session Amnesia
 
-## 1. What It Does
+Current AI coding tools suffer from **session amnesia** - they restart from zero every conversation, cannot learn developer-specific patterns, and lack coordination between multiple AI agents. GitHub Copilot, Cursor, and Claude Code all reset completely between sessions, wasting computational resources and losing valuable context.
 
-Code Cartographer gives AI agents durable memory of a codebase: structure, semantics, patterns, and developer style. It turns ephemeral session context into cumulative intelligence.
+**In Memoria** solves this by providing **persistent, cumulative intelligence** that grows smarter over time.
 
-## 2. Why It Exists
+## How It Works
 
-Most AI coding assistants re-learn the same project facts every session. This wastes tokens, loses nuance, and blocks multi-agent collaboration. Code Cartographer provides:
+Instead of re-analyzing your entire codebase every session, In Memoria:
 
-- Long-lived semantic + pattern knowledge
-- Incremental updates on file changes
-- Unified search (text / semantic / pattern)
-- Programmable access via 11 MCP tools
+- **Learns once, remembers forever** - Initial analysis creates a persistent knowledge base
+- **Watches and adapts** - Incrementally updates understanding as your code evolves
+- **Provides rich context** - AI assistants get semantic insights, not just raw text
+- **Respects your patterns** - Learns your coding style and suggests consistent approaches
 
-## 3. Feature Summary
+Think of it as giving your AI assistant a notebook it never loses.
 
-- Persistent semantic concepts (functions, classes, traits, interfaces, etc.)
-- Pattern learning (naming / structural / implementation)
-- Vector + full‑text search (embedded SurrealDB)
-- Tree-sitter based multi-language parsing (TS/JS/Rust/Python; extensible)
-- Real-time change tracking & incremental learning
-- Intelligent documentation generation
-- Developer profile + approach prediction
-- Bidirectional insight contribution
-
-## 4. Architecture
+## Architecture
 
 ```
 ┌──────────────────────────────┐
 │    MCP Client (Claude, etc.) │
 └──────────────┬───────────────┘
-               │ MCP
+               │ Model Context Protocol
 ┌──────────────▼───────────────┐
-│  TypeScript MCP Server (11)  │  Tools: analysis + intelligence
+│  TypeScript MCP Server (11)  │  ← Integration & API compliance
 └──────────────┬───────────────┘
-               │ napi-rs
+               │ napi-rs bindings
 ┌──────────────▼───────────────┐
-│   Rust Engines (Semantic +   │  Tree-sitter, pattern learning
-│        Pattern Learning)     │
+│   Rust Performance Engines   │  ← Semantic analysis & ML
 └──────────────┬───────────────┘
-               │ storage layer
+               │ Persistent storage
 ┌──────────────▼───────────────┐
-│ SQLite (relational metadata) │
-│ SurrealDB (embedded vectors) │
+│ SQLite + Embedded SurrealDB  │  ← Local-first storage
 └──────────────────────────────┘
 ```
 
-## 5. MCP Tools (11 Total)
-
-Core Analysis (6):
-
-1. analyze_codebase
-2. get_file_content
-3. get_project_structure
-4. search_codebase
-5. learn_codebase_intelligence
-6. generate_documentation
-
-Intelligence (5):
-
-7. get_semantic_insights 
-8. get_pattern_recommendations 
-9. predict_coding_approach 
-10. get_developer_profile 
-11. contribute_insights
-
-All 11 are implemented and functional.
-
-## 6. Installation
-
-Prerequisites: Node.js 18+, Rust 1.70+, Git
+## Quick Start
 
 ```bash
-git clone https://github.com/pi22by7/Code-Cartographer.git
-cd Code-Cartographer
-npm install
-npm run build
+# Install
+npm install -g in-memoria
 
-# initialize local intelligence store
-node dist/index.js init
+# Initialize in your project
+in-memoria init
 
-# optional: learn immediately
-node dist/index.js learn
+# Learn from existing codebase
+in-memoria learn
+
+# Start MCP server for AI integration
+in-memoria server
 ```
 
-### Optional Embeddings
+## Integration
 
-Set an OpenAI key to enrich stored vectors (fallbacks still work without):
-
-```bash
-export OPENAI_API_KEY="your-api-key"
-```
-
-## 7. CLI Usage
-
-```bash
-# Learn / update intelligence
-node dist/index.js learn [path]
-
-# Analyze & print summary
-node dist/index.js analyze [path]
-
-# Watch for changes & incrementally learn
-node dist/index.js watch [path]
-
-# Start MCP server
-node dist/index.js server
-```
-
-## 8. Integration
-
-### Claude Code (CLI-based)
-
-From within the project directory:
-
-```bash
-claude mcp add code-cartographer -- node dist/index.js server
-```
-
-### Claude Desktop (config file)
-
-Add to configuration JSON:
+### Claude Desktop
 
 ```json
 {
   "mcpServers": {
-    "code-cartographer": {
-      "command": "node",
-      "args": ["dist/index.js", "server"],
-      "cwd": "/absolute/path/to/Code-Cartographer"
+    "in-memoria": {
+      "command": "npx",
+      "args": ["in-memoria", "server"]
     }
   }
 }
 ```
 
-### Generic MCP Clients
-
-Run the server and point your client at the same command / working directory.
-
-## 9. Environment Variables
+### Claude Code (CLI)
 
 ```bash
-OPENAI_API_KEY   # optional – enables enriched embeddings
+claude mcp add in-memoria -- npx in-memoria server
 ```
 
-No external DB setup required (SurrealDB is embedded; SQLite is file-based).
+## What Your AI Gets
 
-## 10. How It Works (Internals)
+With In Memoria connected, your AI assistant can:
 
-| Layer                | Responsibility                                    |
-| -------------------- | ------------------------------------------------- |
-| Rust semantic engine | Parse files with tree-sitter, build concept graph |
-| Rust pattern engine  | Learn naming / structural / impl patterns         |
-| Vector layer         | Store embeddings + enable semantic similarity     |
-| SQLite metadata      | Persist concepts, relationships, pattern stats    |
-| TypeScript server    | Expose MCP tools, orchestrate learning & search   |
+- **`analyze_codebase`** - Get architectural overview and complexity metrics
+- **`search_codebase`** - Find code by meaning, not just keywords
+- **`get_semantic_insights`** - Understand functions, classes, and their relationships
+- **`get_pattern_recommendations`** - Suggest code that matches your style
+- **`predict_coding_approach`** - Anticipate how you'd solve similar problems
+- **`generate_documentation`** - Create docs that understand your code's purpose
 
-### Fallback Extraction
+And 5 more tools for comprehensive code intelligence.
 
-If tree-sitter fails, a regex-based fallback extracts functions/classes/interfaces with reduced confidence.
+## Core Capabilities
 
-## 11. Project Structure (Trimmed)
+### Semantic Intelligence Engine
 
-```
-src/
-  mcp-server/ (server + tools)
-  engines/ (TS bridges to Rust)
-  storage/ (sqlite + vector abstractions)
-rust-core/
-  src/semantic.rs
-  src/pattern_learning.rs
-schemas/
-```
+- **Tree-sitter AST analysis** across TypeScript, JavaScript, Python, Rust
+- **Concept extraction** - functions, classes, interfaces, relationships
+- **Complexity metrics** - cyclomatic, cognitive, architectural
+- **Pattern recognition** - naming conventions, structural preferences
 
-## 12. Status & Roadmap
+### Persistent Memory System
 
-Current: v1.0 (All 11 tools implemented)
+- **Cumulative learning** - Intelligence accumulates across sessions
+- **Real-time updates** - File watcher integration with incremental learning
+- **Local storage** - Your code never leaves your machine
+- **Vector embeddings** - Semantic similarity search
 
-Near-term Enhancements:
+### Multi-Agent Coordination
 
-- Broader language coverage
-- Smarter relationship inference
-- Performance tuning on very large repos
-- Additional embedding backends (pluggable)
+- **Shared context** - Multiple AI agents access the same intelligence base
+- **Pattern predictions** - Anticipate developer approaches based on learned patterns
+- **Bidirectional flow** - AI agents can contribute insights back to the knowledge base
 
-Planned (Exploratory):
-
-- Cross-repo intelligence sharing
-- Multi-user/team knowledge graph
-- IDE extension reintegration
-
-## 13. Known Limitations
-
-- Initial full learn pass can be slow on very large monorepos
-- Some complex language edge cases may miss concepts
-- Primary testing on Linux (community feedback welcome for macOS/Windows)
-
-## 14. Contributing
+## Commands
 
 ```bash
-git clone https://github.com/pi22by7/Code-Cartographer.git
-cd Code-Cartographer
-npm install
-npm run build
-npm test
-cd rust-core && cargo test
+in-memoria init          # Initialize project configuration
+in-memoria learn [path]  # Analyze and learn from codebase
+in-memoria watch [path]  # Real-time monitoring and learning
+in-memoria analyze       # Generate insights and metrics
+in-memoria server        # Start MCP server for AI integration
 ```
 
-Please open issues for language/feature requests before large PRs.
+## Why "In Memoria"?
 
-## 15. License
+Because every line of code tells a story. Every function has a purpose. Every architectural decision has reasoning behind it.
 
-MIT – see [LICENSE](LICENSE).
+Most of this context lives only in developers' minds and gets lost over time. In Memoria preserves it, creating a living memory of your codebase that grows smarter with every change.
 
-## 16. Acknowledgments
+## Requirements
 
-- Model Context Protocol (Anthropic)
-- Tree-sitter
-- napi-rs
-- SurrealDB
+- **Node.js 18+** (tested with 20 LTS)
+- **2GB RAM minimum** for vector operations
+- **For development**: Rust 1.70+ with Cargo
+
+## Project Status
+
+**Current**: v0.1.0 - All 11 MCP tools implemented and functional  
+**Architecture**: Hybrid TypeScript/Rust implementation  
+**Testing**: Linux primary, macOS/Windows pending validation for compatibility  
+**Performance**: Optimized for codebases up to 100k files
+
+## Contributing
+
+Found a bug? Have an idea? [Open an issue](https://github.com/pi22by7/in-memoria/issues) or submit a pull request.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+
+## License
+
+MIT - Build something amazing.
 
 ---
 
-Code Cartographer – durable intelligence for your codebase.
+**In Memoria** - _Transforming ephemeral AI interactions into cumulative intelligence_

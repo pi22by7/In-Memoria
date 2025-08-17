@@ -1,11 +1,11 @@
 {
-  "name": "code-cartographer-core",
-  "version": "1.0.0",
-  "description": "Rust core for Code Cartographer",
+  "name": "in-memoria-core",
+  "version": "0.1.0",
+  "description": "Rust core for In Memoria",
   "main": "index.js",
   "types": "index.d.ts",
   "napi": {
-    "name": "code-cartographer-core",
+    "name": "in-memoria-core",
     "triples": {
       "defaults": true,
       "additional": []

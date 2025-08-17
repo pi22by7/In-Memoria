@@ -48,7 +48,7 @@ async function startWatcher(path: string): Promise<void> {
   console.log(`Starting file watcher for: ${path}`);
 
   // Initialize components
-  const database = new SQLiteDatabase('./code-cartographer.db');
+  const database = new SQLiteDatabase('./in-memoria.db');
   const vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
   const semanticEngine = new SemanticEngine(database, vectorDB);
   const patternEngine = new PatternEngine(database);
@@ -100,7 +100,7 @@ async function startWatcher(path: string): Promise<void> {
 async function learnCodebase(path: string): Promise<void> {
   console.log(`Learning from codebase: ${path}`);
 
-  const database = new SQLiteDatabase('./code-cartographer.db');
+  const database = new SQLiteDatabase('./in-memoria.db');
   const vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
   const semanticEngine = new SemanticEngine(database, vectorDB);
   const patternEngine = new PatternEngine(database);
@@ -125,7 +125,7 @@ async function learnCodebase(path: string): Promise<void> {
 async function analyzeCodebase(path: string): Promise<void> {
   console.log(`Analyzing codebase: ${path}`);
 
-  const database = new SQLiteDatabase('./code-cartographer.db');
+  const database = new SQLiteDatabase('./in-memoria.db');
   const vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
   const semanticEngine = new SemanticEngine(database, vectorDB);
   const patternEngine = new PatternEngine(database);
@@ -187,20 +187,20 @@ async function analyzeCodebase(path: string): Promise<void> {
 }
 
 async function initializeProject(path: string): Promise<void> {
-  console.log(`Initializing Code Cartographer for project: ${path}`);
+  console.log(`Initializing In Memoria for project: ${path}`);
 
-  // Create .code-cartographer directory
+  // Create .in-memoria directory
   const { mkdirSync, writeFileSync, existsSync } = await import('fs');
   const { join } = await import('path');
 
-  const configDir = join(path, '.code-cartographer');
+  const configDir = join(path, '.in-memoria');
   if (!existsSync(configDir)) {
     mkdirSync(configDir, { recursive: true });
   }
 
   // Create default configuration
   const defaultConfig = {
-    version: "1.0.0",
+    version: "0.1.0",
     intelligence: {
       enableRealTimeAnalysis: true,
       enablePatternLearning: true,
@@ -240,44 +240,44 @@ async function initializeProject(path: string): Promise<void> {
   if (existsSync(gitignorePath)) {
     const { readFileSync, appendFileSync } = await import('fs');
     const gitignoreContent = readFileSync(gitignorePath, 'utf-8');
-    if (!gitignoreContent.includes('code-cartographer.db')) {
-      appendFileSync(gitignorePath, '\n# Code Cartographer\ncode-cartographer.db\n.code-cartographer/cache/\n');
+    if (!gitignoreContent.includes('in-memoria.db')) {
+      appendFileSync(gitignorePath, '\n# In Memoria\nin-memoria.db\n.in-memoria/cache/\n');
     }
   }
 
-  console.log('✅ Code Cartographer initialized!');
+  console.log('✅ In Memoria initialized!');
   console.log(`Configuration saved to: ${configPath}`);
   console.log('\nNext steps:');
-  console.log('1. Run `code-cartographer learn` to learn from your codebase');
-  console.log('2. Run `code-cartographer server` to start the MCP server');
-  console.log('3. Run `code-cartographer watch` to monitor file changes');
+  console.log('1. Run `in-memoria learn` to learn from your codebase');
+  console.log('2. Run `in-memoria server` to start the MCP server');
+  console.log('3. Run `in-memoria watch` to monitor file changes');
 }
 
 function showHelp(): void {
   console.log(`
-Code Cartographer - Persistent Intelligence Infrastructure for AI Agents
+In Memoria - Persistent Intelligence Infrastructure for AI Agents
 
-Usage: code-cartographer <command> [options]
+Usage: in-memoria <command> [options]
 
 Commands:
   server                    Start the MCP server for AI agent integration
   watch [path]             Start file watcher for real-time intelligence updates
   learn [path]             Learn from codebase and build intelligence
   analyze [path]           Analyze codebase and show insights
-  init [path]              Initialize Code Cartographer for a project
+  init [path]              Initialize In Memoria for a project
 
 Examples:
-  code-cartographer server
-  code-cartographer watch ./src
-  code-cartographer learn ./my-project
-  code-cartographer analyze ./src
-  code-cartographer init
+  in-memoria server
+  in-memoria watch ./src
+  in-memoria learn ./my-project
+  in-memoria analyze ./src
+  in-memoria init
 
 Environment Variables:
   OPENAI_API_KEY           OpenAI API key for enhanced vector embeddings (optional)
   CHROMA_HOST             ChromaDB host (default: http://localhost:8000)
 
-For more information, visit: https://github.com/pi22by7/Code-Cartographer
+For more information, visit: https://github.com/pi22by7/in-memoria
 `);
 }
 

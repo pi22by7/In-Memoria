@@ -26,8 +26,8 @@ export class CodeCartographerMCP {
   constructor() {
     this.server = new Server(
       {
-        name: 'code-cartographer',
-        version: '1.0.0',
+        name: 'in-memoria',
+        version: '0.1.0',
       },
       {
         capabilities: {
@@ -42,7 +42,7 @@ export class CodeCartographerMCP {
 
   private initializeComponents(): void {
     // Initialize storage
-    this.database = new SQLiteDatabase('./code-cartographer.db');
+    this.database = new SQLiteDatabase('./in-memoria.db');
     this.vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
     
     // Initialize engines

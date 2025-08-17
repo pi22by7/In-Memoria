@@ -1,6 +1,6 @@
 [package]
-name = "code-cartographer-core"
-version = "1.0.0"
+name = "in-memoria-core"
+version = "0.1.0"
 edition = "2021"
 
 [lib]
