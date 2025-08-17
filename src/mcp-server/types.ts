@@ -33,7 +33,7 @@ export const CodingContextSchema = z.object({
   currentFile: z.string().optional(),
   selectedCode: z.string().optional(),
   problemDescription: z.string(),
-  preferences: z.record(z.any()).optional()
+  preferences: z.record(z.string(), z.any()).optional()
 });
 
 export const DocOptionsSchema = z.object({
@@ -45,10 +45,10 @@ export const DocOptionsSchema = z.object({
 
 export const AIInsightsSchema = z.object({
   type: z.enum(['bug_pattern', 'optimization', 'refactor_suggestion', 'best_practice']),
-  content: z.record(z.any()),
+  content: z.record(z.string(), z.any()),
   confidence: z.number().min(0).max(1),
   sourceAgent: z.string(),
-  impactPrediction: z.record(z.any()).optional()
+  impactPrediction: z.record(z.string(), z.any()).optional()
 });
 
 // Type exports

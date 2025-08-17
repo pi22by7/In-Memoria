@@ -1,4 +1,4 @@
-import chokidar from 'chokidar';
+import * as chokidar from 'chokidar';
 import { EventEmitter } from 'eventemitter3';
 import { createHash } from 'crypto';
 import { readFileSync, statSync } from 'fs';

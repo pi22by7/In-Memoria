@@ -135,7 +135,7 @@ Most of this context lives only in developers' minds and gets lost over time. In
 
 ## Project Status
 
-**Current**: v0.2.0 - All 11 MCP tools implemented and functional  
+**Current**: v0.2.1 - All 11 MCP tools implemented and functional  
 **Architecture**: Hybrid TypeScript/Rust implementation  
 **Testing**: Linux primary, macOS/Windows pending validation for compatibility  
 **Performance**: Optimized for codebases up to 100k files
