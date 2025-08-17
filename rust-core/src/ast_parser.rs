@@ -1,8 +1,8 @@
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
-use tree_sitter::{Language, Parser, Tree, Node, Query, QueryCursor};
 use std::collections::HashMap;
 use streaming_iterator::StreamingIterator;
+use tree_sitter::{Language, Node, Parser, Query, QueryCursor, Tree};
 
 extern "C" {
     fn tree_sitter_typescript() -> Language;
@@ -64,10 +64,12 @@ impl AstParser {
 
     #[napi]
     pub fn parse_code(&mut self, code: String, language: String) -> napi::Result<ParseResult> {
-        let parser = self.parsers.get_mut(&language)
-            .ok_or_else(|| napi::Error::from_reason(format!("Unsupported language: {}", language)))?;
+        let parser = self.parsers.get_mut(&language).ok_or_else(|| {
+            napi::Error::from_reason(format!("Unsupported language: {}", language))
+        })?;
 
-        let tree = parser.parse(&code, None)
+        let tree = parser
+            .parse(&code, None)
             .ok_or_else(|| napi::Error::from_reason("Failed to parse code"))?;
 
         let ast_tree = self.convert_tree_to_ast(&tree, &code)?;
@@ -83,11 +85,18 @@ impl AstParser {
     }
 
     #[napi]
-    pub fn query_ast(&mut self, code: String, language: String, query_string: String) -> napi::Result<Vec<AstNode>> {
-        let parser = self.parsers.get_mut(&language)
-            .ok_or_else(|| napi::Error::from_reason(format!("Unsupported language: {}", language)))?;
+    pub fn query_ast(
+        &mut self,
+        code: String,
+        language: String,
+        query_string: String,
+    ) -> napi::Result<Vec<AstNode>> {
+        let parser = self.parsers.get_mut(&language).ok_or_else(|| {
+            napi::Error::from_reason(format!("Unsupported language: {}", language))
+        })?;
 
-        let tree = parser.parse(&code, None)
+        let tree = parser
+            .parse(&code, None)
             .ok_or_else(|| napi::Error::from_reason("Failed to parse code"))?;
 
         let lang = self.get_tree_sitter_language(&language)?;
@@ -110,21 +119,31 @@ impl AstParser {
 
     #[napi]
     pub fn get_symbols(&mut self, code: String, language: String) -> napi::Result<Vec<Symbol>> {
-        let parser = self.parsers.get_mut(&language)
-            .ok_or_else(|| napi::Error::from_reason(format!("Unsupported language: {}", language)))?;
+        let parser = self.parsers.get_mut(&language).ok_or_else(|| {
+            napi::Error::from_reason(format!("Unsupported language: {}", language))
+        })?;
 
-        let tree = parser.parse(&code, None)
+        let tree = parser
+            .parse(&code, None)
             .ok_or_else(|| napi::Error::from_reason("Failed to parse code"))?;
 
         self.extract_symbols(&tree, &code, &language)
     }
 
     #[napi]
-    pub fn get_node_at_position(&mut self, code: String, language: String, line: u32, column: u32) -> napi::Result<Option<AstNode>> {
-        let parser = self.parsers.get_mut(&language)
-            .ok_or_else(|| napi::Error::from_reason(format!("Unsupported language: {}", language)))?;
+    pub fn get_node_at_position(
+        &mut self,
+        code: String,
+        language: String,
+        line: u32,
+        column: u32,
+    ) -> napi::Result<Option<AstNode>> {
+        let parser = self.parsers.get_mut(&language).ok_or_else(|| {
+            napi::Error::from_reason(format!("Unsupported language: {}", language))
+        })?;
 
-        let tree = parser.parse(&code, None)
+        let tree = parser
+            .parse(&code, None)
             .ok_or_else(|| napi::Error::from_reason("Failed to parse code"))?;
 
         let point = tree_sitter::Point::new(line as usize, column as usize);
@@ -139,19 +158,34 @@ impl AstParser {
     }
 
     #[napi]
-    pub fn analyze_complexity(&mut self, code: String, language: String) -> napi::Result<HashMap<String, u32>> {
-        let parser = self.parsers.get_mut(&language)
-            .ok_or_else(|| napi::Error::from_reason(format!("Unsupported language: {}", language)))?;
+    pub fn analyze_complexity(
+        &mut self,
+        code: String,
+        language: String,
+    ) -> napi::Result<HashMap<String, u32>> {
+        let parser = self.parsers.get_mut(&language).ok_or_else(|| {
+            napi::Error::from_reason(format!("Unsupported language: {}", language))
+        })?;
 
-        let tree = parser.parse(&code, None)
+        let tree = parser
+            .parse(&code, None)
             .ok_or_else(|| napi::Error::from_reason("Failed to parse code"))?;
 
         let mut complexity = HashMap::new();
-        
+
         // Calculate various complexity metrics
-        complexity.insert("cyclomatic".to_string(), self.calculate_cyclomatic_complexity(&tree));
-        complexity.insert("cognitive".to_string(), self.calculate_cognitive_complexity(&tree));
-        complexity.insert("nesting_depth".to_string(), self.calculate_max_nesting_depth(&tree));
+        complexity.insert(
+            "cyclomatic".to_string(),
+            self.calculate_cyclomatic_complexity(&tree),
+        );
+        complexity.insert(
+            "cognitive".to_string(),
+            self.calculate_cognitive_complexity(&tree),
+        );
+        complexity.insert(
+            "nesting_depth".to_string(),
+            self.calculate_max_nesting_depth(&tree),
+        );
         complexity.insert("function_count".to_string(), self.count_functions(&tree));
         complexity.insert("class_count".to_string(), self.count_classes(&tree));
 
@@ -162,26 +196,36 @@ impl AstParser {
         unsafe {
             // TypeScript parser
             let mut ts_parser = Parser::new();
-            ts_parser.set_language(&tree_sitter_typescript())
-                .map_err(|e| napi::Error::from_reason(format!("Failed to set TypeScript language: {}", e)))?;
+            ts_parser
+                .set_language(&tree_sitter_typescript())
+                .map_err(|e| {
+                    napi::Error::from_reason(format!("Failed to set TypeScript language: {}", e))
+                })?;
             self.parsers.insert("typescript".to_string(), ts_parser);
 
             // JavaScript parser
             let mut js_parser = Parser::new();
-            js_parser.set_language(&tree_sitter_javascript())
-                .map_err(|e| napi::Error::from_reason(format!("Failed to set JavaScript language: {}", e)))?;
+            js_parser
+                .set_language(&tree_sitter_javascript())
+                .map_err(|e| {
+                    napi::Error::from_reason(format!("Failed to set JavaScript language: {}", e))
+                })?;
             self.parsers.insert("javascript".to_string(), js_parser);
 
             // Rust parser
             let mut rust_parser = Parser::new();
-            rust_parser.set_language(&tree_sitter_rust())
-                .map_err(|e| napi::Error::from_reason(format!("Failed to set Rust language: {}", e)))?;
+            rust_parser.set_language(&tree_sitter_rust()).map_err(|e| {
+                napi::Error::from_reason(format!("Failed to set Rust language: {}", e))
+            })?;
             self.parsers.insert("rust".to_string(), rust_parser);
 
             // Python parser
             let mut python_parser = Parser::new();
-            python_parser.set_language(&tree_sitter_python())
-                .map_err(|e| napi::Error::from_reason(format!("Failed to set Python language: {}", e)))?;
+            python_parser
+                .set_language(&tree_sitter_python())
+                .map_err(|e| {
+                    napi::Error::from_reason(format!("Failed to set Python language: {}", e))
+                })?;
             self.parsers.insert("python".to_string(), python_parser);
         }
 
@@ -191,10 +235,10 @@ impl AstParser {
     fn initialize_queries(&mut self) -> napi::Result<()> {
         // Initialize common queries for different languages
         let languages = ["typescript", "javascript", "rust", "python"];
-        
+
         for lang in &languages {
             let lang_obj = self.get_tree_sitter_language(lang)?;
-            
+
             // Function/method query
             let function_query = match *lang {
                 "typescript" | "javascript" => "(function_declaration) @function",
@@ -202,7 +246,7 @@ impl AstParser {
                 "python" => "(function_definition) @function",
                 _ => continue,
             };
-            
+
             if let Ok(query) = Query::new(&lang_obj, function_query) {
                 self.queries.insert(format!("{}_functions", lang), query);
             }
@@ -218,7 +262,10 @@ impl AstParser {
                 "javascript" => Ok(tree_sitter_javascript()),
                 "rust" => Ok(tree_sitter_rust()),
                 "python" => Ok(tree_sitter_python()),
-                _ => Err(napi::Error::from_reason(format!("Unsupported language: {}", language))),
+                _ => Err(napi::Error::from_reason(format!(
+                    "Unsupported language: {}",
+                    language
+                ))),
             }
         }
     }
@@ -227,11 +274,13 @@ impl AstParser {
         self.convert_node_to_ast(tree.root_node(), code)
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn convert_node_to_ast(&self, node: Node, code: &str) -> napi::Result<AstNode> {
         let start_pos = node.start_position();
         let end_pos = node.end_position();
-        
-        let text = code.get(node.start_byte()..node.end_byte())
+
+        let text = code
+            .get(node.start_byte()..node.end_byte())
             .unwrap_or("")
             .to_string();
 
@@ -254,17 +303,23 @@ impl AstParser {
         })
     }
 
-    fn extract_symbols(&self, tree: &Tree, code: &str, language: &str) -> napi::Result<Vec<Symbol>> {
+    fn extract_symbols(
+        &self,
+        tree: &Tree,
+        code: &str,
+        language: &str,
+    ) -> napi::Result<Vec<Symbol>> {
         let mut symbols = Vec::new();
         self.walk_for_symbols(tree.root_node(), code, language, &mut symbols, "global")?;
         Ok(symbols)
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn walk_for_symbols(
         &self,
         node: Node,
         code: &str,
-        language: &str,
+        _language: &str,
         symbols: &mut Vec<Symbol>,
         scope: &str,
     ) -> napi::Result<()> {
@@ -289,11 +344,11 @@ impl AstParser {
                         column: node.start_position().column as u32,
                         scope: scope.to_string(),
                     });
-                    
+
                     // Walk children with this class/struct as new scope
                     let mut cursor = node.walk();
                     for child in node.children(&mut cursor) {
-                        self.walk_for_symbols(child, code, language, symbols, &name)?;
+                        self.walk_for_symbols(child, code, _language, symbols, &name)?;
                     }
                     return Ok(());
                 }
@@ -315,7 +370,7 @@ impl AstParser {
         // Continue walking children
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
-            self.walk_for_symbols(child, code, language, symbols, scope)?;
+            self.walk_for_symbols(child, code, _language, symbols, scope)?;
         }
 
         Ok(())
@@ -325,7 +380,8 @@ impl AstParser {
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
             if child.kind() == "identifier" {
-                return code.get(child.start_byte()..child.end_byte())
+                return code
+                    .get(child.start_byte()..child.end_byte())
                     .map(|s| s.to_string());
             }
         }
@@ -336,7 +392,8 @@ impl AstParser {
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
             if child.kind() == "identifier" || child.kind() == "type_identifier" {
-                return code.get(child.start_byte()..child.end_byte())
+                return code
+                    .get(child.start_byte()..child.end_byte())
                     .map(|s| s.to_string());
             }
         }
@@ -347,7 +404,8 @@ impl AstParser {
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
             if child.kind() == "identifier" {
-                return code.get(child.start_byte()..child.end_byte())
+                return code
+                    .get(child.start_byte()..child.end_byte())
                     .map(|s| s.to_string());
             }
         }
@@ -371,6 +429,7 @@ impl AstParser {
         errors
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn walk_for_errors(&self, node: Node, errors: &mut Vec<String>) {
         if node.is_error() {
             errors.push(format!(
@@ -402,11 +461,16 @@ impl AstParser {
         complexity
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn walk_for_complexity(&self, node: Node, complexity: &mut u32) {
         match node.kind() {
-            "if_statement" | "while_statement" | "for_statement" | 
-            "switch_statement" | "case_clause" | "catch_clause" |
-            "conditional_expression" => {
+            "if_statement"
+            | "while_statement"
+            | "for_statement"
+            | "switch_statement"
+            | "case_clause"
+            | "catch_clause"
+            | "conditional_expression" => {
                 *complexity += 1;
             }
             _ => {}
@@ -424,10 +488,11 @@ impl AstParser {
         complexity
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn walk_for_cognitive_complexity(&self, node: Node, complexity: &mut u32, nesting_level: u32) {
         let increment = match node.kind() {
-            "if_statement" | "switch_statement" | "for_statement" | 
-            "while_statement" | "do_statement" => nesting_level + 1,
+            "if_statement" | "switch_statement" | "for_statement" | "while_statement"
+            | "do_statement" => nesting_level + 1,
             "catch_clause" => nesting_level + 1,
             "conditional_expression" => 1,
             "break_statement" | "continue_statement" => 1,
@@ -436,9 +501,14 @@ impl AstParser {
 
         *complexity += increment;
 
-        let new_nesting = if matches!(node.kind(), 
-            "if_statement" | "switch_statement" | "for_statement" | 
-            "while_statement" | "do_statement" | "catch_clause"
+        let new_nesting = if matches!(
+            node.kind(),
+            "if_statement"
+                | "switch_statement"
+                | "for_statement"
+                | "while_statement"
+                | "do_statement"
+                | "catch_clause"
         ) {
             nesting_level + 1
         } else {
@@ -455,12 +525,18 @@ impl AstParser {
         self.walk_for_nesting_depth(tree.root_node(), 0)
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn walk_for_nesting_depth(&self, node: Node, current_depth: u32) -> u32 {
         let mut max_depth = current_depth;
 
-        let is_nesting_node = matches!(node.kind(),
-            "if_statement" | "while_statement" | "for_statement" |
-            "switch_statement" | "function_declaration" | "class_declaration"
+        let is_nesting_node = matches!(
+            node.kind(),
+            "if_statement"
+                | "while_statement"
+                | "for_statement"
+                | "switch_statement"
+                | "function_declaration"
+                | "class_declaration"
         );
 
         let new_depth = if is_nesting_node {
@@ -486,10 +562,15 @@ impl AstParser {
         count
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn walk_for_function_count(&self, node: Node, count: &mut u32) {
-        if matches!(node.kind(), 
-            "function_declaration" | "function_definition" | "function_item" |
-            "method_definition" | "arrow_function"
+        if matches!(
+            node.kind(),
+            "function_declaration"
+                | "function_definition"
+                | "function_item"
+                | "method_definition"
+                | "arrow_function"
         ) {
             *count += 1;
         }
@@ -506,8 +587,10 @@ impl AstParser {
         count
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn walk_for_class_count(&self, node: Node, count: &mut u32) {
-        if matches!(node.kind(), 
+        if matches!(
+            node.kind(),
             "class_declaration" | "class_definition" | "struct_item" | "enum_item"
         ) {
             *count += 1;

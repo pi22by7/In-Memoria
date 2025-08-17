@@ -52,6 +52,7 @@ pub struct ApproachPrediction {
 }
 
 #[napi]
+#[derive(Default)]
 pub struct PatternLearner {
     patterns: HashMap<String, Pattern>,
     #[allow(dead_code)]
@@ -87,14 +88,14 @@ struct ImplementationPattern {
 impl PatternLearner {
     #[napi(constructor)]
     pub fn new() -> Self {
-        PatternLearner {
-            patterns: HashMap::new(),
-            naming_patterns: HashMap::new(),
-            structural_patterns: HashMap::new(),
-            implementation_patterns: HashMap::new(),
-        }
+        Self::default()
     }
 
+    /// Learns patterns from analyzing an entire codebase
+    /// 
+    /// # Safety
+    /// This function uses unsafe because it needs to interact with the Node.js runtime
+    /// through N-API bindings. The caller must ensure the path exists and is readable.
     #[napi]
     pub async unsafe fn learn_from_codebase(&mut self, path: String) -> napi::Result<Vec<Pattern>> {
         let mut learned_patterns = Vec::new();
@@ -223,6 +224,11 @@ impl PatternLearner {
         Ok(prediction)
     }
 
+    /// Updates patterns based on analysis data
+    /// 
+    /// # Safety
+    /// This function uses unsafe because it needs to interact with the Node.js runtime
+    /// through N-API bindings. The caller must ensure the analysis data is valid JSON.
     #[napi]
     pub async unsafe fn learn_from_analysis(
         &mut self,
@@ -233,6 +239,11 @@ impl PatternLearner {
         Ok(true)
     }
 
+    /// Updates patterns based on file changes
+    /// 
+    /// # Safety
+    /// This function uses unsafe because it needs to interact with the Node.js runtime
+    /// through N-API bindings. The caller must ensure the change data is valid JSON.
     #[napi]
     pub async unsafe fn update_from_change(&mut self, _change_data: String) -> napi::Result<bool> {
         // Update patterns based on file changes

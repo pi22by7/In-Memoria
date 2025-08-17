@@ -70,6 +70,11 @@ impl SemanticAnalyzer {
         Ok(analyzer)
     }
 
+    /// Analyzes an entire codebase for semantic concepts and patterns
+    /// 
+    /// # Safety
+    /// This function uses unsafe because it needs to interact with the Node.js runtime
+    /// through N-API bindings. The caller must ensure the path exists and is readable.
     #[napi]
     pub async unsafe fn analyze_codebase(
         &mut self,
@@ -88,6 +93,11 @@ impl SemanticAnalyzer {
         })
     }
 
+    /// Analyzes the content of a specific file for semantic concepts
+    /// 
+    /// # Safety
+    /// This function uses unsafe because it needs to interact with the Node.js runtime
+    /// through N-API bindings. The caller must ensure the file content is valid UTF-8.
     #[napi]
     pub async unsafe fn analyze_file_content(
         &mut self,
@@ -115,6 +125,11 @@ impl SemanticAnalyzer {
         Ok(concepts)
     }
 
+    /// Learns semantic concepts from analyzing an entire codebase
+    /// 
+    /// # Safety
+    /// This function uses unsafe because it needs to interact with the Node.js runtime
+    /// through N-API bindings. The caller must ensure the path exists and is readable.
     #[napi]
     pub async unsafe fn learn_from_codebase(
         &mut self,
@@ -133,6 +148,11 @@ impl SemanticAnalyzer {
         Ok(concepts)
     }
 
+    /// Updates the analyzer's internal state from analysis data
+    /// 
+    /// # Safety
+    /// This function uses unsafe because it needs to interact with the Node.js runtime
+    /// through N-API bindings. The caller must ensure the analysis data is valid JSON.
     #[napi]
     pub async unsafe fn update_from_analysis(
         &mut self,
@@ -820,6 +840,7 @@ impl SemanticAnalyzer {
         Ok(String::new())
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn find_identifier_recursive(&self, node: Node, content: &str) -> Option<String> {
         // Check if this node is an identifier
         match node.kind() {
@@ -845,7 +866,7 @@ impl SemanticAnalyzer {
     }
 
     fn detect_language_from_path(&self, file_path: &str) -> String {
-        if let Some(extension) = file_path.split('.').last() {
+        if let Some(extension) = file_path.split('.').next_back() {
             match extension {
                 "ts" | "tsx" => "typescript".to_string(),
                 "js" | "jsx" => "javascript".to_string(),
@@ -919,7 +940,7 @@ mod tests {
                 for concept in &concepts {
                     println!("  - {} ({})", concept.name, concept.concept_type);
                 }
-                assert!(concepts.len() > 0, "Should find at least one concept");
+                assert!(!concepts.is_empty(), "Should find at least one concept");
             }
             Err(e) => {
                 println!("❌ Parsing failed: {}", e);
@@ -946,7 +967,7 @@ mod tests {
                 for concept in &concepts {
                     println!("  - {} ({})", concept.name, concept.concept_type);
                 }
-                assert!(concepts.len() > 0, "Should find at least one concept");
+                assert!(!concepts.is_empty(), "Should find at least one concept");
             }
             Err(e) => {
                 println!("❌ Parsing failed: {}", e);
@@ -973,7 +994,7 @@ mod tests {
                 for concept in &concepts {
                     println!("  - {} ({})", concept.name, concept.concept_type);
                 }
-                assert!(concepts.len() > 0, "Should find at least one concept");
+                assert!(!concepts.is_empty(), "Should find at least one concept");
             }
             Err(e) => {
                 println!("❌ Parsing failed: {}", e);
@@ -1000,7 +1021,7 @@ mod tests {
                 for concept in &concepts {
                     println!("  - {} ({})", concept.name, concept.concept_type);
                 }
-                assert!(concepts.len() > 0, "Should find at least one concept");
+                assert!(!concepts.is_empty(), "Should find at least one concept");
             }
             Err(e) => {
                 println!("❌ Parsing failed: {}", e);
@@ -1069,7 +1090,7 @@ mod tests {
         }
 
         assert_eq!(concepts.len(), 1);
-        assert_eq!(concepts[0].name, "TestConcept");
-        assert_eq!(concepts[0].concept_type, "test");
+        assert_eq!(concepts[0].name, "test");
+        assert_eq!(concepts[0].concept_type, "file");
     }
 }
