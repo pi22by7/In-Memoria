@@ -2,15 +2,15 @@ use napi_derive::napi;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
-use tree_sitter::{Language, Parser, Tree, Node};
+use std::path::Path;
+use tree_sitter::{Node, Parser, Tree};
 use walkdir::WalkDir;
 
 // Import tree-sitter language constants
-use tree_sitter_typescript::LANGUAGE_TYPESCRIPT as tree_sitter_typescript;
-use tree_sitter_javascript::LANGUAGE as tree_sitter_javascript;  
-use tree_sitter_rust::LANGUAGE as tree_sitter_rust;
+use tree_sitter_javascript::LANGUAGE as tree_sitter_javascript;
 use tree_sitter_python::LANGUAGE as tree_sitter_python;
+use tree_sitter_rust::LANGUAGE as tree_sitter_rust;
+use tree_sitter_typescript::LANGUAGE_TYPESCRIPT as tree_sitter_typescript;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[napi(object)]
@@ -71,7 +71,10 @@ impl SemanticAnalyzer {
     }
 
     #[napi]
-    pub async unsafe fn analyze_codebase(&mut self, path: String) -> napi::Result<CodebaseAnalysisResult> {
+    pub async unsafe fn analyze_codebase(
+        &mut self,
+        path: String,
+    ) -> napi::Result<CodebaseAnalysisResult> {
         let languages = self.detect_languages(&path).await?;
         let frameworks = self.detect_frameworks(&path).await?;
         let concepts = self.extract_concepts(&path).await?;
@@ -92,15 +95,18 @@ impl SemanticAnalyzer {
         content: String,
     ) -> napi::Result<Vec<SemanticConcept>> {
         let language = self.detect_language_from_path(&file_path);
-        
-        let concepts = match self.parse_file_content(&file_path, &content, &language).await {
+
+        let concepts = match self
+            .parse_file_content(&file_path, &content, &language)
+            .await
+        {
             Ok(tree_concepts) => tree_concepts,
             Err(_) => {
                 // Fallback to pattern-based extraction for unsupported languages
                 self.fallback_extract_concepts(&file_path, &content)
             }
         };
-        
+
         // Store concepts for relationship analysis
         for concept in &concepts {
             self.concepts.insert(concept.id.clone(), concept.clone());
@@ -110,12 +116,15 @@ impl SemanticAnalyzer {
     }
 
     #[napi]
-    pub async unsafe fn learn_from_codebase(&mut self, path: String) -> napi::Result<Vec<SemanticConcept>> {
+    pub async unsafe fn learn_from_codebase(
+        &mut self,
+        path: String,
+    ) -> napi::Result<Vec<SemanticConcept>> {
         let concepts = self.extract_concepts(&path).await?;
-        
+
         // Learn relationships between concepts
         self.learn_concept_relationships(&concepts);
-        
+
         // Update internal knowledge
         for concept in &concepts {
             self.concepts.insert(concept.id.clone(), concept.clone());
@@ -125,7 +134,10 @@ impl SemanticAnalyzer {
     }
 
     #[napi]
-    pub async unsafe fn update_from_analysis(&mut self, _analysis_data: String) -> napi::Result<bool> {
+    pub async unsafe fn update_from_analysis(
+        &mut self,
+        _analysis_data: String,
+    ) -> napi::Result<bool> {
         // Parse analysis data and update internal state
         // This would typically be called when file changes are detected
         Ok(true)
@@ -133,38 +145,50 @@ impl SemanticAnalyzer {
 
     #[napi]
     pub fn get_concept_relationships(&self, concept_id: String) -> napi::Result<Vec<String>> {
-        Ok(self.relationships.get(&concept_id).cloned().unwrap_or_default())
+        Ok(self
+            .relationships
+            .get(&concept_id)
+            .cloned()
+            .unwrap_or_default())
     }
 
     fn initialize_parsers(&mut self) -> napi::Result<()> {
-        unsafe {
-            let mut ts_parser = Parser::new();
-            ts_parser.set_language(&tree_sitter_typescript.into())
-                .map_err(|e| napi::Error::from_reason(format!("Failed to set TypeScript language: {}", e)))?;
-            self.parsers.insert("typescript".to_string(), ts_parser);
+        let mut ts_parser = Parser::new();
+        ts_parser
+            .set_language(&tree_sitter_typescript.into())
+            .map_err(|e| {
+                napi::Error::from_reason(format!("Failed to set TypeScript language: {}", e))
+            })?;
+        self.parsers.insert("typescript".to_string(), ts_parser);
 
-            let mut js_parser = Parser::new();
-            js_parser.set_language(&tree_sitter_javascript.into())
-                .map_err(|e| napi::Error::from_reason(format!("Failed to set JavaScript language: {}", e)))?;
-            self.parsers.insert("javascript".to_string(), js_parser);
+        let mut js_parser = Parser::new();
+        js_parser
+            .set_language(&tree_sitter_javascript.into())
+            .map_err(|e| {
+                napi::Error::from_reason(format!("Failed to set JavaScript language: {}", e))
+            })?;
+        self.parsers.insert("javascript".to_string(), js_parser);
 
-            let mut rust_parser = Parser::new();
-            rust_parser.set_language(&tree_sitter_rust.into())
-                .map_err(|e| napi::Error::from_reason(format!("Failed to set Rust language: {}", e)))?;
-            self.parsers.insert("rust".to_string(), rust_parser);
+        let mut rust_parser = Parser::new();
+        rust_parser
+            .set_language(&tree_sitter_rust.into())
+            .map_err(|e| napi::Error::from_reason(format!("Failed to set Rust language: {}", e)))?;
+        self.parsers.insert("rust".to_string(), rust_parser);
 
-            let mut python_parser = Parser::new();
-            python_parser.set_language(&tree_sitter_python.into())
-                .map_err(|e| napi::Error::from_reason(format!("Failed to set Python language: {}", e)))?;
-            self.parsers.insert("python".to_string(), python_parser);
-        }
+        let mut python_parser = Parser::new();
+        python_parser
+            .set_language(&tree_sitter_python.into())
+            .map_err(|e| {
+                napi::Error::from_reason(format!("Failed to set Python language: {}", e))
+            })?;
+        self.parsers.insert("python".to_string(), python_parser);
 
         Ok(())
     }
 
     async fn detect_languages(&self, path: &str) -> napi::Result<Vec<String>> {
         let mut languages = std::collections::HashSet::new();
-        
+
         for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
             if entry.file_type().is_file() {
                 if let Some(extension) = entry.path().extension().and_then(|s| s.to_str()) {
@@ -180,20 +204,20 @@ impl SemanticAnalyzer {
                         "cs" => Some("csharp"),
                         _ => None,
                     };
-                    
+
                     if let Some(lang) = language {
                         languages.insert(lang.to_string());
                     }
                 }
             }
         }
-        
+
         Ok(languages.into_iter().collect())
     }
 
     async fn detect_frameworks(&self, path: &str) -> napi::Result<Vec<String>> {
         let mut frameworks = std::collections::HashSet::new();
-        
+
         // Check package.json for JavaScript/TypeScript frameworks
         let package_json_path = Path::new(path).join("package.json");
         if package_json_path.exists() {
@@ -218,7 +242,7 @@ impl SemanticAnalyzer {
                 }
             }
         }
-        
+
         // Check Cargo.toml for Rust frameworks
         let cargo_toml_path = Path::new(path).join("Cargo.toml");
         if cargo_toml_path.exists() {
@@ -237,7 +261,7 @@ impl SemanticAnalyzer {
                 }
             }
         }
-        
+
         // Check requirements.txt or setup.py for Python frameworks
         let requirements_path = Path::new(path).join("requirements.txt");
         if requirements_path.exists() {
@@ -253,36 +277,40 @@ impl SemanticAnalyzer {
                 }
             }
         }
-        
+
         Ok(frameworks.into_iter().collect())
     }
 
     async fn extract_concepts(&mut self, path: &str) -> napi::Result<Vec<SemanticConcept>> {
         let mut all_concepts = Vec::new();
-        
+
         for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
             if entry.file_type().is_file() {
                 let file_path = entry.path();
-                
+
                 // Skip non-source files and common directories
                 if self.should_analyze_file(file_path) {
                     match fs::read_to_string(file_path) {
                         Ok(content) => {
-                            let language = self.detect_language_from_path(file_path.to_str().unwrap_or(""));
-                            
-                            match self.parse_file_content(
-                                file_path.to_str().unwrap_or(""),
-                                &content,
-                                &language
-                            ).await {
+                            let language =
+                                self.detect_language_from_path(file_path.to_str().unwrap_or(""));
+
+                            match self
+                                .parse_file_content(
+                                    file_path.to_str().unwrap_or(""),
+                                    &content,
+                                    &language,
+                                )
+                                .await
+                            {
                                 Ok(mut concepts) => {
                                     all_concepts.append(&mut concepts);
                                 }
-                                Err(e) => {
+                                Err(_e) => {
                                     // Fallback to regex-based extraction if tree-sitter fails
                                     let fallback_concepts = self.fallback_extract_concepts(
                                         file_path.to_str().unwrap_or(""),
-                                        &content
+                                        &content,
                                     );
                                     all_concepts.extend(fallback_concepts);
                                 }
@@ -296,55 +324,132 @@ impl SemanticAnalyzer {
                 }
             }
         }
-        
+
         Ok(all_concepts)
     }
-    
+
     fn should_analyze_file(&self, file_path: &Path) -> bool {
         // Skip common non-source directories
         let path_str = file_path.to_string_lossy();
-        if path_str.contains("node_modules") ||
-           path_str.contains(".git") ||
-           path_str.contains("target") ||
-           path_str.contains("dist") ||
-           path_str.contains("build") ||
-           path_str.contains(".next") ||
-           path_str.contains("__pycache__") {
+        if path_str.contains("node_modules")
+            || path_str.contains(".git")
+            || path_str.contains("target")
+            || path_str.contains("dist")
+            || path_str.contains("build")
+            || path_str.contains(".next")
+            || path_str.contains("__pycache__")
+        {
             return false;
         }
-        
+
         // Check if file extension is supported
         if let Some(extension) = file_path.extension().and_then(|s| s.to_str()) {
-            matches!(extension.to_lowercase().as_str(),
-                "ts" | "tsx" | "js" | "jsx" | "rs" | "py" | "go" | "java" | "cpp" | "c" | "cs")
+            matches!(
+                extension.to_lowercase().as_str(),
+                "ts" | "tsx" | "js" | "jsx" | "rs" | "py" | "go" | "java" | "cpp" | "c" | "cs"
+            )
         } else {
             false
         }
     }
-    
-    fn fallback_extract_concepts(&self, file_path: &str, _content: &str) -> Vec<SemanticConcept> {
-        // Return a hardcoded test concept with empty HashMaps to test serialization
+
+    fn fallback_extract_concepts(&self, file_path: &str, content: &str) -> Vec<SemanticConcept> {
+        let mut concepts = Vec::new();
+        let mut concept_id = 1;
+
+        // Parse line by line looking for functions, classes, and interfaces
+        for (line_num, line) in content.lines().enumerate() {
+            let line = line.trim();
+
+            // Try to extract function names
+            if let Some(name) = self.extract_function_name(line) {
+                concepts.push(self.create_fallback_concept(
+                    &format!("fallback_fn_{}", concept_id),
+                    name,
+                    "function",
+                    file_path,
+                    line_num + 1,
+                ));
+                concept_id += 1;
+            }
+
+            // Try to extract class names
+            if let Some(name) = self.extract_class_name(line) {
+                concepts.push(self.create_fallback_concept(
+                    &format!("fallback_class_{}", concept_id),
+                    name,
+                    "class",
+                    file_path,
+                    line_num + 1,
+                ));
+                concept_id += 1;
+            }
+
+            // Try to extract interface names
+            if let Some(name) = self.extract_interface_name(line) {
+                concepts.push(self.create_fallback_concept(
+                    &format!("fallback_interface_{}", concept_id),
+                    name,
+                    "interface",
+                    file_path,
+                    line_num + 1,
+                ));
+                concept_id += 1;
+            }
+        }
+
+        // If no concepts found, create a generic file concept
+        if concepts.is_empty() {
+            let file_name = Path::new(file_path)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("unknown");
+
+            concepts.push(self.create_fallback_concept(
+                "fallback_file_1",
+                file_name.to_string(),
+                "file",
+                file_path,
+                1,
+            ));
+        }
+
+        concepts
+    }
+
+    fn create_fallback_concept(
+        &self,
+        id: &str,
+        name: String,
+        concept_type: &str,
+        file_path: &str,
+        line: usize,
+    ) -> SemanticConcept {
         let mut relationships = HashMap::new();
-        relationships.insert("test_key".to_string(), "test_value".to_string());
-        
+        relationships.insert("extraction_method".to_string(), "fallback".to_string());
+
         let mut metadata = HashMap::new();
-        metadata.insert("source".to_string(), "fallback".to_string());
-        
-        vec![SemanticConcept {
-            id: "test_concept_123".to_string(),
-            name: "TestConcept".to_string(),
-            concept_type: "test".to_string(),
-            confidence: 1.0,
+        metadata.insert("source".to_string(), "regex_fallback".to_string());
+        metadata.insert(
+            "confidence_reason".to_string(),
+            "tree_sitter_failed".to_string(),
+        );
+
+        SemanticConcept {
+            id: id.to_string(),
+            name,
+            concept_type: concept_type.to_string(),
+            confidence: 0.7, // Lower confidence for fallback extraction
             file_path: file_path.to_string(),
             line_range: LineRange {
-                start: 1,
-                end: 1,
+                start: line as u32,
+                end: line as u32,
             },
             relationships,
             metadata,
-        }]
+        }
     }
-    
+
     fn extract_function_name(&self, line: &str) -> Option<String> {
         // TypeScript/JavaScript function patterns
         if line.contains("function ") {
@@ -358,33 +463,29 @@ impl SemanticAnalyzer {
                 }
             }
         }
-        
-        // Arrow function patterns - simplified
-        if line.contains(" = ") && line.contains("=>") {
-            if let Some(equal_pos) = line.find(" = ") {
-                let before_equal = &line[..equal_pos];
-                if let Some(start) = before_equal.rfind(char::is_whitespace) {
-                    let name = before_equal[start..].trim();
+
+        // Arrow function patterns: const funcName = () =>
+        if line.contains("=>") {
+            if let Some(equals_pos) = line.find('=') {
+                let before_equals = &line[..equals_pos].trim();
+                if let Some(name_start) = before_equals.rfind(char::is_whitespace) {
+                    let name = before_equals[name_start..].trim();
                     if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
                         return Some(name.to_string());
+                    }
+                } else {
+                    // Handle case like "const funcName ="
+                    if let Some(const_pos) = before_equals.find("const ") {
+                        let name = before_equals[const_pos + 6..].trim();
+                        if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_')
+                        {
+                            return Some(name.to_string());
+                        }
                     }
                 }
             }
         }
-        
-        // Python function patterns
-        if line.trim_start().starts_with("def ") {
-            if let Some(start) = line.find("def ") {
-                let after_def = &line[start + 4..];
-                if let Some(end) = after_def.find('(') {
-                    let name = after_def[..end].trim();
-                    if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
-                        return Some(name.to_string());
-                    }
-                }
-            }
-        }
-        
+
         // Rust function patterns
         if line.contains("fn ") {
             if let Some(start) = line.find("fn ") {
@@ -397,15 +498,30 @@ impl SemanticAnalyzer {
                 }
             }
         }
-        
+
+        // Python function patterns
+        if line.contains("def ") {
+            if let Some(start) = line.find("def ") {
+                let after_def = &line[start + 4..];
+                if let Some(end) = after_def.find('(') {
+                    let name = after_def[..end].trim();
+                    if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                        return Some(name.to_string());
+                    }
+                }
+            }
+        }
+
         None
     }
-    
+
     fn extract_class_name(&self, line: &str) -> Option<String> {
+        // Class patterns for TypeScript/JavaScript/Python
         if line.contains("class ") {
             if let Some(start) = line.find("class ") {
                 let after_class = &line[start + 6..];
-                let end = after_class.find(char::is_whitespace)
+                let end = after_class
+                    .find(char::is_whitespace)
                     .or_else(|| after_class.find('{'))
                     .or_else(|| after_class.find('('))
                     .unwrap_or(after_class.len());
@@ -417,12 +533,14 @@ impl SemanticAnalyzer {
         }
         None
     }
-    
+
     fn extract_interface_name(&self, line: &str) -> Option<String> {
+        // TypeScript interface patterns
         if line.contains("interface ") {
             if let Some(start) = line.find("interface ") {
                 let after_interface = &line[start + 10..];
-                let end = after_interface.find(char::is_whitespace)
+                let end = after_interface
+                    .find(char::is_whitespace)
                     .or_else(|| after_interface.find('{'))
                     .unwrap_or(after_interface.len());
                 let name = after_interface[..end].trim();
@@ -431,6 +549,23 @@ impl SemanticAnalyzer {
                 }
             }
         }
+
+        // Rust trait patterns
+        if line.contains("trait ") {
+            if let Some(start) = line.find("trait ") {
+                let after_trait = &line[start + 6..];
+                let end = after_trait
+                    .find(char::is_whitespace)
+                    .or_else(|| after_trait.find('{'))
+                    .or_else(|| after_trait.find('<'))
+                    .unwrap_or(after_trait.len());
+                let name = after_trait[..end].trim();
+                if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                    return Some(name.to_string());
+                }
+            }
+        }
+
         None
     }
 
@@ -440,10 +575,12 @@ impl SemanticAnalyzer {
         content: &str,
         language: &str,
     ) -> napi::Result<Vec<SemanticConcept>> {
-        let parser = self.parsers.get_mut(language)
-            .ok_or_else(|| napi::Error::from_reason(format!("Unsupported language: {}", language)))?;
+        let parser = self.parsers.get_mut(language).ok_or_else(|| {
+            napi::Error::from_reason(format!("Unsupported language: {}", language))
+        })?;
 
-        let tree = parser.parse(content, None)
+        let tree = parser
+            .parse(content, None)
             .ok_or_else(|| napi::Error::from_reason("Failed to parse file content"))?;
 
         let mut concepts = Vec::new();
@@ -530,76 +667,96 @@ impl SemanticAnalyzer {
     ) -> napi::Result<()> {
         // Extract concepts based on node types (language-specific)
         match language {
-            "typescript" | "javascript" => {
-                match node.kind() {
-                    "class_declaration" | "interface_declaration" | "type_alias_declaration" => {
-                        if let Some(concept) = self.extract_concept_from_node(node, file_path, content, "class", language)? {
-                            concepts.push(concept);
-                        }
+            "typescript" | "javascript" => match node.kind() {
+                "class_declaration" | "interface_declaration" | "type_alias_declaration" => {
+                    if let Some(concept) =
+                        self.extract_concept_from_node(node, file_path, content, "class", language)?
+                    {
+                        concepts.push(concept);
                     }
-                    "function_declaration" | "method_definition" | "arrow_function" | "function" | "function_expression" => {
-                        if let Some(concept) = self.extract_concept_from_node(node, file_path, content, "function", language)? {
-                            concepts.push(concept);
-                        }
-                    }
-                    "variable_declaration" | "lexical_declaration" => {
-                        if let Some(concept) = self.extract_concept_from_node(node, file_path, content, "variable", language)? {
-                            concepts.push(concept);
-                        }
-                    }
-                    _ => {}
                 }
-            }
-            "python" => {
-                match node.kind() {
-                    "class_definition" => {
-                        if let Some(concept) = self.extract_concept_from_node(node, file_path, content, "class", language)? {
-                            concepts.push(concept);
-                        }
+                "function_declaration"
+                | "method_definition"
+                | "arrow_function"
+                | "function"
+                | "function_expression" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "function", language)?
+                    {
+                        concepts.push(concept);
                     }
-                    "function_definition" => {
-                        if let Some(concept) = self.extract_concept_from_node(node, file_path, content, "function", language)? {
-                            concepts.push(concept);
-                        }
-                    }
-                    "assignment" => {
-                        if let Some(concept) = self.extract_concept_from_node(node, file_path, content, "variable", language)? {
-                            concepts.push(concept);
-                        }
-                    }
-                    _ => {}
                 }
-            }
-            "rust" => {
-                match node.kind() {
-                    "struct_item" | "enum_item" | "trait_item" | "impl_item" => {
-                        if let Some(concept) = self.extract_concept_from_node(node, file_path, content, "struct", language)? {
-                            concepts.push(concept);
-                        }
+                "variable_declaration" | "lexical_declaration" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "variable", language)?
+                    {
+                        concepts.push(concept);
                     }
-                    "function_item" => {
-                        if let Some(concept) = self.extract_concept_from_node(node, file_path, content, "function", language)? {
-                            concepts.push(concept);
-                        }
-                    }
-                    "let_declaration" => {
-                        if let Some(concept) = self.extract_concept_from_node(node, file_path, content, "variable", language)? {
-                            concepts.push(concept);
-                        }
-                    }
-                    _ => {}
                 }
-            }
+                _ => {}
+            },
+            "python" => match node.kind() {
+                "class_definition" => {
+                    if let Some(concept) =
+                        self.extract_concept_from_node(node, file_path, content, "class", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                "function_definition" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "function", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                "assignment" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "variable", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                _ => {}
+            },
+            "rust" => match node.kind() {
+                "struct_item" | "enum_item" | "trait_item" | "impl_item" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "struct", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                "function_item" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "function", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                "let_declaration" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "variable", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                _ => {}
+            },
             _ => {
                 // Generic extraction for unknown languages
                 match node.kind() {
                     kind if kind.contains("class") => {
-                        if let Some(concept) = self.extract_concept_from_node(node, file_path, content, "class", language)? {
+                        if let Some(concept) = self.extract_concept_from_node(
+                            node, file_path, content, "class", language,
+                        )? {
                             concepts.push(concept);
                         }
                     }
                     kind if kind.contains("function") => {
-                        if let Some(concept) = self.extract_concept_from_node(node, file_path, content, "function", language)? {
+                        if let Some(concept) = self.extract_concept_from_node(
+                            node, file_path, content, "function", language,
+                        )? {
                             concepts.push(concept);
                         }
                     }
@@ -627,13 +784,19 @@ impl SemanticAnalyzer {
     ) -> napi::Result<Option<SemanticConcept>> {
         // Extract name from node
         let name = self.extract_name_from_node(node, content)?;
-        
+
         if name.is_empty() {
             return Ok(None);
         }
 
         let concept = SemanticConcept {
-            id: format!("concept_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()),
+            id: format!(
+                "concept_{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis()
+            ),
             name,
             concept_type: concept_type.to_string(),
             confidence: 0.8, // Base confidence
@@ -656,7 +819,7 @@ impl SemanticAnalyzer {
         }
         Ok(String::new())
     }
-    
+
     fn find_identifier_recursive(&self, node: Node, content: &str) -> Option<String> {
         // Check if this node is an identifier
         match node.kind() {
@@ -669,7 +832,7 @@ impl SemanticAnalyzer {
             }
             _ => {}
         }
-        
+
         // Search children recursively (but limit depth to avoid infinite recursion)
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
@@ -677,7 +840,7 @@ impl SemanticAnalyzer {
                 return Some(name);
             }
         }
-        
+
         None
     }
 
@@ -699,7 +862,7 @@ impl SemanticAnalyzer {
         // Analyze relationships between concepts
         for concept in concepts {
             let mut related_concepts = Vec::new();
-            
+
             // Find concepts in the same file
             for other_concept in concepts {
                 if concept.id != other_concept.id && concept.file_path == other_concept.file_path {
@@ -707,23 +870,27 @@ impl SemanticAnalyzer {
                 }
             }
 
-            self.relationships.insert(concept.id.clone(), related_concepts);
+            self.relationships
+                .insert(concept.id.clone(), related_concepts);
         }
     }
 
     fn calculate_complexity(&self, concepts: &[SemanticConcept]) -> ComplexityMetrics {
-        let function_count = concepts.iter()
+        let function_count = concepts
+            .iter()
             .filter(|c| c.concept_type == "function")
             .count() as f64;
-        
-        let class_count = concepts.iter()
+
+        let class_count = concepts
+            .iter()
             .filter(|c| c.concept_type == "class")
             .count() as f64;
 
         ComplexityMetrics {
             cyclomatic: function_count * 1.5 + class_count * 2.0,
             cognitive: function_count * 2.0 + class_count * 3.0,
-            lines: concepts.iter()
+            lines: concepts
+                .iter()
                 .map(|c| c.line_range.end - c.line_range.start + 1)
                 .sum(),
         }
@@ -738,12 +905,14 @@ mod tests {
     async fn test_typescript_class_parsing() {
         let mut analyzer = SemanticAnalyzer::new().unwrap();
         let content = "export class UserService { getName() { return 'test'; } }";
-        
+
         println!("🔍 Testing TypeScript class parsing...");
         println!("Content: {}", content);
-        
-        let result = analyzer.parse_file_content("test.ts", content, "typescript").await;
-        
+
+        let result = analyzer
+            .parse_file_content("test.ts", content, "typescript")
+            .await;
+
         match result {
             Ok(concepts) => {
                 println!("✅ Parsing succeeded! Found {} concepts:", concepts.len());
@@ -763,12 +932,14 @@ mod tests {
     async fn test_javascript_function_parsing() {
         let mut analyzer = SemanticAnalyzer::new().unwrap();
         let content = "function hello() { return 'world'; }";
-        
+
         println!("🔍 Testing JavaScript function parsing...");
         println!("Content: {}", content);
-        
-        let result = analyzer.parse_file_content("test.js", content, "javascript").await;
-        
+
+        let result = analyzer
+            .parse_file_content("test.js", content, "javascript")
+            .await;
+
         match result {
             Ok(concepts) => {
                 println!("✅ Parsing succeeded! Found {} concepts:", concepts.len());
@@ -788,12 +959,14 @@ mod tests {
     async fn test_python_class_parsing() {
         let mut analyzer = SemanticAnalyzer::new().unwrap();
         let content = "class User:\n    def __init__(self):\n        pass";
-        
+
         println!("🔍 Testing Python class parsing...");
         println!("Content: {}", content);
-        
-        let result = analyzer.parse_file_content("test.py", content, "python").await;
-        
+
+        let result = analyzer
+            .parse_file_content("test.py", content, "python")
+            .await;
+
         match result {
             Ok(concepts) => {
                 println!("✅ Parsing succeeded! Found {} concepts:", concepts.len());
@@ -813,12 +986,14 @@ mod tests {
     async fn test_rust_struct_parsing() {
         let mut analyzer = SemanticAnalyzer::new().unwrap();
         let content = "pub struct User { name: String }";
-        
+
         println!("🔍 Testing Rust struct parsing...");
         println!("Content: {}", content);
-        
-        let result = analyzer.parse_file_content("test.rs", content, "rust").await;
-        
+
+        let result = analyzer
+            .parse_file_content("test.rs", content, "rust")
+            .await;
+
         match result {
             Ok(concepts) => {
                 println!("✅ Parsing succeeded! Found {} concepts:", concepts.len());
@@ -837,18 +1012,18 @@ mod tests {
     #[tokio::test]
     async fn test_tree_sitter_basic_functionality() {
         println!("🔍 Testing basic tree-sitter functionality...");
-        
+
         // Test parser initialization
         let mut analyzer = SemanticAnalyzer::new().unwrap();
-        
+
         // Test that parsers were initialized
         assert!(analyzer.parsers.contains_key("typescript"));
         assert!(analyzer.parsers.contains_key("javascript"));
         assert!(analyzer.parsers.contains_key("rust"));
         assert!(analyzer.parsers.contains_key("python"));
-        
+
         println!("✅ All parsers initialized successfully");
-        
+
         // Test basic parsing without concept extraction
         let content = "class Test {}";
         if let Some(parser) = analyzer.parsers.get_mut("typescript") {
@@ -858,11 +1033,16 @@ mod tests {
                     println!("✅ Tree-sitter parsed successfully");
                     println!("   Root node kind: {}", root.kind());
                     println!("   Root node children: {}", root.child_count());
-                    
+
                     // Walk through the tree
                     let mut cursor = root.walk();
                     for child in root.children(&mut cursor) {
-                        println!("   Child: {} ({}..{})", child.kind(), child.start_byte(), child.end_byte());
+                        println!(
+                            "   Child: {} ({}..{})",
+                            child.kind(),
+                            child.start_byte(),
+                            child.end_byte()
+                        );
                     }
                 }
                 None => {
@@ -879,15 +1059,15 @@ mod tests {
             concepts: HashMap::new(),
             relationships: HashMap::new(),
         };
-        
+
         println!("🔍 Testing fallback concept creation...");
         let concepts = analyzer.fallback_extract_concepts("test.ts", "dummy content");
-        
+
         println!("✅ Fallback created {} concepts:", concepts.len());
         for concept in &concepts {
             println!("  - {} ({})", concept.name, concept.concept_type);
         }
-        
+
         assert_eq!(concepts.len(), 1);
         assert_eq!(concepts[0].name, "TestConcept");
         assert_eq!(concepts[0].concept_type, "test");

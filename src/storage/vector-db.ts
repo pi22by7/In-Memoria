@@ -1,121 +1,268 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import { createHash } from 'crypto';
+import { Surreal } from 'surrealdb';
 
-// Simple local vector storage implementation
-// This provides semantic search without requiring external APIs
-class LocalVectorStore {
-  private vectors: Map<string, { embedding: number[], metadata: any, document: string }> = new Map();
-  private storePath: string;
-  
-  constructor(storePath: string = './vector-store.json') {
-    this.storePath = storePath;
-    this.loadFromDisk();
+export interface CodeMetadata {
+  id: string;
+  filePath: string;
+  functionName?: string;
+  className?: string;
+  language: string;
+  complexity: number;
+  lineCount: number;
+  lastModified: Date;
+}
+
+export interface SemanticSearchResult {
+  id: string;
+  code: string;
+  metadata: CodeMetadata;
+  similarity: number;
+}
+
+interface CodeDocument {
+  id?: string;
+  code: string;
+  embedding?: number[];
+  metadata: CodeMetadata;
+  created: Date;
+  updated: Date;
+  [key: string]: unknown;
+}
+
+export class SemanticVectorDB {
+  private db: Surreal;
+  private initialized: boolean = false;
+
+  constructor(apiKey?: string) {
+    this.db = new Surreal();
+    // Store API key for potential OpenAI embeddings in the future
+    if (apiKey || process.env.OPENAI_API_KEY) {
+      // For now, we'll use local embeddings
+      // This could be extended to use OpenAI embeddings later
+    }
   }
-  
-  async add(data: { documents: string[], metadatas: any[], ids: string[] }) {
-    for (let i = 0; i < data.documents.length; i++) {
-      const embedding = this.generateEmbedding(data.documents[i]);
-      this.vectors.set(data.ids[i], {
-        embedding,
-        metadata: data.metadatas[i],
-        document: data.documents[i]
+
+  async initialize(collectionName: string = 'code-cartographer'): Promise<void> {
+    try {
+      // Use embedded/memory mode for SurrealDB
+      await this.db.connect('mem://');
+
+      // Use database and namespace
+      await this.db.use({
+        namespace: 'code_cartographer',
+        database: collectionName
       });
+
+      // Define the code documents table with full-text search capabilities
+      await this.db.query(`
+        DEFINE TABLE code_documents SCHEMAFULL;
+        DEFINE FIELD code ON code_documents TYPE string;
+        DEFINE FIELD embedding ON code_documents TYPE array;
+        DEFINE FIELD metadata ON code_documents TYPE object;
+        DEFINE FIELD created ON code_documents TYPE datetime DEFAULT time::now();
+        DEFINE FIELD updated ON code_documents TYPE datetime DEFAULT time::now();
+        DEFINE INDEX code_content ON code_documents COLUMNS code SEARCH ANALYZER ascii BM25(1.2,0.75) HIGHLIGHTS;
+      `);
+
+      this.initialized = true;
+    } catch (error) {
+      console.error('Failed to initialize SurrealDB:', error);
+      throw error;
     }
-    this.saveToDisk();
   }
-  
-  async query(params: { queryTexts: string[], nResults: number, where?: any }) {
-    const queryEmbedding = this.generateEmbedding(params.queryTexts[0]);
-    const results: Array<{ id: string, distance: number, document: string, metadata: any }> = [];
-    
-    for (const [id, data] of this.vectors) {
-      // Apply filters if specified
-      if (params.where) {
-        let matches = true;
-        for (const [key, value] of Object.entries(params.where)) {
-          if (data.metadata[key] !== value) {
-            matches = false;
-            break;
-          }
-        }
-        if (!matches) continue;
-      }
-      
-      const distance = this.cosineSimilarity(queryEmbedding, data.embedding);
-      results.push({ id, distance, document: data.document, metadata: data.metadata });
+
+  async storeCodeEmbedding(code: string, metadata: CodeMetadata): Promise<void> {
+    if (!this.initialized) {
+      throw new Error('Vector database not initialized. Call initialize() first.');
     }
-    
-    // Sort by similarity (lower distance = higher similarity)
-    results.sort((a, b) => a.distance - b.distance);
-    const topResults = results.slice(0, params.nResults);
-    
+
+    const embedding = this.generateEmbedding(code);
+    const document: CodeDocument = {
+      code,
+      embedding,
+      metadata,
+      created: new Date(),
+      updated: new Date()
+    };
+
+    await this.db.create('code_documents', document);
+  }
+
+  async storeMultipleEmbeddings(
+    codeChunks: string[],
+    metadataList: CodeMetadata[]
+  ): Promise<void> {
+    if (!this.initialized) {
+      throw new Error('Vector database not initialized. Call initialize() first.');
+    }
+
+    if (codeChunks.length !== metadataList.length) {
+      throw new Error('Code chunks and metadata arrays must have the same length');
+    }
+
+    const documents: CodeDocument[] = codeChunks.map((code, index) => ({
+      code,
+      embedding: this.generateEmbedding(code),
+      metadata: metadataList[index],
+      created: new Date(),
+      updated: new Date()
+    }));
+
+    // Insert multiple documents
+    for (const doc of documents) {
+      await this.db.create('code_documents', doc);
+    }
+  }
+
+  async findSimilarCode(
+    query: string,
+    limit: number = 5,
+    filters?: Record<string, any>
+  ): Promise<SemanticSearchResult[]> {
+    if (!this.initialized) {
+      throw new Error('Vector database not initialized. Call initialize() first.');
+    }
+
+    if (!query || query.trim() === '') {
+      // If no query, just return all documents matching filters
+      let searchQuery = 'SELECT * FROM code_documents';
+      const params: Record<string, any> = { limit };
+
+      if (filters) {
+        const filterConditions = Object.entries(filters)
+          .map(([key, value]) => `metadata.${key} = $${key}`)
+          .join(' AND ');
+        searchQuery += ` WHERE ${filterConditions}`;
+        Object.assign(params, filters);
+      }
+
+      searchQuery += ` LIMIT $limit`;
+
+      const results = await this.db.query(searchQuery, params);
+      const documents = results[0] as any[] || [];
+
+      return documents.map(doc => ({
+        id: doc.id,
+        code: doc.code,
+        metadata: doc.metadata,
+        similarity: 0.5 // Default similarity for non-search results
+      }));
+    }
+
+    // Use SurrealDB's full-text search for semantic similarity
+    let searchQuery = `
+      SELECT *, search::score(1) AS similarity 
+      FROM code_documents 
+      WHERE code @@ $query
+    `;
+
+    // Add filters if provided
+    if (filters) {
+      const filterConditions = Object.entries(filters)
+        .map(([key, value]) => `metadata.${key} = $${key}`)
+        .join(' AND ');
+      searchQuery += ` AND ${filterConditions}`;
+    }
+
+    searchQuery += ` ORDER BY similarity DESC LIMIT $limit`;
+
+    const params: Record<string, any> = { query, limit };
+    if (filters) {
+      Object.assign(params, filters);
+    }
+
+    const results = await this.db.query(searchQuery, params);
+    const documents = results[0] as any[] || [];
+
+    return documents.map(doc => ({
+      id: doc.id,
+      code: doc.code,
+      metadata: doc.metadata,
+      similarity: doc.similarity || 0
+    }));
+  }
+
+  async findSimilarCodeByFile(
+    filePath: string,
+    limit: number = 5
+  ): Promise<SemanticSearchResult[]> {
+    return this.findSimilarCode('', limit, { filePath });
+  }
+
+  async findSimilarCodeByLanguage(
+    query: string,
+    language: string,
+    limit: number = 5
+  ): Promise<SemanticSearchResult[]> {
+    return this.findSimilarCode(query, limit, { language });
+  }
+
+  async updateCodeEmbedding(id: string, code: string, metadata: CodeMetadata): Promise<void> {
+    if (!this.initialized) {
+      throw new Error('Vector database not initialized. Call initialize() first.');
+    }
+
+    const embedding = this.generateEmbedding(code);
+    await this.db.merge(id, {
+      code,
+      embedding,
+      metadata,
+      updated: new Date()
+    });
+  }
+
+  async deleteCodeEmbedding(id: string): Promise<void> {
+    if (!this.initialized) {
+      throw new Error('Vector database not initialized. Call initialize() first.');
+    }
+
+    await this.db.delete(id);
+  }
+
+  async deleteCodeEmbeddingsByFile(filePath: string): Promise<void> {
+    if (!this.initialized) {
+      throw new Error('Vector database not initialized. Call initialize() first.');
+    }
+
+    await this.db.query('DELETE code_documents WHERE metadata.filePath = $filePath', {
+      filePath
+    });
+  }
+
+  async getCollectionStats(): Promise<{ count: number; metadata: any }> {
+    if (!this.initialized) {
+      throw new Error('Vector database not initialized. Call initialize() first.');
+    }
+
+    const result = await this.db.query('SELECT count() AS total FROM code_documents GROUP ALL');
+    const count = result[0]?.[0]?.total || 0;
+
     return {
-      documents: [topResults.map(r => r.document)],
-      metadatas: [topResults.map(r => r.metadata)],
-      distances: [topResults.map(r => r.distance)],
-      ids: [topResults.map(r => r.id)]
+      count,
+      metadata: {
+        description: 'Code Cartographer semantic code embeddings',
+        engine: 'SurrealDB'
+      }
     };
   }
-  
-  async update(params: { ids: string[], documents: string[], metadatas: any[] }) {
-    for (let i = 0; i < params.ids.length; i++) {
-      const embedding = this.generateEmbedding(params.documents[i]);
-      this.vectors.set(params.ids[i], {
-        embedding,
-        metadata: params.metadatas[i],
-        document: params.documents[i]
-      });
-    }
-    this.saveToDisk();
-  }
-  
-  async delete(params: { ids?: string[], where?: any }) {
-    if (params.ids) {
-      for (const id of params.ids) {
-        this.vectors.delete(id);
-      }
-    } else if (params.where) {
-      const toDelete: string[] = [];
-      for (const [id, data] of this.vectors) {
-        let matches = true;
-        for (const [key, value] of Object.entries(params.where)) {
-          if (data.metadata[key] !== value) {
-            matches = false;
-            break;
-          }
-        }
-        if (matches) toDelete.push(id);
-      }
-      for (const id of toDelete) {
-        this.vectors.delete(id);
-      }
-    }
-    this.saveToDisk();
-  }
-  
-  async count() {
-    return this.vectors.size;
-  }
-  
-  // Simple TF-IDF based embedding generation
+
+  // Generate simple TF-IDF style embeddings for semantic similarity
   private generateEmbedding(text: string): number[] {
     // Tokenize and clean text
     const tokens = text.toLowerCase()
       .replace(/[^a-zA-Z0-9\s]/g, ' ')
       .split(/\s+/)
       .filter(token => token.length > 2);
-    
+
     // Create a fixed-size vocabulary for consistent embeddings
     const vocabulary = this.getVocabulary();
     const embedding = new Array(vocabulary.length).fill(0);
-    
+
     // Calculate term frequency
     const termFreq = new Map<string, number>();
     for (const token of tokens) {
       termFreq.set(token, (termFreq.get(token) || 0) + 1);
     }
-    
+
     // Generate embedding vector
     for (const [term, freq] of termFreq) {
       const index = vocabulary.indexOf(term);
@@ -123,12 +270,12 @@ class LocalVectorStore {
         embedding[index] = freq / tokens.length; // Normalized frequency
       }
     }
-    
+
     return embedding;
   }
-  
+
   private getVocabulary(): string[] {
-    // Common programming terms vocabulary (this could be expanded)
+    // Common programming terms vocabulary
     return [
       'function', 'class', 'method', 'variable', 'const', 'let', 'var', 'return',
       'if', 'else', 'for', 'while', 'loop', 'array', 'object', 'string', 'number',
@@ -155,330 +302,11 @@ class LocalVectorStore {
       'decrypt', 'hash', 'random', 'uuid', 'token', 'auth', 'login', 'logout'
     ];
   }
-  
-  private cosineSimilarity(a: number[], b: number[]): number {
-    let dotProduct = 0;
-    let normA = 0;
-    let normB = 0;
-    
-    for (let i = 0; i < a.length; i++) {
-      dotProduct += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
+
+  // Cleanup method
+  async close(): Promise<void> {
+    if (this.db) {
+      await this.db.close();
     }
-    
-    if (normA === 0 || normB === 0) return 1; // Maximum distance for zero vectors
-    
-    return 1 - (dotProduct / (Math.sqrt(normA) * Math.sqrt(normB))); // Convert similarity to distance
-  }
-  
-  private loadFromDisk() {
-    try {
-      if (fs.existsSync(this.storePath)) {
-        const data = JSON.parse(fs.readFileSync(this.storePath, 'utf8'));
-        this.vectors = new Map(data.vectors || []);
-      }
-    } catch (error) {
-      console.warn('Failed to load vector store from disk:', error);
-      this.vectors = new Map();
-    }
-  }
-  
-  private saveToDisk() {
-    try {
-      const data = {
-        vectors: Array.from(this.vectors.entries()),
-        lastSaved: new Date().toISOString()
-      };
-      fs.writeFileSync(this.storePath, JSON.stringify(data, null, 2));
-    } catch (error) {
-      console.warn('Failed to save vector store to disk:', error);
-    }
-  }
-}
-
-class LocalVectorCollection {
-  private store: LocalVectorStore;
-  public metadata: any;
-  
-  constructor(name: string, metadata: any = {}) {
-    this.store = new LocalVectorStore(`./data/${name}-vectors.json`);
-    this.metadata = metadata;
-  }
-  
-  async add(data: { documents: string[], metadatas: any[], ids: string[] }) {
-    return this.store.add(data);
-  }
-  
-  async query(params: { queryTexts: string[], nResults: number, where?: any }) {
-    return this.store.query(params);
-  }
-  
-  async update(params: { ids: string[], documents: string[], metadatas: any[] }) {
-    return this.store.update(params);
-  }
-  
-  async delete(params: { ids?: string[], where?: any }) {
-    return this.store.delete(params);
-  }
-  
-  async count() {
-    return this.store.count();
-  }
-}
-
-class LocalVectorClient {
-  private collections: Map<string, LocalVectorCollection> = new Map();
-  
-  async getCollection(options: { name: string }) {
-    if (!this.collections.has(options.name)) {
-      throw new Error(`Collection ${options.name} does not exist`);
-    }
-    return this.collections.get(options.name)!;
-  }
-  
-  async createCollection(options: { name: string, metadata?: any }) {
-    if (this.collections.has(options.name)) {
-      return this.collections.get(options.name)!;
-    }
-    
-    // Ensure data directory exists
-    const dataDir = './data';
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-    
-    const collection = new LocalVectorCollection(options.name, options.metadata);
-    this.collections.set(options.name, collection);
-    return collection;
-  }
-}
-
-class LocalEmbeddingFunction {
-  generate(texts: string[]): number[][] {
-    // Generate TF-IDF style embeddings for semantic similarity
-    const vocabulary = new Set<string>();
-    const documents = texts.map(text => {
-      const tokens = text.toLowerCase()
-        .replace(/[^\w\s]/g, ' ')
-        .split(/\s+/)
-        .filter(token => token.length > 2);
-      tokens.forEach(token => vocabulary.add(token));
-      return tokens;
-    });
-
-    const vocabArray = Array.from(vocabulary);
-    const embeddings: number[][] = [];
-
-    for (const doc of documents) {
-      const embedding = new Array(vocabArray.length).fill(0);
-      const termFreq: Record<string, number> = {};
-      
-      // Calculate term frequency
-      doc.forEach(token => {
-        termFreq[token] = (termFreq[token] || 0) + 1;
-      });
-      
-      // Create TF-IDF embedding
-      vocabArray.forEach((term, index) => {
-        if (termFreq[term]) {
-          const tf = termFreq[term] / doc.length;
-          const df = documents.filter(d => d.includes(term)).length;
-          const idf = Math.log(documents.length / df);
-          embedding[index] = tf * idf;
-        }
-      });
-      
-      embeddings.push(embedding);
-    }
-
-    return embeddings;
-  }
-}
-
-export interface CodeMetadata {
-  id: string;
-  filePath: string;
-  functionName?: string;
-  className?: string;
-  language: string;
-  complexity: number;
-  lineCount: number;
-  lastModified: Date;
-}
-
-export interface SemanticSearchResult {
-  id: string;
-  code: string;
-  metadata: CodeMetadata;
-  similarity: number;
-}
-
-export class SemanticVectorDB {
-  private client: LocalVectorClient;
-  private collection: LocalVectorCollection | null = null;
-  private embeddingFunction: LocalEmbeddingFunction;
-
-  constructor(_apiKey?: string) {
-    this.client = new LocalVectorClient();
-    this.embeddingFunction = new LocalEmbeddingFunction();
-  }
-
-  async initialize(collectionName: string = 'code-cartographer'): Promise<void> {
-    try {
-      this.collection = await this.client.getCollection({
-        name: collectionName
-      });
-    } catch (error) {
-      // Collection doesn't exist, create it
-      this.collection = await this.client.createCollection({
-        name: collectionName,
-        metadata: {
-          description: 'Code Cartographer semantic code embeddings'
-        }
-      });
-    }
-  }
-
-  async storeCodeEmbedding(code: string, metadata: CodeMetadata): Promise<void> {
-    if (!this.collection) {
-      throw new Error('Vector database not initialized. Call initialize() first.');
-    }
-
-    await this.collection.add({
-      documents: [code],
-      metadatas: [this.metadataToRecord(metadata)],
-      ids: [metadata.id]
-    });
-  }
-
-  async storeMultipleEmbeddings(
-    codeChunks: string[], 
-    metadataList: CodeMetadata[]
-  ): Promise<void> {
-    if (!this.collection) {
-      throw new Error('Vector database not initialized. Call initialize() first.');
-    }
-
-    if (codeChunks.length !== metadataList.length) {
-      throw new Error('Code chunks and metadata arrays must have the same length');
-    }
-
-    await this.collection.add({
-      documents: codeChunks,
-      metadatas: metadataList.map(m => this.metadataToRecord(m)),
-      ids: metadataList.map(m => m.id)
-    });
-  }
-
-  async findSimilarCode(
-    query: string, 
-    limit: number = 5,
-    filters?: Record<string, any>
-  ): Promise<SemanticSearchResult[]> {
-    if (!this.collection) {
-      throw new Error('Vector database not initialized. Call initialize() first.');
-    }
-
-    const results = await this.collection.query({
-      queryTexts: [query],
-      nResults: limit,
-      where: filters
-    });
-
-    if (!results.documents?.[0] || !results.metadatas?.[0] || !results.distances?.[0]) {
-      return [];
-    }
-
-    return results.documents[0].map((doc, index) => ({
-      id: results.ids![0][index],
-      code: doc!,
-      metadata: this.recordToMetadata(results.metadatas![0][index]!),
-      similarity: 1 - (results.distances![0][index] || 0) // Convert distance to similarity
-    }));
-  }
-
-  async findSimilarCodeByFile(
-    filePath: string,
-    limit: number = 5
-  ): Promise<SemanticSearchResult[]> {
-    return this.findSimilarCode('', limit, { filePath });
-  }
-
-  async findSimilarCodeByLanguage(
-    query: string,
-    language: string,
-    limit: number = 5
-  ): Promise<SemanticSearchResult[]> {
-    return this.findSimilarCode(query, limit, { language });
-  }
-
-  async updateCodeEmbedding(id: string, code: string, metadata: CodeMetadata): Promise<void> {
-    if (!this.collection) {
-      throw new Error('Vector database not initialized. Call initialize() first.');
-    }
-
-    await this.collection.update({
-      ids: [id],
-      documents: [code],
-      metadatas: [this.metadataToRecord(metadata)]
-    });
-  }
-
-  async deleteCodeEmbedding(id: string): Promise<void> {
-    if (!this.collection) {
-      throw new Error('Vector database not initialized. Call initialize() first.');
-    }
-
-    await this.collection.delete({
-      ids: [id]
-    });
-  }
-
-  async deleteCodeEmbeddingsByFile(filePath: string): Promise<void> {
-    if (!this.collection) {
-      throw new Error('Vector database not initialized. Call initialize() first.');
-    }
-
-    await this.collection.delete({
-      where: { filePath }
-    });
-  }
-
-  async getCollectionStats(): Promise<{ count: number; metadata: any }> {
-    if (!this.collection) {
-      throw new Error('Vector database not initialized. Call initialize() first.');
-    }
-
-    const count = await this.collection.count();
-    return {
-      count,
-      metadata: this.collection.metadata
-    };
-  }
-
-  private metadataToRecord(metadata: CodeMetadata): Record<string, any> {
-    return {
-      filePath: metadata.filePath,
-      functionName: metadata.functionName || null,
-      className: metadata.className || null,
-      language: metadata.language,
-      complexity: metadata.complexity,
-      lineCount: metadata.lineCount,
-      lastModified: metadata.lastModified.toISOString()
-    };
-  }
-
-  private recordToMetadata(record: Record<string, any>): CodeMetadata {
-    return {
-      id: record.id || '',
-      filePath: record.filePath || '',
-      functionName: record.functionName || undefined,
-      className: record.className || undefined,
-      language: record.language || 'unknown',
-      complexity: record.complexity || 0,
-      lineCount: record.lineCount || 0,
-      lastModified: new Date(record.lastModified || Date.now())
-    };
   }
 }

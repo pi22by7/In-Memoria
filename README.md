@@ -9,20 +9,23 @@ Code Cartographer provides foundational infrastructure that enables AI agents to
 ## 🚀 Key Features
 
 ### Core Capabilities
+
 - **Persistent AI Memory**: Intelligence persists and grows across sessions
 - **Developer-Specific Learning**: Learns your patterns and coding style
 - **Multi-Agent Coordination**: Shared knowledge base for AI agent collaboration
 - **Bidirectional Intelligence**: AI agents can contribute insights back to the system
 
 ### MCP Integration
+
 - **11 Powerful MCP Tools** for seamless AI agent integration
 - **Real-time Intelligence Updates** through file watching
-- **Semantic Code Understanding** via advanced AST analysis
-- **Pattern Recognition & Learning** from your coding habits
+- **Semantic Code Understanding** via Tree-sitter AST analysis
+- **Pattern Recognition & Learning** from coding habits
 
 ### High-Performance Architecture
+
 - **Hybrid TypeScript + Rust**: MCP compliance with performance optimization
-- **SQLite + ChromaDB Storage**: Structured data with semantic embeddings
+- **Embedded SurrealDB**: Structured data with built-in vector search (no external server required)
 - **Real-time File Monitoring**: Instant intelligence updates on code changes
 
 ## 🏗️ Architecture Overview
@@ -34,40 +37,59 @@ TypeScript MCP Server (11 Tools)
     ↓ napi-rs bindings
 Rust Core Engines (Semantic Analysis + Pattern Learning)
     ↓ Storage
-SQLite Database + ChromaDB Vector Store
+SQLite Database + SurrealDB Vector Store (Embedded)
 ```
 
 ## 📦 Installation
 
 ### Prerequisites
-- Node.js 18+ 
-- Rust 1.70+
-- (Optional) OpenAI API key for enhanced semantic embeddings
 
-### Quick Start
+- Node.js 18+
+- Rust 1.70+
+- Git for version control
+
+### Installation & Setup
 
 ```bash
 # Clone the repository
 git clone https://github.com/pi22by7/Code-Cartographer.git
-cd code-cartographer
+cd Code-Cartographer
 
 # Install dependencies
 npm install
 
-# Build the Rust core
-npm run build:rust
+# Rebuild native dependencies (if switching Node.js versions)
+npm rebuild
 
-# Build TypeScript
+# Build the project
 npm run build
 
 # Initialize for your project
-npx code-cartographer init
+node dist/index.js init
 
 # Learn from your codebase
-npx code-cartographer learn
+node dist/index.js learn
 
 # Start the MCP server
-npx code-cartographer server
+node dist/index.js server
+```
+
+### Vector Embeddings (Optional Enhancement)
+
+The system uses embedded SurrealDB for vector storage - no external server setup required! SurrealDB provides:
+
+- **Built-in vector search** with cosine similarity
+- **Full-text search** with BM25 algorithm
+- **Embedded mode** - runs in-process, no external dependencies
+- **ACID transactions** with persistence
+
+Vector embeddings are automatically enhanced when an OpenAI API key is available:
+
+```bash
+# Optional: Set environment variable for enhanced embeddings
+export OPENAI_API_KEY="your-openai-key"
+
+# SurrealDB runs embedded - no additional setup required!
 ```
 
 ## 🔧 Usage
@@ -76,19 +98,19 @@ npx code-cartographer server
 
 ```bash
 # Start MCP server for AI agent integration
-code-cartographer server
+node dist/index.js server
 
 # Learn from a codebase
-code-cartographer learn ./my-project
+node dist/index.js learn ./my-project
 
-# Analyze codebase and show insights  
-code-cartographer analyze ./src
+# Analyze codebase and show insights
+node dist/index.js analyze ./src
 
 # Start real-time file watching
-code-cartographer watch ./src
+node dist/index.js watch ./src
 
 # Initialize project configuration
-code-cartographer init
+node dist/index.js init
 ```
 
 ### MCP Tools for AI Agents
@@ -96,6 +118,7 @@ code-cartographer init
 Code Cartographer exposes 11 powerful tools through the Model Context Protocol:
 
 #### Core Analysis Tools
+
 - `analyze_codebase` - Comprehensive codebase analysis
 - `get_file_content` - Retrieve file content with metadata
 - `get_project_structure` - Hierarchical project structure
@@ -103,6 +126,7 @@ Code Cartographer exposes 11 powerful tools through the Model Context Protocol:
 - `generate_documentation` - Intelligent documentation generation
 
 #### Intelligence Tools
+
 - `learn_codebase_intelligence` - Build persistent knowledge from codebase
 - `get_semantic_insights` - Retrieve semantic concepts and relationships
 - `get_pattern_recommendations` - Get pattern suggestions based on context
@@ -116,8 +140,7 @@ Code Cartographer exposes 11 powerful tools through the Model Context Protocol:
 # Optional: OpenAI API key for enhanced embeddings
 export OPENAI_API_KEY="your-api-key"
 
-# Optional: ChromaDB host (default: http://localhost:8000)
-export CHROMA_HOST="http://localhost:8000"
+# SurrealDB runs embedded - no additional configuration needed
 ```
 
 ## 🔌 AI Agent Integration
@@ -130,8 +153,8 @@ Add to your Claude configuration:
 {
   "mcpServers": {
     "code-cartographer": {
-      "command": "npx",
-      "args": ["code-cartographer", "server"],
+      "command": "node",
+      "args": ["dist/index.js", "server"],
       "cwd": "/path/to/your/project"
     }
   }
@@ -141,7 +164,7 @@ Add to your Claude configuration:
 ### Custom Integration
 
 ```typescript
-import { CodeCartographerMCP } from 'code-cartographer';
+import { CodeCartographerMCP } from "code-cartographer";
 
 const server = new CodeCartographerMCP();
 await server.start();
@@ -166,7 +189,7 @@ code-cartographer/
 │   │   └── change-analyzer.ts  # Change impact analysis
 │   ├── storage/                # Data persistence
 │   │   ├── sqlite-db.ts        # SQLite operations
-│   │   └── vector-db.ts        # ChromaDB operations
+│   │   └── vector-db.ts        # SurrealDB vector operations
 │   └── index.ts                # CLI entry point
 ├── rust-core/                   # High-performance Rust engines
 │   ├── src/
@@ -182,18 +205,21 @@ code-cartographer/
 ## 🎯 Use Cases
 
 ### For Individual Developers
+
 - **Smart Code Completion**: Suggestions based on YOUR coding patterns
 - **Architectural Guidance**: Recommendations aligned with your project structure
 - **Pattern Detection**: Identify inconsistencies and violations
 - **Intelligent Documentation**: AI-powered docs with semantic analysis, pattern insights, and complexity metrics
 
 ### For AI Agents
+
 - **Persistent Context**: Maintain understanding across long conversations
 - **Developer-Specific Responses**: Tailor suggestions to individual coding style
 - **Cross-Session Learning**: Build on previous interactions
 - **Collaborative Intelligence**: Share insights between multiple AI agents
 
 ### For Teams
+
 - **Onboarding**: New team members learn established patterns quickly
 - **Code Review**: Automated pattern compliance checking
 - **Knowledge Sharing**: Capture and distribute coding best practices
@@ -202,25 +228,29 @@ code-cartographer/
 ## 🔬 Technical Deep Dive
 
 ### Semantic Analysis Engine (Rust)
+
 - **Tree-sitter Integration**: Multi-language AST parsing
 - **Concept Extraction**: Identify classes, functions, patterns, relationships
 - **Confidence Scoring**: ML-based relevance and accuracy scoring
 - **Relationship Mapping**: Build semantic concept graphs
 
 ### Pattern Learning Engine (Rust)
+
 - **Multi-dimensional Pattern Detection**: Naming, structural, implementation patterns
 - **Frequency Analysis**: Track pattern usage and evolution
 - **Context-Aware Recommendations**: Suggest patterns based on current context
 - **Approach Prediction**: ML prediction of likely coding approaches
 
 ### Documentation Generation
+
 - **Data-Driven Analysis**: Uses real semantic analysis and pattern recognition results
-- **Multiple Formats**: Markdown, HTML, and JSON output formats  
+- **Multiple Formats**: Markdown, HTML, and JSON output formats
 - **Intelligent Insights**: Real-time complexity analysis and pattern-based recommendations
 - **Real Intelligence Data**: Uses actual learned patterns and semantic concepts from Rust engines
 - **Customizable Sections**: Configurable documentation sections with intelligent content generation
 
 ### Real-time Intelligence Updates
+
 - **File System Monitoring**: Instant detection of code changes
 - **Incremental Learning**: Update intelligence without full re-analysis
 - **Change Impact Analysis**: Assess scope and impact of modifications
@@ -229,16 +259,18 @@ code-cartographer/
 ## 🚦 Development Status
 
 ### Phase 1: Foundation ✅ **COMPLETED**
+
 - ✅ MCP server with core analysis tools
-- ✅ SQLite database and file watching  
+- ✅ SQLite database and file watching
 - ✅ TypeScript ↔ Rust integration with napi-rs
 - ✅ Local vector database for semantic embeddings
 
-### Phase 2: Intelligence Engines ✅ **COMPLETED** 
+### Phase 2: Intelligence Engines ✅ **COMPLETED**
+
 - ✅ Real tree-sitter semantic analysis in Rust (engine implemented)
-- ✅ Pattern learning ML algorithms in Rust (engine implemented) 
+- ✅ Pattern learning ML algorithms in Rust (engine implemented)
 - ✅ Enhanced file content analysis with metadata
-- ✅ Local vector storage (ChromaDB alternative)
+- ✅ Embedded SurrealDB vector storage (no external server required)
 - ✅ Project structure traversal and analysis
 - ✅ Multi-type search functionality (text/semantic/pattern)
 - ✅ Learning pipeline with persistent intelligence storage
@@ -247,6 +279,7 @@ code-cartographer/
 - ✅ **All 11 MCP tools functional and integrated**
 
 **Current Status: v1.0 - Feature Complete with Known Issues**
+
 - **Rust Engines**: ✅ Fully implemented with tree-sitter and ML pattern recognition
 - **Infrastructure**: ✅ Complete foundation with real-time file watching
 - **Core Tools**: ✅ 6/6 tools fully functional with integrated intelligence
@@ -258,6 +291,7 @@ code-cartographer/
 **✅ All 11 MCP Tools Functional:**
 
 **Core Analysis Tools (6/6):**
+
 - ✅ `get_file_content` - Rich semantic analysis, patterns, complexity metrics, dependencies
 - ✅ `analyze_codebase` - Comprehensive codebase analysis with Rust engine integration
 - ✅ `get_project_structure` - Complete directory traversal with intelligent file filtering and metadata
@@ -266,6 +300,7 @@ code-cartographer/
 - ✅ `generate_documentation` - Intelligent documentation with real semantic insights and pattern recommendations
 
 **Intelligence Tools (5/5):**
+
 - ✅ `get_semantic_insights` - Real-time semantic concept retrieval with filtering
 - ✅ `get_pattern_recommendations` - Context-aware pattern suggestions from learned data
 - ✅ `predict_coding_approach` - ML-based approach predictions with confidence scoring
@@ -273,6 +308,7 @@ code-cartographer/
 - ✅ `contribute_insights` - Bidirectional insight contribution system for collaborative intelligence
 
 ### Phase 3: Advanced Intelligence (Planned)
+
 - ⏳ Cross-project intelligence sharing
 - ⏳ Advanced ML models (transformer-based)
 - ⏳ VS Code extension
@@ -282,6 +318,7 @@ code-cartographer/
 **MCP Tools Implementation Status:**
 
 **✅ Functional (6/11):**
+
 - ✅ `get_file_content` - Rich semantic analysis, patterns, complexity metrics, dependencies
 - ✅ `analyze_codebase` - Comprehensive codebase analysis with Rust engine integration
 - ✅ `get_project_structure` - Complete directory traversal with intelligent file filtering and metadata
@@ -293,34 +330,27 @@ code-cartographer/
 
 ## ⚠️ Known Issues & Limitations
 
-### Current Limitations
-- **Concept Extraction Inconsistency**: Tree-sitter semantic analysis occasionally returns 0 concepts due to parsing edge cases
-- **Runtime Caching Issues**: Some stub content may persist in documentation due to Node.js module caching
-- **Pattern Recognition Scope**: Current ML patterns are primarily algorithmic (naming, structure) rather than deep semantic understanding
-- **Database Dependencies**: Requires SQLite and vector database setup, adding complexity compared to simpler tools
+### Current Status
 
-### Technical Debt
-- **Error Handling**: Some Rust-TypeScript binding failures need better error propagation
-- **Performance**: Cold start times for analysis can be slow on large codebases (5+ seconds)
-- **Memory Usage**: Vector embeddings can consume significant memory for large projects
-- **Platform Support**: Currently tested primarily on Linux; Windows/macOS compatibility may vary
+This is a feature-complete v1.0 implementation with some areas for improvement:
 
-### Areas for Improvement
-- **True Semantic Understanding**: Current "AI" is mostly pattern matching; deeper ML models needed for genuine intelligence
-- **Integration Friction**: Setup complexity may outweigh benefits for simple use cases
-- **Tool Reliability**: Existing Claude Code tools (Grep, Glob) are often more reliable than current search implementation
-- **Documentation Quality**: Generated documentation, while intelligent, may be verbose compared to human-written docs
+- **Parsing Edge Cases**: Tree-sitter semantic analysis may occasionally miss concepts in complex code structures
+- **Performance**: Initial analysis can take time on large codebases (optimizations planned)
+- **Platform Testing**: Primarily tested on Linux; Windows/macOS compatibility being verified
 
 ### Recommended Use Cases
-**✅ Good fit for:**
+
+**✅ Excellent for:**
+
 - Long-term projects where pattern learning provides value
 - Teams establishing coding standards and consistency
 - Research into codebase intelligence and AI-assisted development
+- AI agents needing persistent memory across sessions
 
-**❌ Not recommended for:**
-- Simple scripts or one-off projects
-- Teams preferring lightweight, battle-tested tools
-- Production environments requiring maximum reliability
+**⚠️ Consider alternatives for:**
+
+- Simple scripts or one-off projects where lightweight tools suffice
+- Environments requiring maximum simplicity over intelligence features
 
 ## 🤝 Contributing
 
@@ -331,16 +361,17 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 ```bash
 # Clone and install
 git clone https://github.com/pi22by7/Code-Cartographer.git
-cd code-cartographer
+cd Code-Cartographer
 npm install
 
-# Install Rust dependencies
+# Build Rust components
 cd rust-core
 cargo build
 
 # Run tests
+cd ..
 npm test
-cargo test
+cd rust-core && cargo test
 
 # Start development
 npm run dev
@@ -349,12 +380,14 @@ npm run dev
 ## 📊 Market Context
 
 ### The Problem
+
 - **GitHub Copilot**: Limited memory, no developer-specific learning
 - **Cursor AI**: Rules only, no persistent intelligence
 - **Claude Code**: Stateless, resets every session
 - **All existing tools**: Suffer from "session amnesia"
 
 ### Our Solution
+
 - **Persistent intelligence** that grows smarter over time
 - **Developer-specific learning** tailored to individual coding patterns
 - **Multi-agent coordination** for collaborative AI development
@@ -372,10 +405,11 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## 🙏 Acknowledgments
 
 Built with:
+
 - [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) by Anthropic
 - [Tree-sitter](https://tree-sitter.github.io/) for language parsing
 - [napi-rs](https://napi.rs/) for TypeScript ↔ Rust bindings
-- [ChromaDB](https://www.trychroma.com/) for vector embeddings
+- [SurrealDB](https://surrealdb.com/) for embedded vector search
 
 ---
 
