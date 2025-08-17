@@ -1,6 +1,6 @@
 {
   "name": "in-memoria",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Persistent intelligence infrastructure for agentic development",
   "main": "dist/index.js",
   "type": "module",
@@ -12,8 +12,10 @@
     "README.md",
     "LICENSE",
     "schemas",
-    "*.node",
-    "rust-core/*.node"
+    "rust-core/index.js",
+    "rust-core/index.d.ts",
+    "rust-core/in-memoria-core.linux-x64-gnu.node",
+    "rust-core/package.json"
   ],
   "scripts": {
     "build": "tsc && npm run build:rust && npm run copy-assets",

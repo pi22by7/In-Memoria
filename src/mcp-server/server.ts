@@ -27,7 +27,7 @@ export class CodeCartographerMCP {
     this.server = new Server(
       {
         name: 'in-memoria',
-        version: '0.1.0',
+        version: '0.2.0',
       },
       {
         capabilities: {
@@ -44,16 +44,16 @@ export class CodeCartographerMCP {
     // Initialize storage
     this.database = new SQLiteDatabase('./in-memoria.db');
     this.vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
-    
+
     // Initialize engines
     this.semanticEngine = new SemanticEngine(this.database, this.vectorDB);
     this.patternEngine = new PatternEngine(this.database);
-    
+
     // Initialize tool collections
     this.coreTools = new CoreAnalysisTools(this.semanticEngine, this.patternEngine, this.database);
     this.intelligenceTools = new IntelligenceTools(
-      this.semanticEngine, 
-      this.patternEngine, 
+      this.semanticEngine,
+      this.patternEngine,
       this.database
     );
   }
@@ -76,7 +76,7 @@ export class CodeCartographerMCP {
       try {
         // Route to appropriate tool handler
         const result = await this.routeToolCall(name, args);
-        
+
         return {
           content: [
             {
@@ -89,7 +89,7 @@ export class CodeCartographerMCP {
         if (error instanceof McpError) {
           throw error;
         }
-        
+
         throw new McpError(
           ErrorCode.InternalError,
           `Tool execution failed: ${error instanceof Error ? error.message : String(error)}`
@@ -103,35 +103,35 @@ export class CodeCartographerMCP {
     switch (name) {
       case 'analyze_codebase':
         return await this.coreTools.analyzeCodebase(args);
-      
+
       case 'get_file_content':
         return await this.coreTools.getFileContent(args);
-      
+
       case 'get_project_structure':
         return await this.coreTools.getProjectStructure(args);
-      
+
       case 'search_codebase':
         return await this.coreTools.searchCodebase(args);
-      
+
       case 'generate_documentation':
         return await this.coreTools.generateDocumentation(args);
 
       // Intelligence Tools
       case 'learn_codebase_intelligence':
         return await this.intelligenceTools.learnCodebaseIntelligence(args);
-      
+
       case 'get_semantic_insights':
         return await this.intelligenceTools.getSemanticInsights(args);
-      
+
       case 'get_pattern_recommendations':
         return await this.intelligenceTools.getPatternRecommendations(args);
-      
+
       case 'predict_coding_approach':
         return await this.intelligenceTools.predictCodingApproach(args);
-      
+
       case 'get_developer_profile':
         return await this.intelligenceTools.getDeveloperProfile(args);
-      
+
       case 'contribute_insights':
         return await this.intelligenceTools.contributeInsights(args);
 
@@ -146,8 +146,8 @@ export class CodeCartographerMCP {
   async start(): Promise<void> {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    
-    console.error('Code Cartographer MCP Server started');
+
+    console.error('In Memoria MCP Server started');
   }
 
   async stop(): Promise<void> {
@@ -159,17 +159,17 @@ export class CodeCartographerMCP {
 // Export for CLI usage
 export async function runServer(): Promise<void> {
   const server = new CodeCartographerMCP();
-  
+
   // Handle graceful shutdown
   process.on('SIGINT', async () => {
     await server.stop();
     process.exit(0);
   });
-  
+
   process.on('SIGTERM', async () => {
     await server.stop();
     process.exit(0);
   });
-  
+
   await server.start();
 }

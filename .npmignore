@@ -1,0 +1,13 @@
+# Rust build artifacts
+rust-core/target/
+rust-core/src/
+rust-core/build.rs
+rust-core/Cargo.lock
+
+# Old binary files
+rust-core/code-cartographer-core.linux-x64-gnu.node
+
+# Development files
+src/
+.env
+*.log

@@ -7,6 +7,7 @@ Welcome! We're excited that you're interested in contributing to In Memoria. Thi
 In Memoria is building the future of persistent AI intelligence for development. We're creating revolutionary infrastructure that enables AI agents to maintain smart, cumulative understanding of codebases across sessions.
 
 ### Core Principles
+
 - **Performance First**: Rust for compute-intensive operations, TypeScript for integration
 - **Developer Experience**: Simple, intuitive APIs and tools
 - **Extensibility**: Plugin architecture for custom intelligence modules
@@ -54,7 +55,7 @@ npm run dev
 in-memoria/
 ├── src/                          # TypeScript source code
 │   ├── mcp-server/              # MCP server and tools
-│   ├── engines/                 # TypeScript interfaces to Rust  
+│   ├── engines/                 # TypeScript interfaces to Rust
 │   ├── storage/                 # Database and vector storage
 │   ├── watchers/               # File system monitoring
 │   └── index.ts                # CLI entry point
@@ -74,13 +75,15 @@ in-memoria/
 ### 1. Choose Your Contribution
 
 #### Good First Issues
+
 - Fix compiler warnings in Rust code
 - Add unit tests for pattern detection
-- Improve CLI help text and error messages  
+- Improve CLI help text and error messages
 - Add examples for MCP tool usage
 - Update documentation
 
 #### Core Features (Advanced)
+
 - Complete remaining MCP tool implementations
 - Enhance pattern learning algorithms
 - Improve semantic analysis accuracy
@@ -113,10 +116,11 @@ git push origin feature/your-feature-name
 ### 3. Code Quality Standards
 
 #### TypeScript Guidelines
+
 ```typescript
 // ✅ Good: Descriptive names, proper typing
 async function analyzeSemanticConcepts(
-  filePath: string, 
+  filePath: string,
   content: string
 ): Promise<SemanticConcept[]> {
   // Implementation...
@@ -129,10 +133,11 @@ async function doStuff(x: any): Promise<any> {
 ```
 
 #### Rust Guidelines
+
 ```rust
 // ✅ Good: Clear ownership, error handling
 pub async fn extract_concepts(
-    &mut self, 
+    &mut self,
     file_path: &str
 ) -> Result<Vec<SemanticConcept>, AnalysisError> {
     // Implementation...
@@ -143,6 +148,7 @@ let result = self.parse_file(path).unwrap(); // Don't do this
 ```
 
 #### General Guidelines
+
 - **Naming**: Use descriptive names for functions, variables, and types
 - **Documentation**: Document all public APIs with examples
 - **Error Handling**: Use proper error types, never panic in library code
@@ -154,21 +160,24 @@ let result = self.parse_file(path).unwrap(); // Don't do this
 ### Test Categories
 
 #### Unit Tests
+
 ```bash
 # TypeScript unit tests
 npm run test:unit
 
-# Rust unit tests  
+# Rust unit tests
 cd rust-core && cargo test
 ```
 
 #### Integration Tests
+
 ```bash
 # End-to-end MCP tool testing
 npm run test:integration
 ```
 
 #### Performance Tests
+
 ```bash
 # Benchmark critical operations
 npm run test:perf
@@ -177,24 +186,26 @@ npm run test:perf
 ### Writing Tests
 
 #### TypeScript Example
+
 ```typescript
 // tests/engines/semantic-engine.test.ts
-describe('SemanticEngine', () => {
-  it('should extract functions from TypeScript code', async () => {
+describe("SemanticEngine", () => {
+  it("should extract functions from TypeScript code", async () => {
     const engine = new SemanticEngine(mockDatabase, mockVectorDB);
     const concepts = await engine.analyzeFileContent(
-      'test.ts',
+      "test.ts",
       'function hello() { return "world"; }'
     );
-    
+
     expect(concepts).toHaveLength(1);
-    expect(concepts[0].type).toBe('function');
-    expect(concepts[0].name).toBe('hello');
+    expect(concepts[0].type).toBe("function");
+    expect(concepts[0].name).toBe("hello");
   });
 });
 ```
 
 #### Rust Example
+
 ```rust
 // rust-core/src/semantic.rs
 #[cfg(test)]
@@ -208,7 +219,7 @@ mod tests {
             .analyze_file_content("test.ts".to_string(), "function hello() {}".to_string())
             .await
             .unwrap();
-            
+
         assert_eq!(concepts.len(), 1);
         assert_eq!(concepts[0].concept_type, "function");
         assert_eq!(concepts[0].name, "hello");
@@ -231,30 +242,36 @@ mod tests {
 
 ```markdown
 ## Description
+
 Brief description of changes and motivation.
 
 ## Type of Change
+
 - [ ] Bug fix (non-breaking change which fixes an issue)
 - [ ] New feature (non-breaking change which adds functionality)
 - [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
 - [ ] Documentation update
 
 ## Testing
+
 - [ ] Unit tests added/updated
 - [ ] Integration tests pass
 - [ ] Manual testing completed
 
 ## Performance Impact
+
 - [ ] No performance impact
 - [ ] Performance improved
 - [ ] Performance impact assessed and acceptable
 
 ## Screenshots/Examples
+
 If applicable, add screenshots or code examples.
 
 ## Checklist
+
 - [ ] My code follows the project's style guidelines
-- [ ] I have performed a self-review of my own code  
+- [ ] I have performed a self-review of my own code
 - [ ] I have commented my code, particularly in hard-to-understand areas
 - [ ] I have made corresponding changes to the documentation
 - [ ] My changes generate no new warnings
@@ -272,6 +289,7 @@ If applicable, add screenshots or code examples.
 ## 🐛 Bug Reports
 
 ### Before Filing
+
 1. Search existing issues for duplicates
 2. Try the latest version
 3. Collect relevant information:
@@ -282,12 +300,14 @@ If applicable, add screenshots or code examples.
    - Expected vs actual behavior
 
 ### Bug Report Template
+
 ```markdown
 **Bug Description**
 A clear and concise description of what the bug is.
 
 **To Reproduce**
 Steps to reproduce the behavior:
+
 1. Go to '...'
 2. Click on '....'
 3. Scroll down to '....'
@@ -297,10 +317,11 @@ Steps to reproduce the behavior:
 A clear and concise description of what you expected to happen.
 
 **Environment**
+
 - OS: [e.g. macOS 13.0]
 - Node.js: [e.g. 20.5.0]
 - Rust: [e.g. 1.72.0]
-- In Memoria: [e.g. 0.1.0]
+- In Memoria: [e.g. 0.2.0]
 
 **Additional Context**
 Add any other context about the problem here.
@@ -309,6 +330,7 @@ Add any other context about the problem here.
 ## 💡 Feature Requests
 
 ### Process
+
 1. **Discussion**: Open an issue to discuss the feature
 2. **Design**: Work with maintainers on design approach
 3. **Implementation**: Create pull request with implementation
@@ -316,6 +338,7 @@ Add any other context about the problem here.
 5. **Documentation**: Update docs and examples
 
 ### Feature Request Template
+
 ```markdown
 **Is your feature request related to a problem?**
 A clear and concise description of what the problem is.
@@ -330,6 +353,7 @@ A clear and concise description of any alternative solutions.
 Add any other context or screenshots about the feature request.
 
 **Implementation Considerations**
+
 - Performance impact
 - Breaking changes
 - Documentation needs
@@ -339,16 +363,19 @@ Add any other context or screenshots about the feature request.
 ## 🏗️ Architecture Guidelines
 
 ### TypeScript Layer
+
 - **Purpose**: MCP integration, CLI interface, orchestration
 - **Patterns**: Dependency injection, error handling, async/await
 - **Responsibilities**: API surface, configuration, file I/O
 
-### Rust Layer  
+### Rust Layer
+
 - **Purpose**: High-performance analysis, ML algorithms, data processing
 - **Patterns**: Result types, ownership, zero-copy where possible
 - **Responsibilities**: Parsing, analysis, pattern learning
 
 ### Integration Guidelines
+
 - **napi-rs bindings**: Keep interface simple, pass owned data
 - **Error handling**: Convert Rust errors to TypeScript errors properly
 - **Performance**: Minimize TypeScript ↔ Rust boundary crossings
@@ -357,6 +384,7 @@ Add any other context or screenshots about the feature request.
 ## 📚 Resources
 
 ### Learning Resources
+
 - [Model Context Protocol Specification](https://modelcontextprotocol.io/)
 - [Tree-sitter Documentation](https://tree-sitter.github.io/tree-sitter/)
 - [napi-rs Guide](https://napi.rs/)
@@ -364,6 +392,7 @@ Add any other context or screenshots about the feature request.
 - [Rust Book](https://doc.rust-lang.org/book/)
 
 ### Project Resources
+
 - [Architecture Decision Records](docs/adr/)
 - [API Documentation](docs/api/)
 - [Performance Benchmarks](docs/benchmarks/)
@@ -372,11 +401,13 @@ Add any other context or screenshots about the feature request.
 ## ❓ Getting Help
 
 ### Communication Channels
+
 - **GitHub Issues**: Bug reports and feature requests
 - **GitHub Discussions**: General questions and ideas
 - **Discord**: Real-time chat and community (coming soon)
 
 ### Maintainer Availability
+
 - **Response Time**: We aim to respond to issues within 48 hours
 - **Review Time**: Pull requests are typically reviewed within a week
 - **Release Cycle**: Monthly releases with weekly patch releases as needed
@@ -384,8 +415,9 @@ Add any other context or screenshots about the feature request.
 ## 🙏 Recognition
 
 Contributors are recognized in several ways:
+
 - **Contributors list** in README.md
-- **Release notes** mentioning significant contributions  
+- **Release notes** mentioning significant contributions
 - **GitHub contributor graph** showing activity
 - **Special recognition** for major contributions
 

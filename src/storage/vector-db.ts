@@ -44,7 +44,7 @@ export class SemanticVectorDB {
     }
   }
 
-  async initialize(collectionName: string = 'code-cartographer'): Promise<void> {
+  async initialize(collectionName: string = 'in-memoria'): Promise<void> {
     try {
       // Use in-memory embedded mode for SurrealDB with Node.js engine
       // Falls back to persistent surrealkv:// if needed for durability
@@ -52,7 +52,7 @@ export class SemanticVectorDB {
 
       // Use database and namespace
       await this.db.use({
-        namespace: 'code_cartographer',
+        namespace: 'in_memoria',
         database: collectionName
       });
 
@@ -244,7 +244,7 @@ export class SemanticVectorDB {
     return {
       count,
       metadata: {
-        description: 'Code Cartographer semantic code embeddings',
+        description: 'In Memoria semantic code embeddings',
         engine: 'SurrealDB'
       }
     };

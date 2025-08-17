@@ -1,5 +1,5 @@
 // Import the actual napi-rs generated bindings
-import { SemanticAnalyzer as NativeSemanticAnalyzer, PatternLearner as NativePatternLearner, AstParser as NativeAstParser, initCore } from '../index.mjs';
+import { SemanticAnalyzer as NativeSemanticAnalyzer, PatternLearner as NativePatternLearner, AstParser as NativeAstParser, initCore } from '../rust-core/index.js';
 
 // Re-export the native classes directly
 export { NativeSemanticAnalyzer as SemanticAnalyzer, NativePatternLearner as PatternLearner, NativeAstParser as AstParser, initCore };
@@ -17,4 +17,4 @@ export type {
     AstNode,
     Symbol,
     PatternExample
-} from '../index.js';
+} from '../rust-core/index.js';

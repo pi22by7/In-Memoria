@@ -1,7 +1,7 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { 
-  CodebaseAnalysisSchema, 
-  SearchQuerySchema, 
+import {
+  CodebaseAnalysisSchema,
+  SearchQuerySchema,
   DocOptionsSchema,
   type CodebaseAnalysis,
   type SearchQuery,
@@ -140,10 +140,10 @@ export class CoreAnalysisTools {
     try {
       // Perform comprehensive semantic analysis
       const analysis = await this.semanticEngine.analyzeCodebase(args.path);
-      
+
       // Extract and learn patterns
       const patterns = await this.patternEngine.extractPatterns(args.path);
-      
+
       // Enhance with additional insights
       const enhancedAnalysis = {
         path: args.path,
@@ -162,7 +162,7 @@ export class CoreAnalysisTools {
         })),
         // Note: Enhanced insights would be available through separate tools
       };
-      
+
       return enhancedAnalysis;
     } catch (error) {
       console.error('Codebase analysis error:', error);
@@ -179,11 +179,11 @@ export class CoreAnalysisTools {
     }
   }
 
-  async getFileContent(args: { path: string }): Promise<{ 
-    content: string; 
-    metadata: { 
-      size: number; 
-      lastModified: Date; 
+  async getFileContent(args: { path: string }): Promise<{
+    content: string;
+    metadata: {
+      size: number;
+      lastModified: Date;
       language: string;
       lineCount: number;
       semanticConcepts: Array<{
@@ -205,27 +205,27 @@ export class CoreAnalysisTools {
       };
       dependencies: string[];
       exports: string[];
-    } 
+    }
   }> {
     try {
       const content = readFileSync(args.path, 'utf-8');
       const stats = statSync(args.path);
       const language = this.detectLanguage(args.path);
       const lineCount = content.split('\n').length;
-      
+
       // Perform semantic analysis using our Rust engine
       const semanticConcepts = await this.semanticEngine.analyzeFileContent(args.path, content);
-      
+
       // Extract patterns using our pattern engine
       const patterns = await this.patternEngine.analyzeFilePatterns(args.path, content);
-      
+
       // Calculate detailed complexity metrics
       const complexity = this.calculateDetailedComplexity(content, semanticConcepts);
-      
+
       // Extract dependencies and exports
       const dependencies = this.extractDependencies(content, language);
       const exports = this.extractExports(content, language);
-      
+
       return {
         content,
         metadata: {
@@ -255,7 +255,7 @@ export class CoreAnalysisTools {
   }> {
     const structure = await this.buildDirectoryStructure(args.path, args.maxDepth || 5);
     const summary = this.calculateStructureSummary(structure);
-    
+
     return { structure, summary };
   }
 
@@ -270,7 +270,7 @@ export class CoreAnalysisTools {
     searchType: string;
   }> {
     const validatedQuery = SearchQuerySchema.parse(args);
-    
+
     switch (validatedQuery.type || 'text') {
       case 'semantic':
         return await this.semanticSearch(validatedQuery);
@@ -290,12 +290,12 @@ export class CoreAnalysisTools {
     }
   }> {
     const options = DocOptionsSchema.parse(args);
-    
+
     // Use our intelligent analysis instead of basic codebase analysis
     const intelligentAnalysis = await this.gatherIntelligentAnalysis(args.path);
-    
+
     const documentation = await this.buildIntelligentDocumentation(intelligentAnalysis, options);
-    
+
     return {
       documentation,
       metadata: {
@@ -333,10 +333,10 @@ export class CoreAnalysisTools {
       'vue': 'vue',
       'svelte': 'svelte'
     };
-    
+
     return languageMap[ext || ''] || 'unknown';
   }
-  
+
   private calculateDetailedComplexity(content: string, semanticConcepts: any[]): {
     cyclomatic: number;
     cognitive: number;
@@ -344,15 +344,15 @@ export class CoreAnalysisTools {
     classes: number;
   } {
     const lines = content.split('\n');
-    
+
     // Count functions and classes from semantic concepts
     const functions = semanticConcepts.filter(c => c.type === 'function').length;
     const classes = semanticConcepts.filter(c => c.type === 'class').length;
-    
+
     // Calculate cyclomatic complexity
     let cyclomatic = 1; // Base complexity
     const complexityKeywords = ['if', 'else', 'while', 'for', 'switch', 'case', 'catch', 'try', '&&', '||', '?'];
-    
+
     for (const line of lines) {
       for (const keyword of complexityKeywords) {
         if (keyword === '&&' || keyword === '||' || keyword === '?') {
@@ -369,10 +369,10 @@ export class CoreAnalysisTools {
         }
       }
     }
-    
+
     // Calculate cognitive complexity (approximation)
     const cognitive = Math.floor(cyclomatic * 1.2) + Math.floor(functions * 0.5);
-    
+
     return {
       cyclomatic,
       cognitive,
@@ -380,14 +380,14 @@ export class CoreAnalysisTools {
       classes
     };
   }
-  
+
   private extractDependencies(content: string, language: string): string[] {
     const dependencies: string[] = [];
     const lines = content.split('\n');
-    
+
     for (const line of lines) {
       const trimmed = line.trim();
-      
+
       // TypeScript/JavaScript imports
       if (language === 'typescript' || language === 'javascript') {
         if (trimmed.startsWith('import ') && trimmed.includes(' from ')) {
@@ -399,7 +399,7 @@ export class CoreAnalysisTools {
             }
           }
         }
-        
+
         if (trimmed.startsWith('const ') && trimmed.includes('require(')) {
           const match = trimmed.match(/require\(['"](.*?)['"]\)/);
           if (match && match[1] && !match[1].startsWith('.')) {
@@ -410,7 +410,7 @@ export class CoreAnalysisTools {
           }
         }
       }
-      
+
       // Python imports
       if (language === 'python') {
         if (trimmed.startsWith('import ') || trimmed.startsWith('from ')) {
@@ -420,7 +420,7 @@ export class CoreAnalysisTools {
           }
         }
       }
-      
+
       // Rust use statements
       if (language === 'rust') {
         if (trimmed.startsWith('use ')) {
@@ -431,17 +431,17 @@ export class CoreAnalysisTools {
         }
       }
     }
-    
+
     return dependencies.slice(0, 20); // Limit to prevent overwhelming output
   }
-  
+
   private extractExports(content: string, language: string): string[] {
     const exports: string[] = [];
     const lines = content.split('\n');
-    
+
     for (const line of lines) {
       const trimmed = line.trim();
-      
+
       // TypeScript/JavaScript exports
       if (language === 'typescript' || language === 'javascript') {
         if (trimmed.startsWith('export ')) {
@@ -450,7 +450,7 @@ export class CoreAnalysisTools {
           if (match && match[1] && !exports.includes(match[1])) {
             exports.push(match[1]);
           }
-          
+
           // Export default
           if (trimmed.includes('export default')) {
             const defaultMatch = trimmed.match(/export\s+default\s+(\w+)/);
@@ -460,7 +460,7 @@ export class CoreAnalysisTools {
           }
         }
       }
-      
+
       // Python exports (functions and classes at module level)
       if (language === 'python') {
         if (trimmed.startsWith('def ') || trimmed.startsWith('class ')) {
@@ -470,7 +470,7 @@ export class CoreAnalysisTools {
           }
         }
       }
-      
+
       // Rust public items
       if (language === 'rust') {
         if (trimmed.startsWith('pub ')) {
@@ -481,33 +481,33 @@ export class CoreAnalysisTools {
         }
       }
     }
-    
+
     return exports.slice(0, 20); // Limit to prevent overwhelming output
   }
-  
+
   private calculateMaintainabilityIndex(complexity: any): number {
     // Simplified maintainability index calculation
     const volume = Math.log2(complexity.lines || 1);
     const cyclomaticComplexity = complexity.cyclomatic || 1;
     const linesOfCode = complexity.lines || 1;
-    
+
     // Microsoft maintainability index formula (simplified)
-    const maintainabilityIndex = Math.max(0, 
+    const maintainabilityIndex = Math.max(0,
       171 - 5.2 * Math.log(volume) - 0.23 * cyclomaticComplexity - 16.2 * Math.log(linesOfCode)
     );
-    
+
     return Math.round(maintainabilityIndex);
   }
-  
+
   private assessTechnicalDebt(patterns: any[]): string {
-    const violationPatterns = patterns.filter(p => 
-      p.pattern_type?.includes('violation') || 
+    const violationPatterns = patterns.filter(p =>
+      p.pattern_type?.includes('violation') ||
       p.description?.includes('anti-pattern') ||
       p.confidence < 0.5
     );
-    
+
     const debtScore = violationPatterns.length;
-    
+
     if (debtScore === 0) return 'low';
     if (debtScore <= 3) return 'medium';
     return 'high';
@@ -525,15 +525,15 @@ export class CoreAnalysisTools {
     try {
       const stats = lstatSync(path);
       const name = basename(path);
-      
+
       // Skip common ignored directories (but not for root directory)
       if (currentDepth > 0 && this.shouldIgnoreDirectory(name)) {
         return null as any;
       }
-      
+
       if (stats.isFile()) {
         const language = this.detectLanguage(path);
-        
+
         return {
           name,
           type: 'file' as const,
@@ -543,17 +543,17 @@ export class CoreAnalysisTools {
           lastModified: stats.mtime
         };
       }
-      
+
       if (stats.isDirectory() && currentDepth < maxDepth) {
         const children: Array<any> = [];
-        
+
         try {
           const entries = readdirSync(path);
-          
+
           for (const entry of entries) {
             const entryPath = join(path, entry);
             const child = await this.buildDirectoryStructure(entryPath, maxDepth, currentDepth + 1);
-            
+
             if (child) {
               children.push(child);
             }
@@ -561,7 +561,7 @@ export class CoreAnalysisTools {
         } catch (error) {
           // Skip directories we can't read
         }
-        
+
         // Filter out null children and sort
         const validChildren = children.filter(child => child !== null);
         validChildren.sort((a, b) => {
@@ -570,7 +570,7 @@ export class CoreAnalysisTools {
           }
           return a.name.localeCompare(b.name);
         });
-        
+
         return {
           name,
           type: 'directory' as const,
@@ -578,14 +578,14 @@ export class CoreAnalysisTools {
           children: validChildren
         };
       }
-      
+
       return null as any;
     } catch (error) {
       // Skip files/directories we can't access
       return null as any;
     }
   }
-  
+
   private shouldIgnoreDirectory(name: string): boolean {
     const ignoredDirs = [
       'node_modules', '.git', '.svn', '.hg',
@@ -595,7 +595,7 @@ export class CoreAnalysisTools {
       'coverage', '.nyc_output',
       'logs', '*.log'
     ];
-    
+
     return ignoredDirs.includes(name) || name.startsWith('.');
   }
 
@@ -619,12 +619,12 @@ export class CoreAnalysisTools {
       oldestFiles: [] as Array<{ name: string; lastModified: Date; path: string }>,
       newestFiles: [] as Array<{ name: string; lastModified: Date; path: string }>
     };
-    
+
     const allFiles: Array<{ name: string; size: number; path: string; lastModified: Date; language: string }> = [];
-    
+
     const traverse = (node: any) => {
       if (!node) return;
-      
+
       if (node.type === 'directory') {
         summary.directories++;
         if (node.children) {
@@ -633,15 +633,15 @@ export class CoreAnalysisTools {
       } else if (node.type === 'file') {
         summary.totalFiles++;
         summary.totalSize += node.size || 0;
-        
+
         // Count by language
         const language = node.language || 'unknown';
         summary.languages[language] = (summary.languages[language] || 0) + 1;
-        
+
         // Count by file extension
         const ext = extname(node.name).toLowerCase() || 'no-extension';
         summary.filesByType[ext] = (summary.filesByType[ext] || 0) + 1;
-        
+
         // Collect file info for sorting
         allFiles.push({
           name: node.name,
@@ -652,32 +652,32 @@ export class CoreAnalysisTools {
         });
       }
     };
-    
+
     traverse(structure);
-    
+
     // Sort and get top files by different criteria
     const sortedBySize = [...allFiles].sort((a, b) => b.size - a.size);
     const sortedByAge = [...allFiles].sort((a, b) => a.lastModified.getTime() - b.lastModified.getTime());
     const sortedByRecent = [...allFiles].sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime());
-    
+
     summary.largestFiles = sortedBySize.slice(0, 5).map(f => ({
       name: f.name,
       size: f.size,
       path: f.path
     }));
-    
+
     summary.oldestFiles = sortedByAge.slice(0, 5).map(f => ({
       name: f.name,
       lastModified: f.lastModified,
       path: f.path
     }));
-    
+
     summary.newestFiles = sortedByRecent.slice(0, 5).map(f => ({
       name: f.name,
       lastModified: f.lastModified,
       path: f.path
     }));
-    
+
     return summary;
   }
 
@@ -685,23 +685,23 @@ export class CoreAnalysisTools {
     try {
       // Get the vector database from semantic engine
       const vectorResults = await this.semanticEngine.searchSemanticallySimilar(
-        query.query, 
+        query.query,
         query.limit || 10
       );
-      
+
       const results = [];
-      
+
       for (const result of vectorResults) {
         try {
           // Read the file content for context
           const content = readFileSync(result.filePath, 'utf-8');
           const lines = content.split('\n');
-          
+
           // Get context around the match (simple approach)
           const contextStart = Math.max(0, 0);
           const contextEnd = Math.min(lines.length, 10);
           const context = lines.slice(contextStart, contextEnd).join('\n');
-          
+
           results.push({
             file: result.filePath,
             content: result.concept,
@@ -718,7 +718,7 @@ export class CoreAnalysisTools {
           continue;
         }
       }
-      
+
       return {
         results,
         totalFound: results.length,
@@ -743,34 +743,34 @@ export class CoreAnalysisTools {
         undefined, // currentFile
         undefined  // selectedCode
       );
-      
+
       const results = [];
-      
+
       for (const pattern of relevantPatterns) {
         // For each pattern, find files that use this pattern
         for (const example of pattern.examples) {
           try {
             // Search for files containing similar code patterns
-            const searchPattern = query.language ? 
+            const searchPattern = query.language ?
               `**/*.{${this.getFileExtensionsForLanguage(query.language)}}` :
               '**/*.{ts,tsx,js,jsx,py,rs,go,java}';
-            
-            const files = await glob(searchPattern, { 
+
+            const files = await glob(searchPattern, {
               ignore: ['**/node_modules/**', '**/.git/**', '**/target/**', '**/dist/**'],
               absolute: true
             });
-            
+
             for (const file of files.slice(0, 10)) { // Limit for performance
               try {
                 const content = readFileSync(file, 'utf-8');
-                
+
                 // Simple pattern matching - look for similar code structures
                 if (this.matchesPattern(content, pattern.patternType, example.code)) {
                   const lines = content.split('\n');
                   const contextStart = Math.max(0, 0);
                   const contextEnd = Math.min(lines.length, 5);
                   const context = lines.slice(contextStart, contextEnd).join('\n');
-                  
+
                   results.push({
                     file: relative(process.cwd(), file),
                     content: pattern.patternContent.description || pattern.patternType,
@@ -795,12 +795,12 @@ export class CoreAnalysisTools {
           }
         }
       }
-      
+
       // Remove duplicates and sort by score
-      const uniqueResults = results.filter((result, index, arr) => 
+      const uniqueResults = results.filter((result, index, arr) =>
         arr.findIndex(r => r.file === result.file) === index
       ).sort((a, b) => b.score - a.score);
-      
+
       return {
         results: uniqueResults.slice(0, query.limit || 10),
         totalFound: uniqueResults.length,
@@ -819,27 +819,27 @@ export class CoreAnalysisTools {
 
   private async textSearch(query: SearchQuery): Promise<any> {
     try {
-      const searchPattern = query.language ? 
+      const searchPattern = query.language ?
         `**/*.{${this.getFileExtensionsForLanguage(query.language)}}` :
         '**/*.{ts,tsx,js,jsx,py,rs,go,java,cpp,c,cs,php,rb,swift,kt}';
-      
-      const files = await glob(searchPattern, { 
+
+      const files = await glob(searchPattern, {
         ignore: ['**/node_modules/**', '**/.git/**', '**/target/**', '**/dist/**', '**/build/**'],
         absolute: true
       });
-      
+
       const results = [];
       const searchRegex = new RegExp(query.query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-      
+
       for (const file of files) {
         try {
           const content = readFileSync(file, 'utf-8');
           const lines = content.split('\n');
-          
+
           for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             const matches = [...line.matchAll(searchRegex)];
-            
+
             for (const match of matches) {
               const lineNumber = i + 1;
               const contextStart = Math.max(0, i - 2);
@@ -851,10 +851,10 @@ export class CoreAnalysisTools {
                   return `${marker} ${actualLineNum}: ${l}`;
                 })
                 .join('\n');
-              
+
               // Calculate relevance score based on match context
               const score = this.calculateTextMatchScore(line, match, query.query);
-              
+
               results.push({
                 file: relative(process.cwd(), file),
                 content: line.trim(),
@@ -874,12 +874,12 @@ export class CoreAnalysisTools {
           continue;
         }
       }
-      
+
       // Sort by relevance and limit results
       const sortedResults = results
         .sort((a, b) => b.score - a.score)
         .slice(0, query.limit || 20);
-      
+
       return {
         results: sortedResults,
         totalFound: results.length,
@@ -895,7 +895,7 @@ export class CoreAnalysisTools {
       };
     }
   }
-  
+
   private getFileExtensionsForLanguage(language: string): string {
     const extensions: Record<string, string> = {
       'typescript': 'ts,tsx',
@@ -912,10 +912,10 @@ export class CoreAnalysisTools {
       'swift': 'swift',
       'kotlin': 'kt'
     };
-    
+
     return extensions[language.toLowerCase()] || 'ts,js,py,rs';
   }
-  
+
   private matchesPattern(content: string, patternType: string, exampleCode: string): boolean {
     // Simple pattern matching based on pattern type
     switch (patternType) {
@@ -939,34 +939,34 @@ export class CoreAnalysisTools {
         return keywords.some(keyword => content.includes(keyword));
     }
   }
-  
+
   private calculateTextMatchScore(line: string, match: RegExpMatchArray, query: string): number {
     let score = 1.0;
-    
+
     // Boost score for exact matches
     if (match[0].toLowerCase() === query.toLowerCase()) {
       score += 0.5;
     }
-    
+
     // Boost score for matches at word boundaries
     if (match.index !== undefined) {
       const beforeChar = line[match.index - 1];
       const afterChar = line[match.index + match[0].length];
-      
+
       if (!beforeChar || /\W/.test(beforeChar)) score += 0.2;
       if (!afterChar || /\W/.test(afterChar)) score += 0.2;
     }
-    
+
     // Boost score for matches in function/class names
     if (/(function|class|interface|type)\s/.test(line)) {
       score += 0.3;
     }
-    
+
     // Boost score for matches in comments
     if (/\/\/|#|<!--/.test(line)) {
       score += 0.1;
     }
-    
+
     return score;
   }
 
@@ -974,21 +974,21 @@ export class CoreAnalysisTools {
     try {
       // Use our actual intelligent engines
       console.log('🔍 Gathering intelligent analysis...');
-      
+
       // Get codebase analysis using our semantic engine
       const codebaseAnalysis = await this.semanticEngine.analyzeCodebase(path);
-      
+
       // Learn from codebase using our engines
       const semanticConcepts = await this.semanticEngine.learnFromCodebase(path);
       const patterns = await this.patternEngine.learnFromCodebase(path);
-      
+
       // Get pattern analysis for individual patterns
       const patternInsights = await Promise.all(
         patterns.slice(0, 10).map(async pattern => {
           try {
             return await this.patternEngine.findRelevantPatterns(
-              `analyze pattern ${pattern.type}`, 
-              null, 
+              `analyze pattern ${pattern.type}`,
+              null,
               null
             );
           } catch (error) {
@@ -996,7 +996,7 @@ export class CoreAnalysisTools {
           }
         })
       );
-      
+
       return {
         path,
         codebaseAnalysis,
@@ -1020,13 +1020,13 @@ export class CoreAnalysisTools {
 
   private async buildIntelligentDocumentation(analysis: any, options: DocOptions): Promise<string> {
     const sections: string[] = [];
-    
+
     // Header with intelligence badge
     const projectName = analysis.path.split('/').pop() || 'Project';
     sections.push(`# ${projectName} - Intelligent Documentation`);
-    sections.push(`\n*🤖 Generated on ${analysis.analysisTimestamp.toLocaleString()} by Code Cartographer AI*`);
+    sections.push(`\n*🤖 Generated on ${analysis.analysisTimestamp.toLocaleString()} by In Memoria AI*`);
     sections.push(`\n*📊 Analysis includes ${analysis.semanticConcepts.length} semantic concepts and ${analysis.patterns.length} patterns*\n`);
-    
+
     // Table of Contents
     sections.push('## Table of Contents');
     sections.push('- [🔍 Intelligent Overview](#-intelligent-overview)');
@@ -1039,44 +1039,44 @@ export class CoreAnalysisTools {
       sections.push('- [💡 Usage Examples](#-usage-examples)');
     }
     sections.push('');
-    
+
     // Intelligent Overview
     sections.push('## 🔍 Intelligent Overview');
     sections.push(await this.generateIntelligentOverview(analysis));
     sections.push('');
-    
+
     // Architecture Intelligence  
     sections.push('## 🏗️ Architecture Intelligence');
     sections.push(await this.generateArchitectureIntelligence(analysis));
     sections.push('');
-    
+
     // Discovered Patterns
     sections.push('## 🔄 Discovered Patterns');
     sections.push(await this.generateDiscoveredPatterns(analysis));
     sections.push('');
-    
+
     // Semantic Concepts
     sections.push('## 🧠 Semantic Concepts');
     sections.push(await this.generateSemanticConcepts(analysis));
     sections.push('');
-    
+
     // Complexity Intelligence
     sections.push('## 📈 Complexity Intelligence');
     sections.push(await this.generateComplexityIntelligence(analysis));
     sections.push('');
-    
+
     // AI Insights
     sections.push('## 🎯 AI Insights');
     sections.push(await this.generateRealIntelligentInsights(analysis));
     sections.push('');
-    
+
     // Usage Examples
     if (options.includeExamples) {
       sections.push('## 💡 Usage Examples');
       sections.push(await this.generateIntelligentExamples(analysis));
       sections.push('');
     }
-    
+
     return sections.join('\n');
   }
 
@@ -1087,7 +1087,7 @@ export class CoreAnalysisTools {
       '### Language Distribution',
       ''
     ];
-    
+
     // Language breakdown
     if (analysis.languages && analysis.languages.length > 0) {
       for (const lang of analysis.languages) {
@@ -1096,7 +1096,7 @@ export class CoreAnalysisTools {
     } else {
       lines.push('- Languages detected through file analysis');
     }
-    
+
     lines.push('');
     lines.push('### Key Metrics');
     if (analysis.complexity) {
@@ -1106,13 +1106,13 @@ export class CoreAnalysisTools {
     } else {
       lines.push('- Complexity metrics will be calculated during analysis');
     }
-    
+
     // Add architectural insights based on patterns
     if (analysis.patterns && analysis.patterns.length > 0) {
       const hasComponents = analysis.patterns.some(p => p.type?.includes('component'));
       const hasServices = analysis.patterns.some(p => p.type?.includes('service'));
       const hasUtils = analysis.patterns.some(p => p.type?.includes('util'));
-      
+
       if (hasComponents || hasServices || hasUtils) {
         lines.push('');
         lines.push('### Architecture Style');
@@ -1121,7 +1121,7 @@ export class CoreAnalysisTools {
         if (hasUtils) lines.push('- Utility-driven organization identified');
       }
     }
-    
+
     return lines.join('\n');
   }
 
@@ -1130,12 +1130,12 @@ export class CoreAnalysisTools {
       'This section describes the architectural patterns and structure of the codebase.',
       ''
     ];
-    
+
     // Directory structure insights
     if (analysis.patterns && analysis.patterns.length > 0) {
-      const structuralPatterns = analysis.patterns.filter(p => 
+      const structuralPatterns = analysis.patterns.filter(p =>
         p.type?.includes('structure') || p.type?.includes('organization'));
-      
+
       if (structuralPatterns.length > 0) {
         lines.push('### Structural Organization');
         lines.push('');
@@ -1145,11 +1145,11 @@ export class CoreAnalysisTools {
         }
         lines.push('');
       }
-      
+
       // Design patterns
-      const designPatterns = analysis.patterns.filter(p => 
+      const designPatterns = analysis.patterns.filter(p =>
         p.type?.includes('implementation') || p.type?.includes('pattern'));
-      
+
       if (designPatterns.length > 0) {
         lines.push('### Design Patterns');
         lines.push('');
@@ -1165,7 +1165,7 @@ export class CoreAnalysisTools {
       lines.push('*Architecture patterns will be identified through detailed code analysis.*');
       lines.push('');
     }
-    
+
     return lines.join('\n');
   }
 
@@ -1174,7 +1174,7 @@ export class CoreAnalysisTools {
       'This section analyzes the coding patterns and conventions used throughout the codebase.',
       ''
     ];
-    
+
     // Group patterns by category
     const patternsByCategory: Record<string, any[]> = {};
     for (const pattern of analysis.patterns) {
@@ -1182,7 +1182,7 @@ export class CoreAnalysisTools {
       if (!patternsByCategory[category]) patternsByCategory[category] = [];
       patternsByCategory[category].push(pattern);
     }
-    
+
     // Naming patterns
     if (patternsByCategory.naming) {
       lines.push('### Naming Conventions');
@@ -1193,7 +1193,7 @@ export class CoreAnalysisTools {
       }
       lines.push('');
     }
-    
+
     // Implementation patterns
     if (patternsByCategory.implementation) {
       lines.push('### Implementation Patterns');
@@ -1205,7 +1205,7 @@ export class CoreAnalysisTools {
       }
       lines.push('');
     }
-    
+
     // Dependency patterns
     if (patternsByCategory.dependency) {
       lines.push('### Dependency Patterns');
@@ -1215,7 +1215,7 @@ export class CoreAnalysisTools {
       }
       lines.push('');
     }
-    
+
     // Pattern recommendations
     lines.push('### Pattern Recommendations');
     lines.push('');
@@ -1226,7 +1226,7 @@ export class CoreAnalysisTools {
     } else {
       lines.push('🔴 **Limited pattern detection** - Consider implementing more structured coding patterns.');
     }
-    
+
     return lines.join('\n');
   }
 
@@ -1235,7 +1235,7 @@ export class CoreAnalysisTools {
       'This section provides an overview of the semantic concepts identified in the codebase.',
       ''
     ];
-    
+
     if (analysis.concepts && analysis.concepts.length > 0) {
       // Group by type
       const conceptsByType: Record<string, any[]> = {};
@@ -1244,20 +1244,20 @@ export class CoreAnalysisTools {
         if (!conceptsByType[type]) conceptsByType[type] = [];
         conceptsByType[type].push(concept);
       }
-      
+
       lines.push('### Concept Distribution');
       lines.push('');
       for (const [type, concepts] of Object.entries(conceptsByType)) {
         lines.push(`- **${type.charAt(0).toUpperCase() + type.slice(1)}s**: ${concepts.length} identified`);
       }
       lines.push('');
-      
+
       // High-confidence concepts
       const highConfidenceConcepts = analysis.concepts
         .filter(c => (c.confidence || 0) > 0.8)
         .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
         .slice(0, 10);
-      
+
       if (highConfidenceConcepts.length > 0) {
         lines.push('### Key Concepts (High Confidence)');
         lines.push('');
@@ -1271,7 +1271,7 @@ export class CoreAnalysisTools {
       lines.push('*Semantic concepts will be extracted through detailed code analysis.*');
       lines.push('');
     }
-    
+
     return lines.join('\n');
   }
 
@@ -1280,14 +1280,14 @@ export class CoreAnalysisTools {
       'This section analyzes the complexity characteristics of the codebase.',
       ''
     ];
-    
+
     if (analysis.complexity) {
       lines.push('### Overall Complexity Metrics');
       lines.push(`- **Cyclomatic Complexity**: ${analysis.complexity.cyclomatic || 'N/A'}`);
       lines.push(`- **Cognitive Complexity**: ${analysis.complexity.cognitive || 'N/A'}`);
       lines.push(`- **Total Lines**: ${analysis.complexity.lines || 'N/A'}`);
       lines.push('');
-      
+
       // Simple recommendations based on available data
       lines.push('### Complexity Assessment');
       const cyclomaticComplexity = analysis.complexity.cyclomatic || 0;
@@ -1302,7 +1302,7 @@ export class CoreAnalysisTools {
       lines.push('### Complexity Analysis');
       lines.push('*Complexity metrics will be calculated during detailed code analysis.*');
     }
-    
+
     return lines.join('\n');
   }
 
@@ -1311,7 +1311,7 @@ export class CoreAnalysisTools {
       'This section analyzes the dependency structure and relationships within the codebase.',
       ''
     ];
-    
+
     lines.push('### Dependency Analysis');
     lines.push('*Dependency analysis will be performed during detailed code scanning.*');
     lines.push('');
@@ -1320,7 +1320,7 @@ export class CoreAnalysisTools {
     lines.push('- Internal module relationships');
     lines.push('- Dependency coupling metrics');
     lines.push('- Potential circular dependencies');
-    
+
     return lines.join('\n');
   }
 
@@ -1329,11 +1329,11 @@ export class CoreAnalysisTools {
       'This section provides usage examples based on the identified patterns and concepts.',
       ''
     ];
-    
+
     lines.push('### Usage Examples');
     lines.push('*Usage examples will be generated based on detected patterns and entry points.*');
     lines.push('');
-    
+
     if (analysis.patterns && analysis.patterns.length > 0) {
       lines.push('**Detected Patterns:**');
       for (const pattern of analysis.patterns.slice(0, 3)) {
@@ -1346,7 +1346,7 @@ export class CoreAnalysisTools {
       lines.push('- Usage patterns will be identified automatically');
       lines.push('- Common architectural patterns will be documented');
     }
-    
+
     return lines.join('\n');
   }
 
@@ -1371,7 +1371,7 @@ export class CoreAnalysisTools {
       lines.push(`- **Cyclomatic Complexity**: ${complexity.cyclomatic}`);
       lines.push(`- **Cognitive Complexity**: ${complexity.cognitive}`);
       lines.push(`- **Total Lines**: ${complexity.lines}`);
-      
+
       // Intelligence-based recommendations
       if (complexity.cyclomatic > 30) {
         lines.push(`- ⚠️ **AI Recommendation**: High complexity detected - consider refactoring for maintainability`);
@@ -1401,9 +1401,9 @@ export class CoreAnalysisTools {
     ];
 
     // Analyze patterns for architectural insights
-    const structuralPatterns = analysis.patterns.filter((p: any) => 
+    const structuralPatterns = analysis.patterns.filter((p: any) =>
       p.type?.includes('structure') || p.type?.includes('organization'));
-    const implementationPatterns = analysis.patterns.filter((p: any) => 
+    const implementationPatterns = analysis.patterns.filter((p: any) =>
       p.type?.includes('implementation'));
 
     if (structuralPatterns.length > 0) {
@@ -1541,9 +1541,9 @@ export class CoreAnalysisTools {
     }
 
     // Concept relationships
-    const conceptsWithRelationships = analysis.semanticConcepts.filter((c: any) => 
+    const conceptsWithRelationships = analysis.semanticConcepts.filter((c: any) =>
       c.relationships && Object.keys(c.relationships).length > 0);
-    
+
     if (conceptsWithRelationships.length > 0) {
       lines.push('### 🔗 Concept Relationships (AI-Mapped)');
       lines.push('');
@@ -1565,7 +1565,7 @@ export class CoreAnalysisTools {
 
     if (analysis.codebaseAnalysis.complexity) {
       const complexity = analysis.codebaseAnalysis.complexity;
-      
+
       lines.push('### 📈 Complexity Metrics');
       lines.push(`- **Cyclomatic Complexity**: ${complexity.cyclomatic}`);
       lines.push(`- **Cognitive Complexity**: ${complexity.cognitive}`);
@@ -1576,7 +1576,7 @@ export class CoreAnalysisTools {
       lines.push('### 🤖 AI Complexity Assessment');
       const cyclomaticScore = complexity.cyclomatic || 0;
       const cognitiveScore = complexity.cognitive || 0;
-      
+
       if (cyclomaticScore < 10 && cognitiveScore < 15) {
         lines.push('✅ **Excellent maintainability** - Low complexity indicates well-structured, readable code');
         lines.push('- Code complexity is well-managed - maintain current practices');
@@ -1591,14 +1591,14 @@ export class CoreAnalysisTools {
         lines.push('- Consider applying design patterns to reduce complexity');
         lines.push('- Break large functions into smaller, focused units');
       }
-      
+
       // Concept-based complexity insights
       if (analysis.semanticConcepts.length > 0) {
         const avgConceptsPerComplexity = analysis.semanticConcepts.length / (complexity.lines / 100);
         lines.push('');
         lines.push('### 🧠 Semantic Complexity Ratio');
         lines.push(`- **Concept density**: ${avgConceptsPerComplexity.toFixed(2)} concepts per 100 lines`);
-        
+
         if (avgConceptsPerComplexity > 5) {
           lines.push('- ✅ High semantic richness - good abstraction level');
         } else if (avgConceptsPerComplexity > 2) {
@@ -1623,7 +1623,7 @@ export class CoreAnalysisTools {
 
       // Get real semantic insights from intelligence tools
       const semanticInsights = await this.intelligenceTools.getSemanticInsights({ limit: 5 });
-      
+
       lines.push('### 🧠 Semantic Intelligence');
       if (semanticInsights.insights.length > 0) {
         lines.push(`- **Active concepts**: ${semanticInsights.totalAvailable} concepts in knowledge base`);
@@ -1632,7 +1632,7 @@ export class CoreAnalysisTools {
           const contexts = insight.usage.contexts.length;
           lines.push(`  - **${insight.concept}**: Used in ${contexts} context${contexts > 1 ? 's' : ''} (confidence: ${insight.usage.frequency}%)`);
         }
-        
+
         // Analyze concept relationships
         const conceptsWithRelationships = semanticInsights.insights.filter(i => i.relationships.length > 0);
         if (conceptsWithRelationships.length > 0) {
@@ -1648,7 +1648,7 @@ export class CoreAnalysisTools {
         problemDescription: 'General codebase analysis and pattern consistency',
         currentFile: analysis.path
       });
-      
+
       lines.push('### 🔍 Pattern Recommendations');
       if (patternRecs.recommendations.length > 0) {
         lines.push(`- **Pattern analysis**: ${patternRecs.recommendations.length} patterns identified for optimization`);
@@ -1665,14 +1665,14 @@ export class CoreAnalysisTools {
       // Get coding approach predictions
       const approach = await this.intelligenceTools.predictCodingApproach({
         problemDescription: 'Evaluate overall codebase architecture and suggest improvements',
-        context: { 
+        context: {
           'complexity_cyclomatic': analysis.codebaseAnalysis.complexity?.cyclomatic?.toString() || '0',
           'complexity_cognitive': analysis.codebaseAnalysis.complexity?.cognitive?.toString() || '0',
           'patterns_count': analysis.patterns.length.toString(),
           'concepts_count': analysis.semanticConcepts.length.toString()
         }
       });
-      
+
       lines.push('### 🎯 Intelligent Recommendations');
       lines.push(`- **Suggested approach**: ${approach.approach}`);
       lines.push(`- **Confidence level**: ${(approach.confidence * 100).toFixed(0)}%`);
@@ -1714,7 +1714,7 @@ export class CoreAnalysisTools {
       if (patternRecs.recommendations.length > 0) {
         lines.push('### 🎯 Pattern-Based Examples');
         lines.push('');
-        
+
         for (const rec of patternRecs.recommendations.slice(0, 3)) {
           if (rec.examples.length > 0) {
             const patternName = rec.pattern.split('_').slice(1).join(' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -1732,17 +1732,17 @@ export class CoreAnalysisTools {
 
       // Get semantic insights for concept-based examples
       const semanticInsights = await this.intelligenceTools.getSemanticInsights({ limit: 3 });
-      
+
       if (semanticInsights.insights.length > 0) {
         lines.push('### 🧠 Concept-Based Usage');
         lines.push('');
-        
+
         for (const insight of semanticInsights.insights) {
           lines.push(`#### ${insight.concept} Usage`);
           lines.push('```typescript');
           lines.push(`// Based on semantic analysis of ${insight.concept}`);
           lines.push(`// Used in ${insight.usage.contexts.length} context(s) with ${insight.usage.frequency}% confidence`);
-          
+
           // Generate intelligent usage example based on concept
           const conceptType = insight.concept.toLowerCase();
           if (conceptType.includes('engine') || conceptType.includes('service')) {

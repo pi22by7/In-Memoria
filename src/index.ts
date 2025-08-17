@@ -14,7 +14,7 @@ async function main() {
 
   switch (command) {
     case 'server':
-      console.log('Starting Code Cartographer MCP Server...');
+      console.log('Starting In Memoria MCP Server...');
       await runServer();
       break;
 
@@ -200,7 +200,7 @@ async function initializeProject(path: string): Promise<void> {
 
   // Create default configuration
   const defaultConfig = {
-    version: "0.1.0",
+    version: "0.2.0",
     intelligence: {
       enableRealTimeAnalysis: true,
       enablePatternLearning: true,
@@ -293,9 +293,7 @@ process.on('uncaughtException', (error) => {
 });
 
 // Run the CLI
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch(error => {
-    console.error('Fatal error:', error);
-    process.exit(1);
-  });
-}
+main().catch(error => {
+  console.error('Fatal error:', error);
+  process.exit(1);
+});

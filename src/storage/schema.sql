@@ -1,4 +1,4 @@
--- Persistent intelligence storage schema for Code Cartographer
+-- Persistent intelligence storage schema for In Memoria
 
 -- Semantic concepts extracted from codebase
 CREATE TABLE IF NOT EXISTS semantic_concepts (

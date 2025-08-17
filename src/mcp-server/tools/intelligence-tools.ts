@@ -588,7 +588,7 @@ export class IntelligenceTools {
   private async buildSemanticIndex(concepts: any[], patterns: any[]): Promise<number> {
     try {
       // Initialize vector DB if not already done
-      await this.vectorDB.initialize('code-cartographer-intelligence');
+      await this.vectorDB.initialize('in-memoria-intelligence');
       
       let vectorCount = 0;
       
