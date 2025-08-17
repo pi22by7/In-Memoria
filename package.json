@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc && npm run build:rust",
+    "build": "tsc && npm run build:rust && npm run copy-assets",
+    "copy-assets": "cp src/storage/schema.sql dist/storage/",
     "build:rust": "cd rust-core && napi build --platform --release",
     "dev": "tsx watch src/index.ts",
     "test": "vitest",
