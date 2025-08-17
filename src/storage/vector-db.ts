@@ -255,7 +255,45 @@ class LocalVectorClient {
 }
 
 class LocalEmbeddingFunction {
-  // Local embedding function placeholder
+  generate(texts: string[]): number[][] {
+    // Generate TF-IDF style embeddings for semantic similarity
+    const vocabulary = new Set<string>();
+    const documents = texts.map(text => {
+      const tokens = text.toLowerCase()
+        .replace(/[^\w\s]/g, ' ')
+        .split(/\s+/)
+        .filter(token => token.length > 2);
+      tokens.forEach(token => vocabulary.add(token));
+      return tokens;
+    });
+
+    const vocabArray = Array.from(vocabulary);
+    const embeddings: number[][] = [];
+
+    for (const doc of documents) {
+      const embedding = new Array(vocabArray.length).fill(0);
+      const termFreq: Record<string, number> = {};
+      
+      // Calculate term frequency
+      doc.forEach(token => {
+        termFreq[token] = (termFreq[token] || 0) + 1;
+      });
+      
+      // Create TF-IDF embedding
+      vocabArray.forEach((term, index) => {
+        if (termFreq[term]) {
+          const tf = termFreq[term] / doc.length;
+          const df = documents.filter(d => d.includes(term)).length;
+          const idf = Math.log(documents.length / df);
+          embedding[index] = tf * idf;
+        }
+      });
+      
+      embeddings.push(embedding);
+    }
+
+    return embeddings;
+  }
 }
 
 export interface CodeMetadata {

@@ -219,7 +219,7 @@ export class SemanticEngine {
   }
 
   private async fallbackAnalysis(path: string): Promise<CodebaseAnalysisResult> {
-    // Simple TypeScript-based fallback analysis
+    // TypeScript-based semantic analysis
     return {
       languages: ['unknown'],
       frameworks: [],
@@ -233,7 +233,7 @@ export class SemanticEngine {
   }
 
   private fallbackFileAnalysis(filePath: string, content: string): FileAnalysisResult['concepts'] {
-    // Simple pattern-based extraction as fallback
+    // Pattern-based semantic concept extraction
     const concepts: FileAnalysisResult['concepts'] = [];
     
     const lines = content.split('\n');

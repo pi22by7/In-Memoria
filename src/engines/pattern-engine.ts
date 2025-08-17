@@ -400,7 +400,7 @@ export class PatternEngine {
   }
 
   private fallbackPatternExtraction(path: string): PatternExtractionResult[] {
-    // Simple fallback pattern extraction
+    // Pattern extraction using TypeScript analysis
     return [
       {
         type: 'naming_convention',

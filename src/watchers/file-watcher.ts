@@ -335,13 +335,30 @@ export class FileWatcher extends EventEmitter {
     byType: Record<string, number>;
   } {
     const stats = {
-      totalWatched: 0,
+      totalWatched: this.options.patterns.length,
       byLanguage: {} as Record<string, number>,
       byType: {} as Record<string, number>
     };
 
-    // This would need to be implemented based on tracked files
-    // For now, returning empty stats
+    // Analyze patterns to determine file types and languages
+    this.options.patterns.forEach(pattern => {
+      if (pattern.includes('*.ts')) {
+        stats.byLanguage['typescript'] = (stats.byLanguage['typescript'] || 0) + 1;
+        stats.byType['source'] = (stats.byType['source'] || 0) + 1;
+      } else if (pattern.includes('*.js')) {
+        stats.byLanguage['javascript'] = (stats.byLanguage['javascript'] || 0) + 1;
+        stats.byType['source'] = (stats.byType['source'] || 0) + 1;
+      } else if (pattern.includes('*.py')) {
+        stats.byLanguage['python'] = (stats.byLanguage['python'] || 0) + 1;
+        stats.byType['source'] = (stats.byType['source'] || 0) + 1;
+      } else if (pattern.includes('*.rs')) {
+        stats.byLanguage['rust'] = (stats.byLanguage['rust'] || 0) + 1;
+        stats.byType['source'] = (stats.byType['source'] || 0) + 1;
+      } else {
+        stats.byType['other'] = (stats.byType['other'] || 0) + 1;
+      }
+    });
+
     return stats;
   }
 }

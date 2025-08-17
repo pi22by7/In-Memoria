@@ -343,9 +343,28 @@ export class ChangeAnalyzer extends EventEmitter {
   }
 
   private async findDependentFiles(filePath: string): Promise<string[]> {
-    // This would query the database for files that import/depend on the given file
-    // For now, returning empty array as placeholder
-    return [];
+    try {
+      // Query the database for files that import/depend on the given file
+      const concepts = this.database.getSemanticConcepts(filePath);
+      const dependentFiles: string[] = [];
+      
+      // Find files that reference concepts from this file
+      for (const concept of concepts) {
+        // Get all concepts to find related ones
+        const allConcepts = this.database.getSemanticConcepts();
+        const relatedConcepts = allConcepts.filter(c => 
+          c.conceptName === concept.conceptName && c.filePath !== filePath
+        );
+        
+        dependentFiles.push(...relatedConcepts.map(c => c.filePath));
+      }
+      
+      // Remove duplicates and return
+      return [...new Set(dependentFiles)];
+    } catch (error) {
+      console.warn('Could not find dependent files:', error.message);
+      return [];
+    }
   }
 
   private async learnFromChange(analysis: ChangeAnalysis): Promise<void> {
