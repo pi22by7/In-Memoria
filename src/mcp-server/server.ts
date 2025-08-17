@@ -27,7 +27,7 @@ export class CodeCartographerMCP {
     this.server = new Server(
       {
         name: 'in-memoria',
-        version: '0.2.1',
+        version: '0.2.2',
       },
       {
         capabilities: {
@@ -36,26 +36,33 @@ export class CodeCartographerMCP {
       }
     );
 
-    this.initializeComponents();
     this.setupHandlers();
   }
 
-  private initializeComponents(): void {
-    // Initialize storage
-    this.database = new SQLiteDatabase('./in-memoria.db');
-    this.vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
+  private async initializeComponents(): Promise<void> {
+    try {
+      // Initialize storage with better path handling
+      const dbPath = process.env.IN_MEMORIA_DB_PATH || './in-memoria.db';
+      this.database = new SQLiteDatabase(dbPath);
+      this.vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
 
-    // Initialize engines
-    this.semanticEngine = new SemanticEngine(this.database, this.vectorDB);
-    this.patternEngine = new PatternEngine(this.database);
+      // Initialize engines
+      this.semanticEngine = new SemanticEngine(this.database, this.vectorDB);
+      this.patternEngine = new PatternEngine(this.database);
 
-    // Initialize tool collections
-    this.coreTools = new CoreAnalysisTools(this.semanticEngine, this.patternEngine, this.database);
-    this.intelligenceTools = new IntelligenceTools(
-      this.semanticEngine,
-      this.patternEngine,
-      this.database
-    );
+      // Initialize tool collections
+      this.coreTools = new CoreAnalysisTools(this.semanticEngine, this.patternEngine, this.database);
+      this.intelligenceTools = new IntelligenceTools(
+        this.semanticEngine,
+        this.patternEngine,
+        this.database
+      );
+
+      console.error('In Memoria components initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize In Memoria components:', error);
+      throw error;
+    }
   }
 
   private setupHandlers(): void {
@@ -144,6 +151,8 @@ export class CodeCartographerMCP {
   }
 
   async start(): Promise<void> {
+    await this.initializeComponents();
+    
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
 
