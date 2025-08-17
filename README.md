@@ -215,7 +215,7 @@ Please open issues for language/feature requests before large PRs.
 
 ## 15. License
 
-MIT – see [LICENSE](LICENSE.md).
+MIT – see [LICENSE](LICENSE).
 
 ## 16. Acknowledgments
 
