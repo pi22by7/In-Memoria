@@ -70,12 +70,12 @@ export class SQLiteDatabase {
   // Semantic Concepts
   insertSemanticConcept(concept: Omit<SemanticConcept, 'createdAt' | 'updatedAt'>): void {
     const stmt = this.db.prepare(`
-      INSERT INTO semantic_concepts (
+      INSERT OR REPLACE INTO semantic_concepts (
         id, concept_name, concept_type, confidence_score, 
         relationships, evolution_history, file_path, line_range
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    
+
     stmt.run(
       concept.id,
       concept.conceptName,
@@ -91,15 +91,15 @@ export class SQLiteDatabase {
   getSemanticConcepts(filePath?: string): SemanticConcept[] {
     let query = 'SELECT * FROM semantic_concepts';
     let params: any[] = [];
-    
+
     if (filePath) {
       query += ' WHERE file_path = ?';
       params = [filePath];
     }
-    
+
     const stmt = this.db.prepare(query);
     const rows = stmt.all(...params) as any[];
-    
+
     return rows.map(row => ({
       id: row.id,
       conceptName: row.concept_name,
@@ -122,7 +122,7 @@ export class SQLiteDatabase {
         contexts, examples, confidence, last_seen
       ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `);
-    
+
     stmt.run(
       pattern.patternId,
       pattern.patternType,
@@ -137,17 +137,17 @@ export class SQLiteDatabase {
   getDeveloperPatterns(patternType?: string): DeveloperPattern[] {
     let query = 'SELECT * FROM developer_patterns';
     let params: any[] = [];
-    
+
     if (patternType) {
       query += ' WHERE pattern_type = ?';
       params = [patternType];
     }
-    
+
     query += ' ORDER BY frequency DESC, confidence DESC';
-    
+
     const stmt = this.db.prepare(query);
     const rows = stmt.all(...params) as any[];
-    
+
     return rows.map(row => ({
       patternId: row.pattern_id,
       patternType: row.pattern_type,
@@ -169,7 +169,7 @@ export class SQLiteDatabase {
         complexity_metrics, dependencies, last_analyzed
       ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `);
-    
+
     stmt.run(
       fileIntel.filePath,
       fileIntel.fileHash,
@@ -183,9 +183,9 @@ export class SQLiteDatabase {
   getFileIntelligence(filePath: string): FileIntelligence | null {
     const stmt = this.db.prepare('SELECT * FROM file_intelligence WHERE file_path = ?');
     const row = stmt.get(filePath) as any;
-    
+
     if (!row) return null;
-    
+
     return {
       filePath: row.file_path,
       fileHash: row.file_hash,
@@ -206,7 +206,7 @@ export class SQLiteDatabase {
         source_agent, validation_status, impact_prediction
       ) VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
-    
+
     stmt.run(
       insight.insightId,
       insight.insightType,
@@ -221,17 +221,17 @@ export class SQLiteDatabase {
   getAIInsights(insightType?: string): AIInsight[] {
     let query = 'SELECT * FROM ai_insights';
     let params: any[] = [];
-    
+
     if (insightType) {
       query += ' WHERE insight_type = ?';
       params = [insightType];
     }
-    
+
     query += ' ORDER BY confidence_score DESC, created_at DESC';
-    
+
     const stmt = this.db.prepare(query);
     const rows = stmt.all(...params) as any[];
-    
+
     return rows.map(row => ({
       insightId: row.insight_id,
       insightType: row.insight_type,

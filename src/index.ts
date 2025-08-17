@@ -125,7 +125,7 @@ async function learnCodebase(path: string): Promise<void> {
 async function analyzeCodebase(path: string): Promise<void> {
   console.log(`Analyzing codebase: ${path}`);
 
-  const database = new SQLiteDatabase(':memory:');
+  const database = new SQLiteDatabase('./code-cartographer.db');
   const vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
   const semanticEngine = new SemanticEngine(database, vectorDB);
   const patternEngine = new PatternEngine(database);
@@ -134,24 +134,49 @@ async function analyzeCodebase(path: string): Promise<void> {
     const analysis = await semanticEngine.analyzeCodebase(path);
     const patterns = await patternEngine.extractPatterns(path);
 
+    // Also get stored intelligence from previous learning sessions
+    const storedConcepts = database.getSemanticConcepts();
+    const storedPatterns = database.getDeveloperPatterns();
+
     console.log('\n=== Codebase Analysis Results ===');
     console.log(`Languages: ${analysis.languages.join(', ')}`);
     console.log(`Frameworks: ${analysis.frameworks.join(', ')}`);
-    console.log(`Concepts found: ${analysis.concepts.length}`);
-    console.log(`Patterns found: ${patterns.length}`);
+    console.log(`Fresh concepts found: ${analysis.concepts.length}`);
+    console.log(`Stored concepts available: ${storedConcepts.length}`);
+    console.log(`Fresh patterns found: ${patterns.length}`);
+    console.log(`Stored patterns available: ${storedPatterns.length}`);
     console.log(`Complexity: Cyclomatic=${analysis.complexity.cyclomatic.toFixed(1)}, Cognitive=${analysis.complexity.cognitive.toFixed(1)}`);
 
+    // Show fresh concepts from current analysis
     if (analysis.concepts.length > 0) {
-      console.log('\nTop Concepts:');
+      console.log('\nFresh Concepts (from current analysis):');
       analysis.concepts.slice(0, 5).forEach(concept => {
         console.log(`  - ${concept.name} (${concept.type}) - confidence: ${(concept.confidence * 100).toFixed(1)}%`);
       });
     }
 
+    // Show some stored concepts from learning
+    if (storedConcepts.length > 0) {
+      console.log('\nStored Concepts (from learning):');
+      storedConcepts.slice(0, 5).forEach(concept => {
+        console.log(`  - ${concept.conceptName} (${concept.conceptType}) - confidence: ${(concept.confidenceScore * 100).toFixed(1)}%`);
+      });
+    }
+
+    // Show fresh patterns
     if (patterns.length > 0) {
-      console.log('\nDetected Patterns:');
+      console.log('\nFresh Patterns:');
       patterns.slice(0, 5).forEach(pattern => {
         console.log(`  - ${pattern.type}: ${pattern.description} (frequency: ${pattern.frequency})`);
+      });
+    }
+
+    // Show stored patterns
+    if (storedPatterns.length > 0) {
+      console.log('\nStored Patterns (from learning):');
+      storedPatterns.slice(0, 5).forEach(pattern => {
+        const description = pattern.patternContent?.description || 'Pattern learned from code';
+        console.log(`  - ${pattern.patternType}: ${description} (frequency: ${pattern.frequency})`);
       });
     }
   } catch (error) {

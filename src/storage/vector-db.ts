@@ -1,4 +1,5 @@
 import { Surreal } from 'surrealdb';
+import * as SurrealNodeModule from '@surrealdb/node';
 
 export interface CodeMetadata {
   id: string;
@@ -33,7 +34,9 @@ export class SemanticVectorDB {
   private initialized: boolean = false;
 
   constructor(apiKey?: string) {
-    this.db = new Surreal();
+    this.db = new Surreal({
+      engines: (SurrealNodeModule as any).surrealdbNodeEngines(),
+    });
     // Store API key for potential OpenAI embeddings in the future
     if (apiKey || process.env.OPENAI_API_KEY) {
       // For now, we'll use local embeddings
@@ -43,7 +46,8 @@ export class SemanticVectorDB {
 
   async initialize(collectionName: string = 'code-cartographer'): Promise<void> {
     try {
-      // Use embedded/memory mode for SurrealDB
+      // Use in-memory embedded mode for SurrealDB with Node.js engine
+      // Falls back to persistent surrealkv:// if needed for durability
       await this.db.connect('mem://');
 
       // Use database and namespace
@@ -54,13 +58,14 @@ export class SemanticVectorDB {
 
       // Define the code documents table with full-text search capabilities
       await this.db.query(`
+        DEFINE ANALYZER code_analyzer TOKENIZERS blank FILTERS lowercase,ascii;
         DEFINE TABLE code_documents SCHEMAFULL;
         DEFINE FIELD code ON code_documents TYPE string;
         DEFINE FIELD embedding ON code_documents TYPE array;
         DEFINE FIELD metadata ON code_documents TYPE object;
         DEFINE FIELD created ON code_documents TYPE datetime DEFAULT time::now();
         DEFINE FIELD updated ON code_documents TYPE datetime DEFAULT time::now();
-        DEFINE INDEX code_content ON code_documents COLUMNS code SEARCH ANALYZER ascii BM25(1.2,0.75) HIGHLIGHTS;
+        DEFINE INDEX code_content ON code_documents COLUMNS code SEARCH ANALYZER code_analyzer BM25(1.2,0.75) HIGHLIGHTS;
       `);
 
       this.initialized = true;

@@ -23,6 +23,7 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "@surrealdb/node": "^1.0.0-beta.3",
     "better-sqlite3": "^8.7.0",
     "chokidar": "^3.5.3",
     "eventemitter3": "^5.0.1",
