@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc && npm run build:rust",
-    "build:rust": "cd rust-core && cargo build --release",
+    "build:rust": "cd rust-core && napi build --platform --release",
     "dev": "tsx watch src/index.ts",
     "test": "vitest",
     "typecheck": "tsc --noEmit"

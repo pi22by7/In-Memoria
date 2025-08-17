@@ -12,13 +12,18 @@ import {
 import { SemanticEngine } from '../../engines/semantic-engine.js';
 import { PatternEngine } from '../../engines/pattern-engine.js';
 import { SQLiteDatabase } from '../../storage/sqlite-db.js';
+import { SemanticVectorDB } from '../../storage/vector-db.js';
 
 export class IntelligenceTools {
+  private vectorDB: SemanticVectorDB;
+
   constructor(
     private semanticEngine: SemanticEngine,
     private patternEngine: PatternEngine,
     private database: SQLiteDatabase
-  ) {}
+  ) {
+    this.vectorDB = new SemanticVectorDB();
+  }
 
   get tools(): Tool[] {
     return [
@@ -169,7 +174,7 @@ export class IntelligenceTools {
       // Check if already learned and not forcing re-learn
       if (!args.force) {
         const existingIntelligence = await this.checkExistingIntelligence(args.path);
-        if (existingIntelligence) {
+        if (existingIntelligence && existingIntelligence.concepts > 0) {
           return {
             success: true,
             conceptsLearned: existingIntelligence.concepts,
@@ -180,32 +185,84 @@ export class IntelligenceTools {
         }
       }
 
-      // Learn semantic concepts
+      const insights: string[] = [];
+      
+      // Phase 1: Comprehensive codebase analysis
+      insights.push('🔍 Phase 1: Analyzing codebase structure...');
+      const codebaseAnalysis = await this.semanticEngine.analyzeCodebase(args.path);
+      insights.push(`   ✅ Detected languages: ${codebaseAnalysis.languages.join(', ')}`);
+      insights.push(`   ✅ Found frameworks: ${codebaseAnalysis.frameworks.join(', ') || 'none detected'}`);
+      insights.push(`   ✅ Complexity: ${codebaseAnalysis.complexity.cyclomatic.toFixed(1)} cyclomatic, ${codebaseAnalysis.complexity.cognitive.toFixed(1)} cognitive`);
+
+      // Phase 2: Deep semantic learning
+      insights.push('🧠 Phase 2: Learning semantic concepts...');
       const concepts = await this.semanticEngine.learnFromCodebase(args.path);
       
-      // Learn patterns
+      // Analyze concept distribution
+      const conceptTypes = concepts.reduce((acc, concept) => {
+        const type = concept.type || 'unknown';
+        acc[type] = (acc[type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      insights.push(`   ✅ Extracted ${concepts.length} semantic concepts:`);
+      Object.entries(conceptTypes).forEach(([type, count]) => {
+        insights.push(`     - ${count} ${type}${count > 1 ? 's' : ''}`);
+      });
+
+      // Phase 3: Pattern discovery and learning
+      insights.push('🔄 Phase 3: Discovering coding patterns...');
       const patterns = await this.patternEngine.learnFromCodebase(args.path);
       
-      // Store learned intelligence
+      // Analyze pattern distribution
+      const patternTypes = patterns.reduce((acc, pattern) => {
+        const patternType = pattern.type || 'unknown';
+        const category = patternType.split('_')[0]; // Get category from pattern type
+        acc[category] = (acc[category] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      insights.push(`   ✅ Identified ${patterns.length} coding patterns:`);
+      Object.entries(patternTypes).forEach(([category, count]) => {
+        insights.push(`     - ${count} ${category} pattern${count > 1 ? 's' : ''}`);
+      });
+
+      // Phase 4: Relationship and dependency analysis
+      insights.push('🔗 Phase 4: Analyzing relationships and dependencies...');
+      const relationships = await this.analyzeCodebaseRelationships(concepts, patterns);
+      insights.push(`   ✅ Built ${relationships.conceptRelationships} concept relationships`);
+      insights.push(`   ✅ Identified ${relationships.dependencyPatterns} dependency patterns`);
+      
+      // Phase 5: Intelligence synthesis and storage
+      insights.push('💾 Phase 5: Synthesizing and storing intelligence...');
       await this.storeIntelligence(args.path, concepts, patterns);
+      
+      // Generate learning insights based on discovered patterns
+      const learningInsights = await this.generateLearningInsights(concepts, patterns, codebaseAnalysis);
+      insights.push('🎯 Learning Summary:');
+      learningInsights.forEach(insight => insights.push(`   ${insight}`));
+      
+      // Phase 6: Vector embeddings for semantic search
+      insights.push('🔍 Phase 6: Building semantic search index...');
+      const vectorCount = await this.buildSemanticIndex(concepts, patterns);
+      insights.push(`   ✅ Created ${vectorCount} vector embeddings for semantic search`);
+      
+      const timeElapsed = Date.now() - startTime;
+      insights.push(`⚡ Learning completed in ${timeElapsed}ms`);
       
       return {
         success: true,
         conceptsLearned: concepts.length,
         patternsLearned: patterns.length,
-        insights: [
-          `Learned ${concepts.length} semantic concepts`,
-          `Identified ${patterns.length} coding patterns`,
-          'Intelligence stored for future sessions'
-        ],
-        timeElapsed: Date.now() - startTime
+        insights,
+        timeElapsed
       };
     } catch (error) {
       return {
         success: false,
         conceptsLearned: 0,
         patternsLearned: 0,
-        insights: [`Learning failed: ${error}`],
+        insights: [`❌ Learning failed: ${error instanceof Error ? error.message : error}`],
         timeElapsed: Date.now() - startTime
       };
     }
@@ -425,6 +482,152 @@ export class IntelligenceTools {
   }
 
   private extractRecentFocus(patterns: any[]): string[] {
-    return patterns.map(p => p.patternType).slice(0, 5);
+    return patterns.map(p => p.type).slice(0, 5);
+  }
+
+  private async analyzeCodebaseRelationships(
+    concepts: any[], 
+    patterns: any[]
+  ): Promise<{ conceptRelationships: number; dependencyPatterns: number }> {
+    // Analyze semantic relationships between concepts
+    const conceptRelationships = new Set<string>();
+    
+    // Group concepts by file to find file-level relationships
+    const conceptsByFile = concepts.reduce((acc, concept) => {
+      const filePath = concept.filePath || concept.file_path || 'unknown';
+      if (!acc[filePath]) acc[filePath] = [];
+      acc[filePath].push(concept);
+      return acc;
+    }, {} as Record<string, any[]>);
+    
+    // Find relationships within files
+    Object.values(conceptsByFile).forEach(fileConcepts => {
+      if (Array.isArray(fileConcepts)) {
+        for (let i = 0; i < fileConcepts.length; i++) {
+          for (let j = i + 1; j < fileConcepts.length; j++) {
+            const relationshipKey = `${fileConcepts[i].id}-${fileConcepts[j].id}`;
+            conceptRelationships.add(relationshipKey);
+          }
+        }
+      }
+    });
+    
+    // Analyze dependency patterns from imports/references
+    const dependencyPatterns = new Set<string>();
+    patterns.forEach(pattern => {
+      const patternType = pattern.type || '';
+      if (patternType.includes('dependency') || 
+          patternType.includes('import') ||
+          patternType.includes('organization')) {
+        dependencyPatterns.add(pattern.id);
+      }
+    });
+    
+    return {
+      conceptRelationships: conceptRelationships.size,
+      dependencyPatterns: dependencyPatterns.size
+    };
+  }
+
+  private async generateLearningInsights(
+    concepts: any[], 
+    patterns: any[], 
+    codebaseAnalysis: any
+  ): Promise<string[]> {
+    const insights: string[] = [];
+    
+    // Analyze codebase characteristics
+    const totalLines = codebaseAnalysis.complexity?.lines || 0;
+    const conceptDensity = totalLines > 0 ? (concepts.length / totalLines * 1000).toFixed(2) : '0';
+    insights.push(`📊 Concept density: ${conceptDensity} concepts per 1000 lines`);
+    
+    // Analyze pattern distribution
+    const namingPatterns = patterns.filter(p => p.type?.includes('naming'));
+    const structuralPatterns = patterns.filter(p => p.type?.includes('organization') || p.type?.includes('structure'));
+    const implementationPatterns = patterns.filter(p => p.type?.includes('implementation'));
+    
+    if (namingPatterns.length > 0) {
+      insights.push(`✨ Strong naming conventions detected (${namingPatterns.length} patterns)`);
+    }
+    if (structuralPatterns.length > 0) {
+      insights.push(`🏗️ Organized code structure found (${structuralPatterns.length} patterns)`);
+    }
+    if (implementationPatterns.length > 0) {
+      insights.push(`⚙️ Design patterns in use (${implementationPatterns.length} patterns)`);
+    }
+    
+    // Analyze complexity
+    const complexity = codebaseAnalysis.complexity;
+    if (complexity) {
+      if (complexity.cyclomatic < 10) {
+        insights.push('🟢 Low complexity codebase - easy to maintain');
+      } else if (complexity.cyclomatic < 30) {
+        insights.push('🟡 Moderate complexity - consider refactoring high-complexity areas');
+      } else {
+        insights.push('🔴 High complexity detected - refactoring recommended');
+      }
+    }
+    
+    // Analyze language and framework usage
+    const languages = codebaseAnalysis.languages || [];
+    const frameworks = codebaseAnalysis.frameworks || [];
+    
+    if (languages.length === 1) {
+      insights.push(`🎯 Single-language codebase (${languages[0]}) - consistent technology stack`);
+    } else if (languages.length > 1) {
+      insights.push(`🌐 Multi-language codebase (${languages.join(', ')}) - consider integration patterns`);
+    }
+    
+    if (frameworks.length > 0) {
+      insights.push(`🔧 Framework usage: ${frameworks.join(', ')}`);
+    }
+    
+    return insights;
+  }
+
+  private async buildSemanticIndex(concepts: any[], patterns: any[]): Promise<number> {
+    try {
+      // Initialize vector DB if not already done
+      await this.vectorDB.initialize('code-cartographer-intelligence');
+      
+      let vectorCount = 0;
+      
+      // Create embeddings for semantic concepts
+      for (const concept of concepts) {
+        const conceptType = concept.type || 'unknown';
+        const text = `${concept.name} ${conceptType}`;
+        await this.vectorDB.storeCodeEmbedding(text, {
+          id: concept.id,
+          filePath: concept.filePath,
+          functionName: conceptType === 'function' ? concept.name : undefined,
+          className: conceptType === 'class' ? concept.name : undefined,
+          language: 'unknown',
+          complexity: 1,
+          lineCount: 1,
+          lastModified: new Date()
+        });
+        vectorCount++;
+      }
+      
+      // Create embeddings for patterns
+      for (const pattern of patterns) {
+        const patternType = pattern.type || 'unknown';
+        const text = `${patternType} ${pattern.content?.description || ''}`;
+        await this.vectorDB.storeCodeEmbedding(text, {
+          id: pattern.id,
+          filePath: `pattern-${patternType}`,
+          language: 'pattern',
+          complexity: pattern.frequency || 1,
+          lineCount: 1,
+          lastModified: new Date()
+        });
+        vectorCount++;
+      }
+      
+      return vectorCount;
+    } catch (error) {
+      console.warn('Failed to build semantic index:', error);
+      return 0;
+    }
   }
 }

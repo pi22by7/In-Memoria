@@ -50,7 +50,7 @@ export class CodeCartographerMCP {
     this.patternEngine = new PatternEngine(this.database);
     
     // Initialize tool collections
-    this.coreTools = new CoreAnalysisTools(this.semanticEngine, this.patternEngine);
+    this.coreTools = new CoreAnalysisTools(this.semanticEngine, this.patternEngine, this.database);
     this.intelligenceTools = new IntelligenceTools(
       this.semanticEngine, 
       this.patternEngine, 

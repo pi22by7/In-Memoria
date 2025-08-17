@@ -1,0 +1,25 @@
+{
+  "name": "code-cartographer-core",
+  "version": "1.0.0",
+  "description": "Rust core for Code Cartographer",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "napi": {
+    "name": "code-cartographer-core",
+    "triples": {
+      "defaults": true,
+      "additional": []
+    }
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@napi-rs/cli": "^2.16.0"
+  },
+  "engines": {
+    "node": ">= 10"
+  },
+  "scripts": {
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform"
+  }
+}

@@ -120,5 +120,11 @@ data/*.json
 vector-store.json
 *-vectors.json
 
+# Test databases and generated files
+test*.db
+test-*.db
+docs/GENERATED_*.md
+*.session-*.txt
+
 # Claude configuration
 .claude/

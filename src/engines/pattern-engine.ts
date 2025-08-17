@@ -289,8 +289,7 @@ export class PatternEngine {
     complexity: 'low' | 'medium' | 'high';
   }> {
     try {
-      const contextMap = new Map(Object.entries(context));
-      const prediction = await this.rustLearner.predictApproach(problemDescription, contextMap);
+      const prediction = await this.rustLearner.predictApproach(problemDescription, context);
       
       return {
         approach: prediction.approach,
