@@ -61,7 +61,13 @@ Core Analysis (6):
 5. learn_codebase_intelligence
 6. generate_documentation
 
-Intelligence (5): 7. get_semantic_insights 8. get_pattern_recommendations 9. predict_coding_approach 10. get_developer_profile 11. contribute_insights
+Intelligence (5):
+
+7. get_semantic_insights 
+8. get_pattern_recommendations 
+9. predict_coding_approach 
+10. get_developer_profile 
+11. contribute_insights
 
 All 11 are implemented and functional.
 
@@ -209,7 +215,7 @@ Please open issues for language/feature requests before large PRs.
 
 ## 15. License
 
-MIT – see LICENSE.
+MIT – see [LICENSE](LICENSE.md).
 
 ## 16. Acknowledgments
 
