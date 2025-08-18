@@ -80,14 +80,32 @@ claude mcp add in-memoria -- npx in-memoria server
 
 With In Memoria connected, your AI assistant can:
 
+**🔧 Core Analysis Tools:**
 - **`analyze_codebase`** - Get architectural overview and complexity metrics
 - **`search_codebase`** - Find code by meaning, not just keywords
+- **`get_file_content`** - Retrieve file contents with metadata
+- **`get_project_structure`** - Get hierarchical project structure
+- **`generate_documentation`** - Create intelligent documentation
+
+**🧠 Intelligence Tools:**
 - **`get_semantic_insights`** - Understand functions, classes, and their relationships
 - **`get_pattern_recommendations`** - Suggest code that matches your style
 - **`predict_coding_approach`** - Anticipate how you'd solve similar problems
-- **`generate_documentation`** - Create docs that understand your code's purpose
+- **`learn_codebase_intelligence`** - Learn from codebase (manual trigger)
+- **`get_developer_profile`** - Get learned developer patterns and preferences
+- **`contribute_insights`** - AI agents can contribute back to knowledge base
 
-And 5 more tools for comprehensive code intelligence.
+**🤖 Automation Tools (for seamless agent use):**
+- **`auto_learn_if_needed`** - Automatically learn if intelligence data is missing/stale
+- **`get_learning_status`** - Check current intelligence status
+- **`quick_setup`** - Rapid setup and learning for immediate use
+
+**📊 Monitoring Tools:**
+- **`get_system_status`** - Comprehensive system health and status
+- **`get_intelligence_metrics`** - Detailed metrics about learned intelligence
+- **`get_performance_status`** - Performance metrics and benchmarks
+
+**17 total tools** providing seamless, intelligent development assistance.
 
 ## Core Capabilities
 
@@ -129,16 +147,18 @@ Most of this context lives only in developers' minds and gets lost over time. In
 
 ## Requirements
 
-- **Node.js 18+** (tested with 20 LTS)
+- **Node.js 18+** (tested with 20 LTS and 24+)
 - **2GB RAM minimum** for vector operations
 - **For development**: Rust 1.70+ with Cargo
 
 ## Project Status
 
-**Current**: v0.2.4 - All 11 MCP tools implemented and functional  
+**Current**: v0.3.0 - Major usability release with 17 MCP tools and seamless agent integration  
 **Architecture**: Hybrid TypeScript/Rust implementation  
-**Testing**: Linux primary, macOS/Windows pending validation for compatibility  
-**Performance**: Optimized for codebases up to 100k files
+**Testing**: Comprehensive test suite with unit and integration tests  
+**Performance**: Optimized for codebases up to 100k files  
+**Compatibility**: Node.js 18+ including 24+  
+**Usability**: Interactive setup, progress indicators, debugging tools, seamless agent integration
 
 ## Contributing
 

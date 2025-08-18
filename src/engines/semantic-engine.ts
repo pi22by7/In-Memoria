@@ -2,6 +2,7 @@ import { SemanticAnalyzer } from '../rust-bindings.js';
 import { SQLiteDatabase, SemanticConcept } from '../storage/sqlite-db.js';
 import { SemanticVectorDB } from '../storage/vector-db.js';
 import { nanoid } from 'nanoid';
+import { CircuitBreaker, createRustAnalyzerCircuitBreaker } from '../utils/circuit-breaker.js';
 
 export interface CodebaseAnalysisResult {
   languages: string[];
@@ -30,55 +31,61 @@ export interface FileAnalysisResult {
 
 export class SemanticEngine {
   private rustAnalyzer: SemanticAnalyzer;
+  private rustCircuitBreaker: CircuitBreaker;
 
   constructor(
     private database: SQLiteDatabase,
     private vectorDB: SemanticVectorDB
   ) {
     this.rustAnalyzer = new SemanticAnalyzer();
+    this.rustCircuitBreaker = createRustAnalyzerCircuitBreaker();
   }
 
   async analyzeCodebase(path: string): Promise<CodebaseAnalysisResult> {
-    try {
-      const result = await this.rustAnalyzer.analyzeCodebase(path);
-      return {
-        languages: result.languages,
-        frameworks: result.frameworks,
-        complexity: {
-          cyclomatic: result.complexity.cyclomatic,
-          cognitive: result.complexity.cognitive,
-          lines: result.complexity.lines
-        },
-        concepts: result.concepts.map(c => ({
-          name: c.name,
-          type: c.conceptType,
-          confidence: c.confidence
-        }))
-      };
-    } catch (error) {
-      console.error('Rust analyzer error:', error);
+    return this.rustCircuitBreaker.execute(
+      async () => {
+        const result = await this.rustAnalyzer.analyzeCodebase(path);
+        return {
+          languages: result.languages,
+          frameworks: result.frameworks,
+          complexity: {
+            cyclomatic: result.complexity.cyclomatic,
+            cognitive: result.complexity.cognitive,
+            lines: result.complexity.lines
+          },
+          concepts: result.concepts.map(c => ({
+            name: c.name,
+            type: c.conceptType,
+            confidence: c.confidence
+          }))
+        };
+      },
       // Fallback to TypeScript analysis
-      return this.fallbackAnalysis(path);
-    }
+      async () => this.fallbackAnalysis(path)
+    );
   }
 
   async analyzeFileContent(filePath: string, content: string): Promise<FileAnalysisResult['concepts']> {
-    try {
-      const concepts = await this.rustAnalyzer.analyzeFileContent(filePath, content);
-      return concepts.map(c => ({
-        name: c.name,
-        type: c.conceptType,
-        confidence: c.confidence,
-        filePath: c.filePath,
-        lineRange: {
-          start: c.lineRange.start,
-          end: c.lineRange.end
-        }
-      }));
-    } catch (error) {
-      console.error('File analysis error:', error);
-      return this.fallbackFileAnalysis(filePath, content);
-    }
+    return this.rustCircuitBreaker.execute(
+      async () => {
+        const concepts = await this.rustAnalyzer.analyzeFileContent(filePath, content);
+        return concepts.map(c => ({
+          name: c.name,
+          type: c.conceptType,
+          confidence: c.confidence,
+          filePath: c.filePath,
+          lineRange: {
+            start: c.lineRange.start,
+            end: c.lineRange.end
+          }
+        }));
+      },
+      // Fallback to empty analysis
+      async () => {
+        console.warn('Using fallback for file analysis');
+        return [];
+      }
+    );
   }
 
   async learnFromCodebase(path: string): Promise<Array<{

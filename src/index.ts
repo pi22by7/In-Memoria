@@ -7,6 +7,8 @@ import { SemanticEngine } from './engines/semantic-engine.js';
 import { PatternEngine } from './engines/pattern-engine.js';
 import { SQLiteDatabase } from './storage/sqlite-db.js';
 import { SemanticVectorDB } from './storage/vector-db.js';
+import { InteractiveSetup } from './cli/interactive-setup.js';
+import { DebugTools } from './cli/debug-tools.js';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -36,6 +38,30 @@ async function main() {
     case 'init':
       const initPath = args[1] || process.cwd();
       await initializeProject(initPath);
+      break;
+
+    case 'setup':
+      if (args[1] === '--interactive') {
+        const setup = new InteractiveSetup();
+        await setup.run();
+      } else {
+        showHelp();
+      }
+      break;
+
+    case 'debug':
+      const debugPath = args.find(arg => !arg.startsWith('--')) || process.cwd();
+      const debugOptions = {
+        verbose: args.includes('--verbose'),
+        checkDatabase: !args.includes('--no-database'),
+        checkIntelligence: !args.includes('--no-intelligence'),
+        checkFileSystem: !args.includes('--no-filesystem'),
+        validateData: args.includes('--validate'),
+        performance: args.includes('--performance')
+      };
+      
+      const debugTools = new DebugTools(debugOptions);
+      await debugTools.runDiagnostics(debugPath);
       break;
 
     default:
@@ -200,7 +226,7 @@ async function initializeProject(path: string): Promise<void> {
 
   // Create default configuration
   const defaultConfig = {
-    version: "0.2.4",
+    version: "0.3.0",
     intelligence: {
       enableRealTimeAnalysis: true,
       enablePatternLearning: true,
@@ -261,13 +287,26 @@ Usage: in-memoria <command> [options]
 
 Commands:
   server                    Start the MCP server for AI agent integration
+  setup --interactive       Interactive setup wizard (recommended for first time)
+  debug [path] [options]    Run diagnostics and troubleshooting
   watch [path]             Start file watcher for real-time intelligence updates
   learn [path]             Learn from codebase and build intelligence
   analyze [path]           Analyze codebase and show insights
-  init [path]              Initialize In Memoria for a project
+  init [path]              Initialize In Memoria for a project (basic)
+
+Debug Options:
+  --verbose                Show detailed diagnostic information
+  --validate               Validate intelligence data consistency
+  --performance            Analyze performance characteristics
+  --no-database            Skip database diagnostics
+  --no-intelligence        Skip intelligence diagnostics
+  --no-filesystem          Skip filesystem diagnostics
 
 Examples:
+  in-memoria setup --interactive    # Recommended for first-time setup
   in-memoria server
+  in-memoria debug --verbose       # Full diagnostics with details
+  in-memoria debug --validate      # Check data integrity
   in-memoria watch ./src
   in-memoria learn ./my-project
   in-memoria analyze ./src

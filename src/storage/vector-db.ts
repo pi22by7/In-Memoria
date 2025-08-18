@@ -1,5 +1,6 @@
 import { Surreal } from 'surrealdb';
 import * as SurrealNodeModule from '@surrealdb/node';
+import { CircuitBreaker, createOpenAICircuitBreaker } from '../utils/circuit-breaker.js';
 
 export interface CodeMetadata {
   id: string;
@@ -32,16 +33,16 @@ interface CodeDocument {
 export class SemanticVectorDB {
   private db: Surreal;
   private initialized: boolean = false;
+  private openaiCircuitBreaker: CircuitBreaker;
+  private apiKey?: string;
 
   constructor(apiKey?: string) {
     this.db = new Surreal({
       engines: (SurrealNodeModule as any).surrealdbNodeEngines(),
     });
-    // Store API key for potential OpenAI embeddings in the future
-    if (apiKey || process.env.OPENAI_API_KEY) {
-      // For now, we'll use local embeddings
-      // This could be extended to use OpenAI embeddings later
-    }
+    
+    this.apiKey = apiKey || process.env.OPENAI_API_KEY;
+    this.openaiCircuitBreaker = createOpenAICircuitBreaker();
   }
 
   async initialize(collectionName: string = 'in-memoria'): Promise<void> {

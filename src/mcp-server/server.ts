@@ -9,10 +9,13 @@ import {
 
 import { CoreAnalysisTools } from './tools/core-analysis.js';
 import { IntelligenceTools } from './tools/intelligence-tools.js';
+import { AutomationTools } from './tools/automation-tools.js';
+import { MonitoringTools } from './tools/monitoring-tools.js';
 import { SemanticEngine } from '../engines/semantic-engine.js';
 import { PatternEngine } from '../engines/pattern-engine.js';
 import { SQLiteDatabase } from '../storage/sqlite-db.js';
 import { SemanticVectorDB } from '../storage/vector-db.js';
+import { validateInput, VALIDATION_SCHEMAS } from './validation.js';
 
 export class CodeCartographerMCP {
   private server: Server;
@@ -22,12 +25,14 @@ export class CodeCartographerMCP {
   private patternEngine: PatternEngine;
   private coreTools: CoreAnalysisTools;
   private intelligenceTools: IntelligenceTools;
+  private automationTools: AutomationTools;
+  private monitoringTools: MonitoringTools;
 
   constructor() {
     this.server = new Server(
       {
         name: 'in-memoria',
-        version: '0.2.4',
+        version: '0.3.0',
       },
       {
         capabilities: {
@@ -52,7 +57,6 @@ export class CodeCartographerMCP {
         console.error('SQLite database initialized successfully');
       } catch (dbError) {
         console.error('Failed to initialize SQLite database:', dbError);
-        console.error('This might be due to native binary compatibility issues with Node.js 24');
         console.error('The MCP server will continue with limited functionality');
         throw new Error(`Database initialization failed: ${dbError.message}`);
       }
@@ -68,6 +72,16 @@ export class CodeCartographerMCP {
       // Initialize tool collections
       this.coreTools = new CoreAnalysisTools(this.semanticEngine, this.patternEngine, this.database);
       this.intelligenceTools = new IntelligenceTools(
+        this.semanticEngine,
+        this.patternEngine,
+        this.database
+      );
+      this.automationTools = new AutomationTools(
+        this.semanticEngine,
+        this.patternEngine,
+        this.database
+      );
+      this.monitoringTools = new MonitoringTools(
         this.semanticEngine,
         this.patternEngine,
         this.database
@@ -88,7 +102,9 @@ export class CodeCartographerMCP {
       return {
         tools: [
           ...this.coreTools.tools,
-          ...this.intelligenceTools.tools
+          ...this.intelligenceTools.tools,
+          ...this.automationTools.tools,
+          ...this.monitoringTools.tools
         ]
       };
     });
@@ -123,6 +139,12 @@ export class CodeCartographerMCP {
   }
 
   private async routeToolCall(name: string, args: any): Promise<any> {
+    // Validate input using Zod schemas
+    const schema = VALIDATION_SCHEMAS[name as keyof typeof VALIDATION_SCHEMAS];
+    if (schema) {
+      args = validateInput(schema, args, name);
+    }
+
     // Core Analysis Tools
     switch (name) {
       case 'analyze_codebase':
@@ -158,6 +180,26 @@ export class CodeCartographerMCP {
 
       case 'contribute_insights':
         return await this.intelligenceTools.contributeInsights(args);
+
+      // Automation Tools
+      case 'auto_learn_if_needed':
+        return await this.automationTools.autoLearnIfNeeded(args);
+
+      case 'get_learning_status':
+        return await this.automationTools.getLearningStatus(args);
+
+      case 'quick_setup':
+        return await this.automationTools.quickSetup(args);
+
+      // Monitoring Tools
+      case 'get_system_status':
+        return await this.monitoringTools.getSystemStatus(args);
+
+      case 'get_intelligence_metrics':
+        return await this.monitoringTools.getIntelligenceMetrics(args);
+
+      case 'get_performance_status':
+        return await this.monitoringTools.getPerformanceStatus(args);
 
       default:
         throw new McpError(

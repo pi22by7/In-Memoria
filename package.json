@@ -1,6 +1,6 @@
 {
   "name": "in-memoria",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "Persistent intelligence infrastructure for agentic development",
   "main": "dist/index.js",
   "type": "module",
@@ -23,6 +23,9 @@
     "build:rust": "cd rust-core && napi build --platform --release",
     "dev": "tsx watch src/index.ts",
     "test": "vitest",
+    "test:unit": "vitest",
+    "test:manual": "npm run build && node tests/run-all.js",
+    "test:manual:single": "npm run build && node tests/run-all.js",
     "typecheck": "tsc --noEmit",
     "start": "node dist/index.js server",
     "prepublishOnly": "npm run build",

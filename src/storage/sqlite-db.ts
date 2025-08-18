@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { DatabaseMigrator } from './migrations.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -55,16 +56,26 @@ export interface AIInsight {
 
 export class SQLiteDatabase {
   private db: Database.Database;
+  private migrator: DatabaseMigrator;
 
   constructor(dbPath: string = ':memory:') {
     this.db = new Database(dbPath);
+    this.migrator = new DatabaseMigrator(this.db);
     this.initializeDatabase();
   }
 
   private initializeDatabase(): void {
-    const schemaPath = join(__dirname, 'schema.sql');
-    const schema = readFileSync(schemaPath, 'utf-8');
-    this.db.exec(schema);
+    // Run migrations if needed
+    if (this.migrator.needsMigration()) {
+      console.log('Running database migrations...');
+      this.migrator.migrate();
+    } else {
+      console.log('Database is up to date');
+    }
+  }
+
+  getMigrator(): DatabaseMigrator {
+    return this.migrator;
   }
 
   // Semantic Concepts

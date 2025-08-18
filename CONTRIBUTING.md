@@ -17,7 +17,7 @@ In Memoria is building the future of persistent AI intelligence for development.
 
 ### Prerequisites
 
-- **Node.js 20 LTS** (required for tree-sitter compatibility)
+- **Node.js 18+** (20 LTS recommended, 24+ also supported)
 - **Rust 1.70+** with cargo
 - **Git** for version control
 - **VS Code** (recommended) with Rust-analyzer extension
@@ -29,8 +29,8 @@ In Memoria is building the future of persistent AI intelligence for development.
 git clone https://github.com/YOUR-USERNAME/in-memoria.git
 cd in-memoria
 
-# 2. Switch to Node.js 20 LTS (if using nvm)
-nvm use 20
+# 2. Switch to Node.js 20 LTS or 24+ (if using nvm)
+nvm use 20  # or nvm use 24
 
 # 3. Install Node.js dependencies
 npm install
@@ -321,7 +321,7 @@ A clear and concise description of what you expected to happen.
 - OS: [e.g. macOS 13.0]
 - Node.js: [e.g. 20.5.0]
 - Rust: [e.g. 1.72.0]
-- In Memoria: [e.g. 0.2.4]
+- In Memoria: [e.g. 0.3.0]
 
 **Additional Context**
 Add any other context about the problem here.
