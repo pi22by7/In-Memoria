@@ -136,11 +136,11 @@ export class MonitoringTools {
       const metrics = {
         concepts: {
           total: concepts.length,
-          breakdown: {} as any
+          ...(includeBreakdown && { breakdown: {} as any })
         },
         patterns: {
           total: patterns.length,
-          breakdown: {} as any
+          ...(includeBreakdown && { breakdown: {} as any })
         },
         quality: {} as any,
         coverage: {} as any,

@@ -138,7 +138,7 @@ export class CodeCartographerMCP {
     });
   }
 
-  private async routeToolCall(name: string, args: any): Promise<any> {
+  public async routeToolCall(name: string, args: any): Promise<any> {
     // Validate input using Zod schemas
     const schema = VALIDATION_SCHEMAS[name as keyof typeof VALIDATION_SCHEMAS];
     if (schema) {
