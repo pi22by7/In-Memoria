@@ -114,7 +114,7 @@ describe('AutomationTools', () => {
         learnFromCodebase: vi.fn().mockRejectedValue(new Error('Test error'))
       };
       
-      const tools = new AutomationTools(database, {} as any, projectDir);
+      const tools = new AutomationTools({} as any, {} as any, {} as any);
       (tools as any).semanticEngine = mockSemanticEngine;
       
       const result = await tools.autoLearnIfNeeded({ 

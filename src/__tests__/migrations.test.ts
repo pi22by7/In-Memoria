@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DatabaseMigrator } from '../storage/migrations.js';
 import Database from 'better-sqlite3';
 import { mkdtempSync, rmSync } from 'fs';

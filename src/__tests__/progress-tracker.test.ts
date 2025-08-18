@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ProgressTracker, ProgressUpdate } from '../utils/progress-tracker.js';
 import { ConsoleProgressRenderer } from '../utils/console-progress.js';
 
