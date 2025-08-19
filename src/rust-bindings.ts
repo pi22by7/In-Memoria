@@ -10,10 +10,10 @@ function loadNativeBinary() {
   
   // Map Node.js platform/arch to our package names
   const platformMap: Record<string, string> = {
-    'linux-x64': 'in-memoria-linux-x64',
-    'darwin-x64': 'in-memoria-darwin-x64', 
-    'darwin-arm64': 'in-memoria-darwin-arm64',
-    'win32-x64': 'in-memoria-win32-x64'
+    'linux-x64': '@in-memoria/linux-x64',
+    'darwin-x64': '@in-memoria/darwin-x64', 
+    'darwin-arm64': '@in-memoria/darwin-arm64',
+    'win32-x64': '@in-memoria/win32-x64'
   };
   
   const platformKey = `${platform}-${arch}`;

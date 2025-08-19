@@ -1,5 +1,5 @@
 {
-  "name": "in-memoria-darwin-x64",
+  "name": "@in-memoria/darwin-x64",
   "version": "0.3.1",
   "description": "macOS x64 native bindings for In Memoria",
   "main": "in-memoria-core.darwin-x64.node",
@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/pi22by7/in-memoria.git"
+    "url": "git+https://github.com/pi22by7/in-memoria.git"
   },
   "os": [
     "darwin"
