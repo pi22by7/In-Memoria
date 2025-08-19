@@ -148,6 +148,25 @@ In Memoria works as an intelligence layer that makes your existing AI coding ass
 
 **The key insight**: Instead of replacing your AI tools, In Memoria gives them the persistent memory they're missing.
 
+## Team Workflows
+
+In Memoria works great for individual developers and shines even brighter in team environments:
+
+🏗️ **Shared Codebase Understanding** - New team members get instant context about architectural decisions and coding patterns
+
+🔄 **Consistent AI Suggestions** - All team members get suggestions that match your team's established coding style
+
+📚 **Institutional Knowledge** - AI tools remember why certain decisions were made and how the codebase evolved
+
+🚀 **Faster Onboarding** - New developers can ask AI about the codebase and get context-aware, team-specific answers
+
+💡 **Knowledge Sharing** - Intelligence learned by one team member benefits the entire team's AI interactions
+
+**Team Setup:**
+- Run In Memoria on a shared development server or each developer's machine
+- Share intelligence exports for consistent AI behavior across the team
+- Use the same MCP configuration across team members' AI tools
+
 ## Command Reference
 
 ```bash
