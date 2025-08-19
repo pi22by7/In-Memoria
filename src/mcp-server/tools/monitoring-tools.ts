@@ -10,7 +10,7 @@ export class MonitoringTools {
     private semanticEngine: SemanticEngine,
     private patternEngine: PatternEngine,
     private database: SQLiteDatabase
-  ) {}
+  ) { }
 
   get tools(): Tool[] {
     return [
@@ -75,7 +75,7 @@ export class MonitoringTools {
 
     const status = {
       timestamp: new Date().toISOString(),
-      version: '0.3.0',
+      version: '0.3.1',
       status: 'operational',
       components: {} as any,
       intelligence: {} as any,
@@ -86,7 +86,7 @@ export class MonitoringTools {
     try {
       // Database component status
       status.components.database = await this.getDatabaseStatus();
-      
+
       // Intelligence system status
       status.intelligence = await this.getIntelligenceStatus();
 
@@ -112,7 +112,7 @@ export class MonitoringTools {
 
     } catch (error) {
       console.error('❌ Status check failed:', error);
-      
+
       return {
         success: false,
         status: 'error',
@@ -196,7 +196,7 @@ export class MonitoringTools {
 
       // Timestamps
       if (concepts.length > 0) {
-        const latestConcept = concepts.reduce((latest, current) => 
+        const latestConcept = concepts.reduce((latest, current) =>
           new Date(current.createdAt) > new Date(latest.createdAt) ? current : latest
         );
         metrics.timestamps.lastConceptLearned = latestConcept.createdAt;
@@ -217,7 +217,7 @@ export class MonitoringTools {
 
     } catch (error) {
       console.error('❌ Intelligence metrics failed:', error);
-      
+
       return {
         success: false,
         error: error.message,
@@ -255,13 +255,13 @@ export class MonitoringTools {
         const queryStart = Date.now();
         const concepts = this.database.getSemanticConcepts();
         const queryTime = Date.now() - queryStart;
-        
+
         performance.database.queryPerformance = {
           conceptQueryTime: queryTime,
           conceptCount: concepts.length,
-          performanceRating: queryTime < 100 ? 'excellent' : 
-                           queryTime < 500 ? 'good' : 
-                           queryTime < 1000 ? 'fair' : 'poor'
+          performanceRating: queryTime < 100 ? 'excellent' :
+            queryTime < 500 ? 'good' :
+              queryTime < 1000 ? 'fair' : 'poor'
         };
       }
 
@@ -296,7 +296,7 @@ export class MonitoringTools {
 
     } catch (error) {
       console.error('❌ Performance check failed:', error);
-      
+
       return {
         success: false,
         error: error.message,
@@ -309,11 +309,11 @@ export class MonitoringTools {
     try {
       const concepts = this.database.getSemanticConcepts();
       const patterns = this.database.getDeveloperPatterns();
-      
+
       const migrator = this.database.getMigrator();
       const currentVersion = migrator.getCurrentVersion();
       const latestVersion = migrator.getLatestVersion();
-      
+
       return {
         status: 'healthy',
         connected: true,
@@ -359,7 +359,7 @@ export class MonitoringTools {
 
   private async getPerformanceMetrics(): Promise<any> {
     const memUsage = process.memoryUsage();
-    
+
     return {
       memory: {
         heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
@@ -394,7 +394,7 @@ export class MonitoringTools {
   private generateStatusSummary(status: any): string {
     const db = status.components.database;
     const intel = status.intelligence;
-    
+
     if (status.status === 'operational') {
       return `All systems operational. ${intel.conceptCount} concepts, ${intel.patternCount} patterns ready.`;
     } else if (status.status === 'ready_for_learning') {
@@ -424,17 +424,17 @@ export class MonitoringTools {
 
   private getLastUpdateTime(concepts: any[], patterns: any[]): string | null {
     let latestTime = 0;
-    
+
     for (const concept of concepts) {
       const time = new Date(concept.createdAt).getTime();
       if (time > latestTime) latestTime = time;
     }
-    
+
     for (const pattern of patterns) {
       const time = new Date(pattern.createdAt).getTime();
       if (time > latestTime) latestTime = time;
     }
-    
+
     return latestTime > 0 ? new Date(latestTime).toISOString() : null;
   }
 

@@ -1,0 +1,23 @@
+{
+  "name": "in-memoria-darwin-x64",
+  "version": "0.3.1",
+  "description": "macOS x64 native bindings for In Memoria",
+  "main": "in-memoria-core.darwin-x64.node",
+  "files": [
+    "*.node"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">= 18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pi22by7/in-memoria.git"
+  },
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64"
+  ]
+}

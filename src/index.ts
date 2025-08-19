@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { runServer } from './mcp-server/server.js';
 import { FileWatcher } from './watchers/file-watcher.js';
 import { ChangeAnalyzer } from './watchers/change-analyzer.js';
@@ -10,11 +13,40 @@ import { SemanticVectorDB } from './storage/vector-db.js';
 import { InteractiveSetup } from './cli/interactive-setup.js';
 import { DebugTools } from './cli/debug-tools.js';
 
+function getVersion(): string {
+  try {
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    const packagePath = join(__dirname, '..', 'package.json');
+    const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
+    return packageJson.version;
+  } catch (error) {
+    return 'unknown';
+  }
+}
+
+function showVersion(): void {
+  const version = getVersion();
+  console.log(`In Memoria v${version}`);
+  console.log('Persistent Intelligence Infrastructure for AI Agents');
+  console.log('https://github.com/pi22by7/in-memoria');
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const command = args[0];
 
+  // Handle version flags
+  if (args.includes('--version') || args.includes('-v')) {
+    showVersion();
+    return;
+  }
+
   switch (command) {
+    case 'version':
+    case '--version':
+    case '-v':
+      showVersion();
+      break;
     case 'server':
       console.log('Starting In Memoria MCP Server...');
       await runServer();
@@ -59,7 +91,7 @@ async function main() {
         validateData: args.includes('--validate'),
         performance: args.includes('--performance')
       };
-      
+
       const debugTools = new DebugTools(debugOptions);
       await debugTools.runDiagnostics(debugPath);
       break;
@@ -226,7 +258,7 @@ async function initializeProject(path: string): Promise<void> {
 
   // Create default configuration
   const defaultConfig = {
-    version: "0.3.0",
+    version: "0.3.1",
     intelligence: {
       enableRealTimeAnalysis: true,
       enablePatternLearning: true,
@@ -293,6 +325,7 @@ Commands:
   learn [path]             Learn from codebase and build intelligence
   analyze [path]           Analyze codebase and show insights
   init [path]              Initialize In Memoria for a project (basic)
+  version, --version, -v    Show version information
 
 Debug Options:
   --verbose                Show detailed diagnostic information

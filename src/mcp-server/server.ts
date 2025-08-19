@@ -32,7 +32,7 @@ export class CodeCartographerMCP {
     this.server = new Server(
       {
         name: 'in-memoria',
-        version: '0.3.0',
+        version: '0.3.1',
       },
       {
         capabilities: {
@@ -47,11 +47,11 @@ export class CodeCartographerMCP {
   private async initializeComponents(): Promise<void> {
     try {
       console.error('Initializing In Memoria components...');
-      
+
       // Initialize storage with better path handling and fallback
       const dbPath = process.env.IN_MEMORIA_DB_PATH || './in-memoria.db';
       console.error(`Attempting to initialize database at: ${dbPath}`);
-      
+
       try {
         this.database = new SQLiteDatabase(dbPath);
         console.error('SQLite database initialized successfully');

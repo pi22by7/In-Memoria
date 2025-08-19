@@ -153,7 +153,7 @@ Most of this context lives only in developers' minds and gets lost over time. In
 
 ## Project Status
 
-**Current**: v0.3.0 - Major usability release with 17 MCP tools and seamless agent integration  
+**Current**: v0.3.1 - Cross-platform release with Windows/macOS support and 80% smaller downloads  
 **Architecture**: Hybrid TypeScript/Rust implementation  
 **Testing**: Comprehensive test suite with unit and integration tests  
 **Performance**: Optimized for codebases up to 100k files  

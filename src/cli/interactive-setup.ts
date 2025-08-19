@@ -36,7 +36,7 @@ export class InteractiveSetup {
       const config = await this.collectConfiguration();
       await this.validateConfiguration(config);
       await this.createConfiguration(config);
-      
+
       if (config.performInitialLearning) {
         await this.performInitialLearning(config);
       }
@@ -66,7 +66,7 @@ export class InteractiveSetup {
     console.log('\n🔍 Detecting languages in your project...');
     const detectedLanguages = await this.detectLanguages(config.projectPath);
     console.log(`Found: ${detectedLanguages.join(', ')}`);
-    
+
     const useDetected = await this.confirm(`Use detected languages?`, true);
     if (useDetected) {
       config.languages = detectedLanguages;
@@ -79,10 +79,10 @@ export class InteractiveSetup {
     console.log('\n🧠 Intelligence Configuration:');
     config.enableRealTimeAnalysis = await this.confirm('Enable real-time analysis?', true);
     config.enablePatternLearning = await this.confirm('Enable pattern learning?', true);
-    
+
     const enhancedEmbeddings = await this.confirm('Enable enhanced vector embeddings? (requires OpenAI API key)', false);
     config.enableVectorEmbeddings = enhancedEmbeddings;
-    
+
     if (enhancedEmbeddings) {
       const existingKey = process.env.OPENAI_API_KEY;
       if (existingKey) {
@@ -99,7 +99,7 @@ export class InteractiveSetup {
     console.log('\n📁 File Watching Configuration:');
     const defaultPatterns = this.getDefaultWatchPatterns(config.languages!);
     const customPatterns = await this.confirm('Customize file watching patterns?', false);
-    
+
     if (customPatterns) {
       const patternsInput = await this.prompt('Watch patterns (comma-separated)', defaultPatterns.join(', '));
       config.watchPatterns = patternsInput.split(',').map(p => p.trim());
@@ -110,7 +110,7 @@ export class InteractiveSetup {
     // Ignored paths
     const defaultIgnored = ['**/node_modules/**', '**/.git/**', '**/dist/**', '**/build/**', '**/target/**'];
     const customIgnore = await this.confirm('Customize ignored paths?', false);
-    
+
     if (customIgnore) {
       const ignoredInput = await this.prompt('Ignored paths (comma-separated)', defaultIgnored.join(', '));
       config.ignoredPaths = ignoredInput.split(',').map(p => p.trim());
@@ -158,7 +158,7 @@ export class InteractiveSetup {
 
     // Create configuration file
     const configFile = {
-      version: "0.3.0",
+      version: "0.3.1",
       project: {
         name: config.projectName,
         languages: config.languages
@@ -366,11 +366,11 @@ export class InteractiveSetup {
         process.stdout.write(questionText);
         process.stdin.setRawMode(true);
         process.stdin.resume();
-        
+
         let input = '';
         const onData = (key: Buffer) => {
           const char = key.toString();
-          
+
           if (char === '\r' || char === '\n') {
             process.stdin.setRawMode(false);
             process.stdin.pause();
@@ -389,7 +389,7 @@ export class InteractiveSetup {
             process.stdout.write('*');
           }
         };
-        
+
         process.stdin.on('data', onData);
       } else {
         this.rl.question(questionText, (answer) => {
@@ -402,9 +402,9 @@ export class InteractiveSetup {
   private async confirm(question: string, defaultValue: boolean = false): Promise<boolean> {
     const defaultText = defaultValue ? 'Y/n' : 'y/N';
     const answer = await this.prompt(`${question} (${defaultText})`);
-    
+
     if (!answer) return defaultValue;
-    
+
     const normalized = answer.toLowerCase();
     return normalized === 'y' || normalized === 'yes';
   }

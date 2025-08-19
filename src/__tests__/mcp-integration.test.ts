@@ -15,14 +15,14 @@ describe('MCP Server Integration', () => {
     tempDir = mkdtempSync(join(tmpdir(), 'mcp-integration-test-'));
     projectDir = join(tempDir, 'test-project');
     mkdirSync(projectDir, { recursive: true });
-    
+
     // Create test project structure
     writeFileSync(join(projectDir, 'package.json'), JSON.stringify({
       name: 'test-project',
       version: '1.0.0',
       description: 'Test project for MCP integration'
     }));
-    
+
     writeFileSync(join(projectDir, 'index.ts'), `
 export class TestService {
   private data: string[] = [];
@@ -36,7 +36,7 @@ export class TestService {
   }
 }
     `);
-    
+
     writeFileSync(join(projectDir, 'utils.ts'), `
 export function calculateSum(numbers: number[]): number {
   return numbers.reduce((sum, num) => sum + num, 0);
@@ -46,13 +46,13 @@ export function formatMessage(message: string): string {
   return \`[INFO] \${message}\`;
 }
     `);
-    
+
     // Set test environment
     originalCwd = process.cwd();
     originalEnv = { ...process.env };
     process.chdir(projectDir);
     process.env.IN_MEMORIA_DB_PATH = join(tempDir, 'test.db');
-    
+
     server = new CodeCartographerMCP();
     // MCP server doesn't have a connect method in tests, components initialize in constructor
   });
@@ -63,7 +63,7 @@ export function formatMessage(message: string): string {
     } catch (error) {
       // Ignore cleanup errors
     }
-    
+
     process.chdir(originalCwd);
     process.env = originalEnv;
     rmSync(tempDir, { recursive: true, force: true });
@@ -78,8 +78,8 @@ export function formatMessage(message: string): string {
 
   describe('Core Analysis Tools', () => {
     it('should analyze codebase successfully', async () => {
-      const result = await server.routeToolCall('analyze_codebase', { 
-        path: projectDir 
+      const result = await server.routeToolCall('analyze_codebase', {
+        path: projectDir
       });
 
       expect(result).toBeDefined();
@@ -88,7 +88,7 @@ export function formatMessage(message: string): string {
     });
 
     it('should get file content with metadata', async () => {
-      const result = await server.routeToolCall('get_file_content', { 
+      const result = await server.routeToolCall('get_file_content', {
         path: join(projectDir, 'index.ts')
       });
 
@@ -97,8 +97,8 @@ export function formatMessage(message: string): string {
     });
 
     it('should get project structure', async () => {
-      const result = await server.routeToolCall('get_project_structure', { 
-        path: projectDir 
+      const result = await server.routeToolCall('get_project_structure', {
+        path: projectDir
       });
 
       expect(result.structure).toBeDefined();
@@ -107,7 +107,7 @@ export function formatMessage(message: string): string {
     });
 
     it('should search codebase', async () => {
-      const result = await server.routeToolCall('search_codebase', { 
+      const result = await server.routeToolCall('search_codebase', {
         query: 'TestService',
         type: 'text'
       });
@@ -119,8 +119,8 @@ export function formatMessage(message: string): string {
 
   describe('Automation Tools', () => {
     it('should check learning status', async () => {
-      const result = await server.routeToolCall('get_learning_status', { 
-        path: projectDir 
+      const result = await server.routeToolCall('get_learning_status', {
+        path: projectDir
       });
 
       expect(result.hasIntelligence).toBeDefined();
@@ -130,7 +130,7 @@ export function formatMessage(message: string): string {
     });
 
     it('should auto-learn if needed', async () => {
-      const result = await server.routeToolCall('auto_learn_if_needed', { 
+      const result = await server.routeToolCall('auto_learn_if_needed', {
         path: projectDir,
         includeProgress: false
       });
@@ -143,7 +143,7 @@ export function formatMessage(message: string): string {
     });
 
     it('should perform quick setup', async () => {
-      const result = await server.routeToolCall('quick_setup', { 
+      const result = await server.routeToolCall('quick_setup', {
         path: projectDir,
         skipLearning: true
       });
@@ -156,20 +156,20 @@ export function formatMessage(message: string): string {
 
   describe('Monitoring Tools', () => {
     it('should get system status', async () => {
-      const result = await server.routeToolCall('get_system_status', { 
-        includeMetrics: true 
+      const result = await server.routeToolCall('get_system_status', {
+        includeMetrics: true
       });
 
       expect(result.success).toBe(true);
-      expect(result.status.version).toBe('0.3.0');
+      expect(result.status.version).toBe('0.3.1');
       expect(result.status.components.database).toBeDefined();
       expect(result.status.intelligence).toBeDefined();
       expect(result.status.status).toMatch(/operational|ready_for_learning|degraded|critical/);
     });
 
     it('should get intelligence metrics', async () => {
-      const result = await server.routeToolCall('get_intelligence_metrics', { 
-        includeBreakdown: true 
+      const result = await server.routeToolCall('get_intelligence_metrics', {
+        includeBreakdown: true
       });
 
       expect(result.success).toBe(true);
@@ -178,8 +178,8 @@ export function formatMessage(message: string): string {
     });
 
     it('should get performance status', async () => {
-      const result = await server.routeToolCall('get_performance_status', { 
-        runBenchmark: false 
+      const result = await server.routeToolCall('get_performance_status', {
+        runBenchmark: false
       });
 
       expect(result.success).toBe(true);
@@ -189,8 +189,8 @@ export function formatMessage(message: string): string {
     });
 
     it('should run performance benchmark', async () => {
-      const result = await server.routeToolCall('get_performance_status', { 
-        runBenchmark: true 
+      const result = await server.routeToolCall('get_performance_status', {
+        runBenchmark: true
       });
 
       expect(result.success).toBe(true);
@@ -201,8 +201,8 @@ export function formatMessage(message: string): string {
 
   describe('Intelligence Tools', () => {
     it('should get semantic insights', async () => {
-      const result = await server.routeToolCall('get_semantic_insights', { 
-        limit: 10 
+      const result = await server.routeToolCall('get_semantic_insights', {
+        limit: 10
       });
 
       expect(result).toBeDefined();
@@ -210,8 +210,8 @@ export function formatMessage(message: string): string {
     });
 
     it('should get pattern recommendations', async () => {
-      const result = await server.routeToolCall('get_pattern_recommendations', { 
-        problemDescription: 'I need to create a data processing service' 
+      const result = await server.routeToolCall('get_pattern_recommendations', {
+        problemDescription: 'I need to create a data processing service'
       });
 
       expect(result).toBeDefined();
@@ -219,8 +219,8 @@ export function formatMessage(message: string): string {
     });
 
     it('should predict coding approach', async () => {
-      const result = await server.routeToolCall('predict_coding_approach', { 
-        problemDescription: 'Building a REST API endpoint' 
+      const result = await server.routeToolCall('predict_coding_approach', {
+        problemDescription: 'Building a REST API endpoint'
       });
 
       expect(result).toBeDefined();
@@ -253,7 +253,7 @@ export function formatMessage(message: string): string {
     });
 
     it('should validate input parameters', async () => {
-      await expect(server.routeToolCall('analyze_codebase', { 
+      await expect(server.routeToolCall('analyze_codebase', {
         path: '' // Invalid empty path
       })).rejects.toThrow();
     });
@@ -273,16 +273,16 @@ export function formatMessage(message: string): string {
       });
 
       expect(listResult.tools).toHaveLength(17);
-      
+
       const toolNames = listResult.tools.map((tool: any) => tool.name);
       const expectedTools = [
         // Core Analysis Tools
         'analyze_codebase',
-        'get_file_content', 
+        'get_file_content',
         'get_project_structure',
         'search_codebase',
         'generate_documentation',
-        
+
         // Intelligence Tools
         'learn_codebase_intelligence',
         'get_semantic_insights',
@@ -290,12 +290,12 @@ export function formatMessage(message: string): string {
         'predict_coding_approach',
         'get_developer_profile',
         'contribute_insights',
-        
+
         // Automation Tools
         'auto_learn_if_needed',
         'get_learning_status',
         'quick_setup',
-        
+
         // Monitoring Tools
         'get_system_status',
         'get_intelligence_metrics',
@@ -324,13 +324,13 @@ export function formatMessage(message: string): string {
   describe('End-to-End Workflow', () => {
     it('should support complete agent workflow', async () => {
       // 1. Check initial status
-      const initialStatus = await server.routeToolCall('get_learning_status', { 
-        path: projectDir 
+      const initialStatus = await server.routeToolCall('get_learning_status', {
+        path: projectDir
       });
       expect(initialStatus.hasIntelligence).toBeDefined();
 
       // 2. Auto-learn if needed
-      const learningResult = await server.routeToolCall('auto_learn_if_needed', { 
+      const learningResult = await server.routeToolCall('auto_learn_if_needed', {
         path: projectDir,
         includeProgress: false
       });
@@ -345,8 +345,8 @@ export function formatMessage(message: string): string {
       expect(metrics.success).toBe(true);
 
       // 5. Analyze the codebase
-      const analysis = await server.routeToolCall('analyze_codebase', { 
-        path: projectDir 
+      const analysis = await server.routeToolCall('analyze_codebase', {
+        path: projectDir
       });
       expect(analysis).toBeDefined();
 

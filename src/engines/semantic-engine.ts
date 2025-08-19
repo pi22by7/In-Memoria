@@ -30,7 +30,7 @@ export interface FileAnalysisResult {
 }
 
 export class SemanticEngine {
-  private rustAnalyzer: SemanticAnalyzer;
+  private rustAnalyzer: InstanceType<typeof SemanticAnalyzer>;
   private rustCircuitBreaker: CircuitBreaker;
 
   constructor(

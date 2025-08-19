@@ -38,7 +38,7 @@ describe('MonitoringTools', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.status.version).toBe('0.3.0');
+      expect(result.status.version).toBe('0.3.1');
       expect(result.status.timestamp).toBeDefined();
       expect(result.status.components.database).toBeDefined();
       expect(result.status.intelligence).toBeDefined();
@@ -163,7 +163,7 @@ describe('MonitoringTools', () => {
   describe('tools property', () => {
     it('should expose correct tool definitions', () => {
       const tools = monitoringTools.tools;
-      
+
       expect(tools).toHaveLength(3);
       expect(tools.map(t => t.name)).toEqual([
         'get_system_status',

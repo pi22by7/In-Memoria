@@ -5,6 +5,51 @@ All notable changes to In Memoria will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-08-19
+
+### 🚀 Cross-Platform Release - Universal Compatibility
+
+This release makes In Memoria work seamlessly across Windows, macOS, and Linux with optimized package distribution and 80% smaller downloads.
+
+### ✨ Added
+
+#### 🌍 Cross-Platform Support
+- **Windows compatibility** - Full support for x64 Windows systems
+- **macOS compatibility** - Support for both Intel (x64) and Apple Silicon (ARM64) Macs
+- **Linux compatibility** - Enhanced Linux x64 support with glibc
+- **Platform-specific packages** - Automatic installation of correct binaries per platform
+
+#### 📦 Optimized Package Distribution
+- **Platform-specific npm packages** - `in-memoria-{linux-x64,darwin-x64,darwin-arm64,win32-x64}`
+- **Minimal main package** - Only 130KB download (vs previous 50MB+)
+- **Automatic platform detection** - Runtime loading of correct native binaries
+- **Optional dependencies** - npm installs only the user's platform binaries
+
+#### 🔧 Build System Improvements
+- **Cross-platform build scripts** - Support for building on any platform
+- **GitHub Actions matrix builds** - Automated builds for all 4 platforms
+- **NAPI-RS configuration** - Modern build targets and binary naming
+- **Platform detection fallbacks** - Graceful error handling for unsupported platforms
+
+### 🛠️ Changed
+- **File copy operations** - Replaced Unix `cp` with cross-platform Node.js operations
+- **Build commands** - Use `npm --prefix` instead of `cd` for Windows compatibility
+- **Shell scripts** - Explicit `bash` shell for cross-platform GitHub Actions
+- **TypeScript types** - Fixed class type exports for better IDE support
+
+### 🐛 Fixed
+- **Windows build failures** - Resolved path separator and toolchain issues
+- **macOS compilation** - Fixed cross-compilation toolchain requirements
+- **Package structure** - Proper binary loading and fallback mechanisms
+- **GitHub Actions** - Cross-platform workflow compatibility
+
+### 📊 Package Size Reduction
+- **Before**: ~50MB (all platforms bundled)
+- **After**: ~2MB per user (only their platform)
+- **Savings**: 80% smaller downloads and faster installs
+
+---
+
 ## [0.3.0] - 2025-08-18
 
 ### 🎯 Major Usability Release - Seamless Agent Integration

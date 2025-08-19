@@ -33,7 +33,7 @@ export interface RelevantPattern {
 }
 
 export class PatternEngine {
-  private rustLearner: PatternLearner;
+  private rustLearner: InstanceType<typeof PatternLearner>;
 
   constructor(private database: SQLiteDatabase) {
     this.rustLearner = new PatternLearner();

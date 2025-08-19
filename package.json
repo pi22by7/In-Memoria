@@ -1,6 +1,6 @@
 {
   "name": "in-memoria",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Persistent intelligence infrastructure for agentic development",
   "main": "dist/index.js",
   "type": "module",
@@ -11,16 +11,18 @@
     "dist",
     "README.md",
     "LICENSE",
-    "schemas",
-    "rust-core/index.js",
-    "rust-core/index.d.ts",
-    "rust-core/*.node",
-    "rust-core/package.json"
+    "schemas"
   ],
   "scripts": {
     "build": "tsc && npm run build:rust && npm run copy-assets",
-    "copy-assets": "cp src/storage/schema.sql dist/storage/",
-    "build:rust": "cd rust-core && napi build --platform --release",
+    "copy-assets": "node -e \"require('fs').mkdirSync('dist/storage', {recursive: true}); require('fs').copyFileSync('src/storage/schema.sql', 'dist/storage/schema.sql')\"",
+    "build:rust": "npm --prefix rust-core run build",
+    "build:universal": "npm run build:rust -- --target universal",
+    "build:windows": "npm --prefix rust-core run build -- --target x86_64-pc-windows-msvc",
+    "build:macos": "npm --prefix rust-core run build -- --target x86_64-apple-darwin",
+    "build:macos-arm": "npm --prefix rust-core run build -- --target aarch64-apple-darwin",
+    "build:all-platforms": "npm run build:windows && npm run build:macos && npm run build:macos-arm",
+    "prepare:platform-packages": "node scripts/build-platform-packages.js",
     "dev": "tsx watch src/index.ts",
     "test": "vitest",
     "test:unit": "vitest",
@@ -59,6 +61,12 @@
     "tree-sitter-rust": "^0.21.0",
     "tree-sitter-typescript": "^0.21.2",
     "zod": "^4.0.17"
+  },
+  "optionalDependencies": {
+    "in-memoria-linux-x64": "0.3.1",
+    "in-memoria-darwin-x64": "0.3.1",
+    "in-memoria-darwin-arm64": "0.3.1",
+    "in-memoria-win32-x64": "0.3.1"
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.1.5",
