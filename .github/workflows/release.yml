@@ -103,6 +103,7 @@ jobs:
   publish:
     name: Publish main package to npm
     runs-on: ubuntu-latest
+    environment: production
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     
@@ -117,7 +118,7 @@ jobs:
           registry-url: https://registry.npmjs.org/
           
       - name: Install dependencies
-        run: npm install
+        run: npm ci
         
       - name: Build TypeScript (without Rust)
         run: tsc && npm run copy-assets
