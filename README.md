@@ -3,55 +3,57 @@
 [![npm version](https://badge.fury.io/js/in-memoria.svg)](https://www.npmjs.com/package/in-memoria)
 [![npm downloads](https://img.shields.io/npm/dm/in-memoria.svg)](https://www.npmjs.com/package/in-memoria)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Platform Support](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue.svg)](https://github.com/pi22by7/in-memoria)
-[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
 
-**Persistent intelligence infrastructure that gives AI coding assistants the memory and context they need to be truly effective.**
+**MCP server that gives AI coding assistants persistent memory and pattern learning.**
 
-## The Problem: Session Amnesia
+AI coding tools suffer from complete memory loss between sessions. Every conversation with Claude, Copilot, or Cursor starts from scratch, wasting time and tokens re-explaining your codebase.
 
-AI coding assistants suffer from complete memory loss between sessions:
+In Memoria solves **session amnesia** by building persistent intelligence about your code that AI tools can access through the Model Context Protocol.
 
-- **Copilot, Claude, Cursor** waste tokens re-analyzing your codebase every session
-- You spend valuable time re-explaining your architecture and patterns
-- AI gives generic suggestions that don't match YOUR coding style
-- No shared context when using multiple AI tools
-- Lost insights about architectural decisions and learned patterns
+## The Problem
 
-**In Memoria solves this.** It's the persistent memory layer that makes your AI tools truly intelligent.
+```bash
+# What happens now
+You: "Refactor this function using our established patterns"
+AI: "What patterns? I don't know your codebase."
+You: *explains architecture for the 50th time*
 
-## How It Works
+# What should happen
+You: "Refactor this function using our established patterns"
+AI: "Based on your preference for functional composition and your naming conventions..."
+```
 
-🧠 **Persistent Memory** - AI tools remember architecture, patterns, and preferences across sessions
+Current AI tools:
 
-⚡ **Pattern Learning** - Learns your specific coding style to provide personalized suggestions
+- Re-analyze codebases every session (expensive)
+- Give generic suggestions that don't match your style
+- Have no memory of architectural decisions
+- Can't learn from corrections you've made
 
-🎯 **Semantic Understanding** - Pre-analyzed codebase knowledge saves tokens and context windows
+## Technical Approach
 
-🤝 **Shared Intelligence** - One memory layer serves all your AI tools (Claude, Copilot, Cursor)
+In Memoria runs as an MCP server that AI tools connect to. It provides 17 tools for codebase analysis and pattern learning.
 
-🔄 **Cumulative Learning** - Intelligence builds up over time instead of starting from scratch
+**Architecture:**
 
-🔒 **Local-First** - All data stays on your machine, enhances your existing tools
+```
+AI Tool (Claude/etc) <--MCP--> TypeScript Server <--napi-rs--> Rust Core <--> SQLite + Vectors
+```
+
+**Core engines:**
+
+- **AST Parser**: Tree-sitter based, supports TypeScript/JavaScript, Python, Rust
+- **Pattern Learner**: Analyzes your coding decisions and builds a style profile
+- **Semantic Engine**: Maps code relationships and architectural concepts
+- **Vector Store**: Semantic similarity search for code understanding
 
 ## Quick Start
-
-Get up and running in 2 minutes:
 
 ```bash
 # Start the MCP server
 npx in-memoria server
 
-# Or install globally first
-npm install -g in-memoria
-in-memoria server
-```
-
-**Connect to your AI tools:**
-
-**Claude Desktop** - Add this to your config:
-
-```json
+# Connect from Claude Desktop (add to config)
 {
   "mcpServers": {
     "in-memoria": {
@@ -60,160 +62,185 @@ in-memoria server
     }
   }
 }
-```
 
-**Claude Code (CLI)**:
-
-```bash
+# Connect from Claude Code CLI
 claude mcp add in-memoria -- npx in-memoria server
 ```
 
-That's it! Your AI assistant now has persistent memory and will learn your codebase over time.
+## What It Learns
 
-## Intelligence Tools
+**Coding Patterns:**
 
-In Memoria provides 17 specialized MCP tools for AI assistants:
+```typescript
+// Learns you prefer functional composition
+const processUser = pipe(validateUser, enrichUserData, saveUser);
 
-### 🔍 **Codebase Analysis**
-
-- `analyze_codebase` - Architectural overview and complexity metrics
-- `search_codebase` - Semantic search that finds code by meaning
-- `get_file_content` - File retrieval with rich metadata
-- `get_project_structure` - Intelligent project hierarchy understanding
-
-### 🧠 **Intelligence Engine**
-
-- `get_semantic_insights` - Deep relationships between functions and classes
-- `get_pattern_recommendations` - Suggestions that match YOUR coding style
-- `predict_coding_approach` - AI predicts how YOU would solve similar problems
-- `get_developer_profile` - Your learned coding preferences and patterns
-- `learn_codebase_intelligence` - Trigger learning when needed
-
-### ⚡ **Smart Automation**
-
-- `auto_learn_if_needed` - Automatic gap detection and learning
-- `get_learning_status` - What your AI knows about your codebase
-- `contribute_insights` - Let AI contribute back to your knowledge base
-- `quick_setup` - One-command project initialization
-
-### 📊 **System Intelligence**
-
-- `get_system_status` - Health monitoring and diagnostics
-- `get_intelligence_metrics` - Quality metrics for learned intelligence
-- `get_performance_status` - Performance benchmarks and optimization
-- `generate_documentation` - Context-aware, intelligent documentation
-
-## Technical Details
-
-**Architecture:**
-
-```
-┌──────────────────────────────┐
-│  MCP Clients (Claude, etc.)  │
-└──────────────┬───────────────┘
-               │ Model Context Protocol
-┌──────────────▼───────────────┐
-│   TypeScript MCP Server      │  ← Standards compliance & integration
-└──────────────┬───────────────┘
-               │ napi-rs bindings
-┌──────────────▼───────────────┐
-│  Rust Intelligence Engines  │  ← Pattern learning & semantic analysis
-└──────────────┬───────────────┘
-               │ Persistent storage
-┌──────────────▼───────────────┐
-│ SQLite + Vector Embeddings   │  ← Local-first intelligence storage
-└──────────────────────────────┘
+// Future suggestions match this style, not OOP alternatives
 ```
 
-**Language Support:** TypeScript/JavaScript, Python, and Rust (more coming via tree-sitter)
+**Naming Conventions:**
 
-**Key Features:**
+```typescript
+// Learns your patterns: useXxxData for API hooks, handleXxx for events
+const useUserData = () => { ... }
+const handleSubmit = () => { ... }
 
-- Tree-sitter parsing for language-aware analysis
-- Incremental updates (only processes changes)
-- Vector similarity search for semantic understanding
-- Cross-platform binaries (Windows, macOS, Linux)
-- Circuit breakers for reliability
+// Suggests consistent naming in new code
+```
 
-## How It Enhances Your AI Tools
+**Architecture Decisions:**
 
-In Memoria works as an intelligence layer that makes your existing AI coding assistants more effective:
+```typescript
+// Remembers you use Result types for error handling
+type ApiResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string };
 
-| AI Tool                 | What In Memoria Adds                                              |
-| ----------------------- | ----------------------------------------------------------------- |
-| **GitHub Copilot**      | Persistent context about your coding patterns and architecture    |
-| **Cursor**              | Shared memory across sessions and semantic codebase understanding |
-| **Claude Desktop/Code** | Pre-analyzed codebase insights that save context tokens           |
-| **Any MCP Client**      | 17 specialized tools for intelligent code analysis and learning   |
+// Suggests this pattern instead of throwing exceptions
+```
 
-**The key insight**: Instead of replacing your AI tools, In Memoria gives them the persistent memory they're missing.
+## MCP Tools
 
-## Team Workflows
+**Analysis:**
 
-In Memoria works great for individual developers and shines even brighter in team environments:
+- `analyze_codebase` - Get architectural overview and metrics
+- `search_codebase` - Semantic search (find by meaning, not keywords)
+- `get_file_content` - Retrieve files with metadata
+- `get_project_structure` - Project hierarchy understanding
 
-🏗️ **Shared Codebase Understanding** - New team members get instant context about architectural decisions and coding patterns
+**Intelligence:**
 
-🔄 **Consistent AI Suggestions** - All team members get suggestions that match your team's established coding style
+- `get_semantic_insights` - Code relationships and dependencies
+- `get_pattern_recommendations` - Suggestions matching your style
+- `predict_coding_approach` - How you'd solve similar problems
+- `get_developer_profile` - Your learned preferences
+- `learn_codebase_intelligence` - Trigger analysis
 
-📚 **Institutional Knowledge** - AI tools remember why certain decisions were made and how the codebase evolved
+**Automation:**
 
-🚀 **Faster Onboarding** - New developers can ask AI about the codebase and get context-aware, team-specific answers
+- `auto_learn_if_needed` - Smart learning when gaps detected
+- `contribute_insights` - AI can add back to knowledge base
+- `get_learning_status` - What's been analyzed
+- `quick_setup` - Project initialization
 
-💡 **Knowledge Sharing** - Intelligence learned by one team member benefits the entire team's AI interactions
+**System:**
 
-**Team Setup:**
-- Run In Memoria on a shared development server or each developer's machine
-- Share intelligence exports for consistent AI behavior across the team
-- Use the same MCP configuration across team members' AI tools
+- `get_system_status` - Health and diagnostics
+- `get_intelligence_metrics` - Learning quality metrics
+- `get_performance_status` - Performance benchmarks
 
-## Command Reference
+## Implementation Details
+
+**Pattern Learning Algorithm:**
+
+1. Parse code into ASTs using tree-sitter
+2. Extract structural patterns (function signatures, class hierarchies, naming)
+3. Build frequency maps of developer choices
+4. Train classifier on decision patterns
+5. Generate predictions for new code contexts
+
+**Performance:**
+
+- Incremental analysis (only processes changed files)
+- SQLite for metadata, embedded vector DB for semantic search
+- Cross-platform Rust binaries (Windows, macOS, Linux)
+- Handles codebases up to 100k files
+
+## Team Usage
+
+In Memoria works for individual developers and teams:
+
+**Individual:**
+
+- Learns your personal coding style
+- Remembers architectural decisions you've made
+- Provides context-aware suggestions
+
+**Team:**
+
+- Share intelligence across team members
+- Onboard new developers with institutional knowledge
+- Maintain consistent AI suggestions team-wide
 
 ```bash
-# Intelligence Operations
-in-memoria learn [path]          # Analyze and learn from codebase
-in-memoria analyze [path]        # Generate insights and metrics
-in-memoria watch [path]          # Real-time file monitoring
+# Export team knowledge
+in-memoria export --format json > team-intelligence.json
 
-# AI Integration
-in-memoria server               # Start MCP server
-in-memoria setup --interactive  # Guided setup
-
-# System Management
-in-memoria --version            # Show version information
-in-memoria debug --verbose     # Detailed diagnostics
+# Import on another machine
+in-memoria import team-intelligence.json
 ```
 
-## Requirements
+## Technical Comparison
 
-- **Node.js 18+** (tested with 20 LTS and 24+)
-- **2GB RAM** minimum for vector operations
-- **Development**: Rust 1.70+ with Cargo
+**vs GitHub Copilot's memory:**
 
-## Why Open Source?
+- Copilot: Basic fact storage, no pattern learning
+- In Memoria: Semantic analysis with prediction engine
 
-In Memoria is open source because persistent AI intelligence should be a shared foundation, not a proprietary advantage. We're building the infrastructure layer that transforms AI development for everyone.
+**vs Cursor's rules:**
 
-**Benefits:**
+- Cursor: Static rules, manually defined
+- In Memoria: Dynamic learning from actual code
 
-- Zero barrier to entry accelerates adoption
-- Community intelligence creates network effects
-- Prevents vendor lock-in and promotes innovation
-- Builds the ecosystem foundation for agentic development
+**vs Custom RAG:**
 
-## Get Involved
+- RAG: Retrieves relevant code snippets
+- In Memoria: Understands coding patterns and predicts behavior
 
-Help make In Memoria better:
+## Build from Source
 
-- 🐛 **Found a bug?** [Open an issue](https://github.com/pi22by7/in-memoria/issues)
-- 💡 **Have ideas?** [Start a discussion](https://github.com/pi22by7/in-memoria/discussions)
-- 🔧 **Want to contribute?** [Check the contributing guide](CONTRIBUTING.md)
-- ⭐ **Like the project?** Give us a star on GitHub!
+```bash
+git clone https://github.com/pi22by7/in-memoria
+cd in-memoria
+npm install
+npm run build
+```
+
+**Requirements:**
+
+- Node.js 18+
+- Rust 1.70+ (for building)
+- 2GB RAM minimum
+
+**Development:**
+
+```bash
+npm run dev          # Start in development mode
+npm test            # Run test suite
+npm run build:rust  # Build Rust components
+```
+
+## Contributing
+
+This is infrastructure for the AI development ecosystem. Contributions welcome:
+
+- Language support (add tree-sitter parsers)
+- Pattern learning improvements
+- MCP tool additions
+- Performance optimizations
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+## FAQ
+
+**Q: Does this replace my AI coding assistant?**
+A: No, it enhances them. In Memoria provides memory and context that AI tools can use.
+
+**Q: What data is collected?**
+A: Everything stays local. No data is sent to external services.
+
+**Q: How accurate is pattern learning?**
+A: Accuracy improves with codebase size. Help us benchmark this across different codebases to establish solid metrics.
+
+**Q: Performance impact?**
+A: Minimal. Runs in background, incremental updates only.
 
 ## License
 
-MIT - Build something intelligent.
+MIT - see [LICENSE](LICENSE)
 
 ---
 
-**Give your AI tools the memory they need. Try In Memoria today.**
+**Try it:** `npx in-memoria server`
+
+Give your AI tools the memory they've been missing.
