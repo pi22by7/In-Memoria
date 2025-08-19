@@ -37,15 +37,25 @@ In Memoria runs as an MCP server that AI tools connect to. It provides 17 tools 
 **Architecture:**
 
 ```
-AI Tool (Claude/etc) <--MCP--> TypeScript Server <--napi-rs--> Rust Core <--> SQLite + Vectors
+┌─────────────────────┐    MCP    ┌──────────────────────┐    napi-rs    ┌─────────────────────┐
+│  AI Tool (Claude)   │◄─────────►│  TypeScript Server   │◄─────────────►│     Rust Core       │
+└─────────────────────┘           └──────────┬───────────┘               │  • AST Parser       │
+                                             │                          │  • Pattern Learner  │
+                                             │                          │  • Semantic Engine  │
+                                             ▼                          └─────────────────────┘
+                                   ┌──────────────────────┐
+                                   │ SQLite + SurrealDB   │
+                                   │  (Local Storage)     │
+                                   └──────────────────────┘
 ```
 
 **Core engines:**
 
-- **AST Parser**: Tree-sitter based, supports TypeScript/JavaScript, Python, Rust
-- **Pattern Learner**: Analyzes your coding decisions and builds a style profile
-- **Semantic Engine**: Maps code relationships and architectural concepts
-- **Vector Store**: Semantic similarity search for code understanding
+- **AST Parser** (Rust): Tree-sitter based parsing with complexity analysis and symbol extraction
+- **Pattern Learner** (Rust): Analyzes coding decisions and builds developer style profiles  
+- **Semantic Engine** (Rust): Maps code relationships and architectural concepts
+- **TypeScript Layer**: MCP server, database operations, file watching
+- **Storage**: SQLite for structured data, SurrealDB for vector operations and semantic search
 
 ## Quick Start
 
@@ -142,7 +152,7 @@ type ApiResult<T> =
 **Performance:**
 
 - Incremental analysis (only processes changed files)
-- SQLite for metadata, embedded vector DB for semantic search
+- SQLite for structured data, SurrealDB embedded for semantic search and vectors
 - Cross-platform Rust binaries (Windows, macOS, Linux)
 - Handles codebases up to 100k files
 
