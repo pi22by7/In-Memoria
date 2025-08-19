@@ -2,7 +2,15 @@
 
 This document tracks the current implementation status and identifies areas for improvement.
 
-## 🎯 Current Status: v0.3.1 - Cross-Platform Release
+## 🎯 Current Status: v0.3.2 - Cross-Platform Release
+
+### ✅ Version 0.3.2 Package Distribution Fixes - ALL COMPLETED
+
+**📦 Scoped Package Publishing:**
+- ✅ Switch to scoped packages (`@in-memoria/*`) - Avoid npm spam detection
+- ✅ Build workflow improvements - Use `npm install` for main package publishing
+- ✅ Repository URL fixes - Add `git+` prefix for npm compliance
+- ✅ Cross-platform package distribution - All 4 platforms working
 
 ### ✅ Version 0.3.1 Cross-Platform Updates - ALL COMPLETED
 

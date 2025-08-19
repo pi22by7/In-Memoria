@@ -321,7 +321,7 @@ A clear and concise description of what you expected to happen.
 - OS: [e.g. macOS 13.0]
 - Node.js: [e.g. 20.5.0]
 - Rust: [e.g. 1.72.0]
-- In Memoria: [e.g. 0.3.1]
+- In Memoria: [e.g. 0.3.2]
 
 **Additional Context**
 Add any other context about the problem here.

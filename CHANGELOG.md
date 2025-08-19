@@ -5,6 +5,25 @@ All notable changes to In Memoria will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2025-08-19
+
+### 🔧 Package Distribution Fixes
+
+Minor release to fix npm publishing issues with cross-platform packages.
+
+### 🛠️ Changed
+- **Package naming** - Switch to scoped packages (`@in-memoria/*`) to avoid npm spam detection
+- **Build workflow** - Use `npm install` instead of `npm ci` for main package publishing
+- **Repository URLs** - Add `git+` prefix to avoid npm warnings
+
+### 📦 Platform Packages
+- `@in-memoria/linux-x64` - Linux x64 native bindings
+- `@in-memoria/darwin-x64` - macOS Intel native bindings  
+- `@in-memoria/darwin-arm64` - macOS Apple Silicon native bindings
+- `@in-memoria/win32-x64` - Windows x64 native bindings
+
+---
+
 ## [0.3.1] - 2025-08-19
 
 ### 🚀 Cross-Platform Release - Universal Compatibility

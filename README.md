@@ -172,7 +172,7 @@ in-memoria debug [options]       # System diagnostics
 
 | Aspect           | Status                                   |
 | ---------------- | ---------------------------------------- |
-| **Version**      | v0.3.1 - Cross-platform support          |
+| **Version**      | v0.3.2 - Cross-platform support          |
 | **Architecture** | Hybrid TypeScript/Rust                   |
 | **Testing**      | Unit and integration test coverage       |
 | **Performance**  | Optimized for codebases up to 100k files |
