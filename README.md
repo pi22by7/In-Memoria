@@ -4,11 +4,11 @@
 [![npm downloads](https://img.shields.io/npm/dm/in-memoria.svg)](https://www.npmjs.com/package/in-memoria)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**MCP server that gives AI coding assistants persistent memory and pattern learning.**
+**Persistent memory and pattern learning for AI coding assistants via MCP.**
 
-AI coding tools suffer from complete memory loss between sessions. Every conversation with Claude, Copilot, or Cursor starts from scratch, wasting time and tokens re-explaining your codebase.
+AI coding tools suffer from complete **session amnesia**. Every conversation with Claude, Copilot, or Cursor starts from scratch, forcing you to re-explain your codebase architecture, patterns, and preferences repeatedly.
 
-In Memoria solves **session amnesia** by building persistent intelligence about your code that AI tools can access through the Model Context Protocol.
+In Memoria solves this by building persistent intelligence about your code that AI assistants can access through the Model Context Protocol - giving them memory that persists across sessions.
 
 ## The Problem
 
@@ -30,7 +30,30 @@ Current AI tools:
 - Have no memory of architectural decisions
 - Can't learn from corrections you've made
 
-## Technical Approach
+## Quick Start
+
+```bash
+# Install and start the MCP server
+npx in-memoria server
+
+# Connect from Claude Desktop (add to config)
+{
+  "mcpServers": {
+    "in-memoria": {
+      "command": "npx",
+      "args": ["in-memoria", "server"]
+    }
+  }
+}
+
+# Connect from Claude Code CLI
+claude mcp add in-memoria -- npx in-memoria server
+
+# Learn from your codebase
+npx in-memoria learn ./my-project
+```
+
+## How It Works
 
 In Memoria runs as an MCP server that AI tools connect to. It provides 17 tools for codebase analysis and pattern learning.
 
@@ -51,93 +74,91 @@ In Memoria runs as an MCP server that AI tools connect to. It provides 17 tools 
 
 **Core engines:**
 
-- **AST Parser** (Rust): Tree-sitter based parsing with complexity analysis and symbol extraction
-- **Pattern Learner** (Rust): Analyzes coding decisions and builds developer style profiles  
-- **Semantic Engine** (Rust): Maps code relationships and architectural concepts
-- **TypeScript Layer**: MCP server, database operations, file watching
-- **Storage**: SQLite for structured data, SurrealDB for vector operations and semantic search
-
-## Quick Start
-
-```bash
-# Start the MCP server
-npx in-memoria server
-
-# Connect from Claude Desktop (add to config)
-{
-  "mcpServers": {
-    "in-memoria": {
-      "command": "npx",
-      "args": ["in-memoria", "server"]
-    }
-  }
-}
-
-# Connect from Claude Code CLI
-claude mcp add in-memoria -- npx in-memoria server
-```
+- **AST Parser** (Rust): Tree-sitter parsing across TypeScript, JavaScript, Python, and Rust
+- **Pattern Learner** (Rust): Statistical analysis of naming conventions, function signatures, and architectural choices
+- **Semantic Engine** (Rust): Code relationship mapping and concept extraction
+- **TypeScript Layer**: MCP server, SQLite/SurrealDB operations, file watching
+- **Storage**: SQLite for structured patterns, SurrealDB for vector search and semantic queries
 
 ## What It Learns
 
-**Coding Patterns:**
+In Memoria builds statistical models from your actual code to understand your preferences:
+
+**Naming Patterns:**
 
 ```typescript
-// Learns you prefer functional composition
-const processUser = pipe(validateUser, enrichUserData, saveUser);
-
-// Future suggestions match this style, not OOP alternatives
-```
-
-**Naming Conventions:**
-
-```typescript
-// Learns your patterns: useXxxData for API hooks, handleXxx for events
+// Detects patterns like: useXxxData for API hooks, handleXxx for events
 const useUserData = () => { ... }
 const handleSubmit = () => { ... }
+const formatUserName = (name: string) => { ... }
 
-// Suggests consistent naming in new code
+// AI gets context: "This developer uses camelCase, 'use' prefix for hooks, 
+// 'handle' for events, 'format' for data transformation"
 ```
 
-**Architecture Decisions:**
+**Architectural Choices:**
 
 ```typescript
-// Remembers you use Result types for error handling
-type ApiResult<T> =
+// Learns you consistently use Result types instead of throwing
+type ApiResult<T> = 
   | { success: true; data: T }
   | { success: false; error: string };
 
-// Suggests this pattern instead of throwing exceptions
+// AI suggests this pattern in new code instead of try/catch
 ```
 
-## MCP Tools
+**Code Structure Preferences:**
 
-**Analysis:**
+```typescript
+// Detects your preference for functional composition
+const processUser = pipe(validateUser, enrichUserData, saveUser);
 
-- `analyze_codebase` - Get architectural overview and metrics
-- `search_codebase` - Semantic search (find by meaning, not keywords)
-- `get_file_content` - Retrieve files with metadata
-- `get_project_structure` - Project hierarchy understanding
+// vs object-oriented approaches you avoid
+class UserProcessor { ... } // Rarely used in your codebase
+```
 
-**Intelligence:**
+**Project Organization:**
 
-- `get_semantic_insights` - Code relationships and dependencies
-- `get_pattern_recommendations` - Suggestions matching your style
-- `predict_coding_approach` - How you'd solve similar problems
-- `get_developer_profile` - Your learned preferences
-- `learn_codebase_intelligence` - Trigger analysis
+```
+src/
+  components/     # UI components
+  services/      # Business logic  
+  utils/         # Pure functions
+  types/         # Type definitions
+  
+// AI learns your directory structure preferences
+```
 
-**Automation:**
+## MCP Tools for AI Assistants
 
-- `auto_learn_if_needed` - Smart learning when gaps detected
-- `contribute_insights` - AI can add back to knowledge base
-- `get_learning_status` - What's been analyzed
-- `quick_setup` - Project initialization
+In Memoria provides 17 tools that AI assistants can use to understand your codebase:
 
-**System:**
+**Getting Started:**
+- `get_learning_status` - Check what intelligence exists for a project
+- `auto_learn_if_needed` - Automatically learn from codebase if no intelligence exists
+- `quick_setup` - Initialize In Memoria for a new project
 
-- `get_system_status` - Health and diagnostics
-- `get_intelligence_metrics` - Learning quality metrics
-- `get_performance_status` - Performance benchmarks
+**Code Analysis:**
+- `analyze_codebase` - Get architectural overview, complexity metrics, and language breakdown
+- `get_file_content` - Retrieve files with rich metadata and analysis
+- `get_project_structure` - Understand directory hierarchy and organization patterns
+- `search_codebase` - Semantic search that finds code by meaning, not just keywords
+
+**Pattern Intelligence:**
+- `get_pattern_recommendations` - Get coding suggestions that match your established style
+- `predict_coding_approach` - Predict how you'd solve similar problems based on your patterns
+- `get_developer_profile` - Access your learned coding preferences and decision patterns
+- `get_semantic_insights` - Discover code relationships and architectural concepts
+
+**Learning & Memory:**
+- `learn_codebase_intelligence` - Manually trigger analysis of a codebase
+- `contribute_insights` - Allow AI to add observations back to the knowledge base
+- `generate_documentation` - Create docs that understand your project's patterns
+
+**System Monitoring:**
+- `get_system_status` - Health check and component status
+- `get_intelligence_metrics` - Quality and completeness of learned patterns
+- `get_performance_status` - System performance and benchmarking
 
 ## Implementation Details
 
@@ -154,9 +175,9 @@ type ApiResult<T> =
 - Incremental analysis (only processes changed files)
 - SQLite for structured data, SurrealDB embedded for semantic search and vectors
 - Cross-platform Rust binaries (Windows, macOS, Linux)
-- Handles codebases up to 100k files
-- Performance profiling and monitoring built-in
-- Zero memory leaks verified through comprehensive testing
+- Designed for scalability across different project sizes
+- Built-in performance profiling and memory leak detection
+- Optimized for real-time file watching without blocking development workflow
 
 ## Team Usage
 
@@ -170,17 +191,9 @@ In Memoria works for individual developers and teams:
 
 **Team:**
 
-- Share intelligence across team members
-- Onboard new developers with institutional knowledge
-- Maintain consistent AI suggestions team-wide
-
-```bash
-# Export team knowledge
-in-memoria export --format json > team-intelligence.json
-
-# Import on another machine
-in-memoria import team-intelligence.json
-```
+- Share `.in-memoria.db` files containing learned patterns across team members
+- Onboard new developers by providing pre-learned codebase intelligence
+- Ensure consistent AI suggestions team-wide through shared pattern recognition
 
 ## Technical Comparison
 
@@ -250,7 +263,7 @@ A: No, it enhances them. In Memoria provides memory and context that AI tools ca
 A: Everything stays local. No data is sent to external services.
 
 **Q: How accurate is pattern learning?**
-A: Accuracy improves with codebase size. Help us benchmark this across different codebases to establish solid metrics.
+A: Pattern recognition accuracy improves with codebase size and consistency. Projects with established patterns and consistent style will see better pattern detection than smaller or inconsistent codebases. The system learns from frequency and repetition in your actual code.
 
 **Q: Performance impact?**
 A: Minimal. Runs in background, incremental updates only.
