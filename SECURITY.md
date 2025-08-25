@@ -113,5 +113,5 @@ For security-related questions or concerns:
 
 ---
 
-**Last updated**: December 2024  
+**Last updated**: August 2025  
 **Policy version**: 1.0
