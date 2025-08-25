@@ -1,0 +1,112 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement for In-Memoria
+title: "[Feature]: "
+labels: ["enhancement", "needs-discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Help us understand your use case and how it would improve In-Memoria's AI development assistance.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: What area would this feature enhance?
+      options:
+        - AI/ML Pattern Learning
+        - Code Analysis & AST Parsing
+        - MCP Integration & Tools
+        - CLI User Experience
+        - Language Support
+        - Performance & Scalability
+        - Developer Intelligence
+        - Storage & Data Management
+        - Cross-platform Support
+        - Documentation & Onboarding
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? What's currently missing or difficult?
+      placeholder: "As a developer using AI assistants, I find that..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe your proposed feature in detail
+      placeholder: "I would like In-Memoria to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case Example
+      description: Provide a specific example of how you'd use this feature
+      placeholder: |
+        Example workflow:
+        1. I run `in-memoria learn ./my-project`
+        2. The new feature would...
+        3. Then I could...
+
+  - type: dropdown
+    id: ai-context
+    attributes:
+      label: AI Assistant Integration
+      description: How would this feature work with AI coding assistants?
+      options:
+        - Provides better context to AI assistants
+        - Improves pattern recognition accuracy
+        - Enhances MCP tool capabilities
+        - Reduces repetitive explanations to AI
+        - Enables new AI workflows
+        - Not directly AI-related
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What other solutions have you considered?
+      placeholder: "I've tried... but it doesn't work because..."
+
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: Implementation Complexity (Your Estimate)
+      description: How complex do you think this feature would be to implement?
+      options:
+        - Simple (configuration/CLI changes)
+        - Medium (new algorithms/analysis)
+        - Complex (major architectural changes)
+        - Unsure
+
+  - type: textarea
+    id: technical-notes
+    attributes:
+      label: Technical Considerations
+      description: Any technical details, constraints, or implementation ideas?
+      placeholder: "This might require changes to the Rust core for performance..."
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would be willing to contribute to this feature
+        - label: I would be willing to help with testing
+        - label: I would be willing to help with documentation
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other relevant information, mockups, or examples?

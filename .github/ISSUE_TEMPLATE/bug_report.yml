@@ -1,0 +1,109 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior in In-Memoria
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug in In-Memoria! Please provide detailed information to help us reproduce and fix the issue.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of In-Memoria is affected?
+      options:
+        - CLI commands (learn, analyze, watch, server)
+        - MCP Server integration
+        - Rust Core (AST parsing, pattern learning)
+        - File watching/change detection
+        - Database/storage layer
+        - AI/ML pattern detection
+        - Cross-platform builds
+        - Documentation/setup
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear description of what the bug is
+      placeholder: Describe the unexpected behavior...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the behavior
+      placeholder: |
+        1. Run `in-memoria learn ./my-project`
+        2. Execute `in-memoria analyze ./my-project`
+        3. See error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should have happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Logs/Output
+      description: Please include relevant error messages, stack traces, or console output
+      render: text
+      placeholder: Paste error messages here...
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Linux
+        - macOS (Intel)
+        - macOS (Apple Silicon)
+        - Windows
+        - Other (specify in additional context)
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js Version
+      placeholder: "v20.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: In-Memoria Version
+      description: Run `in-memoria --version` to get the version
+      placeholder: "0.4.1"
+    validations:
+      required: true
+
+  - type: textarea
+    id: project-info
+    attributes:
+      label: Project Context
+      description: Information about your codebase being analyzed
+      placeholder: |
+        - Project language(s): TypeScript, Python, etc.
+        - Project size: ~1000 files
+        - Any unusual project structure or tools
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other relevant information, screenshots, or context
