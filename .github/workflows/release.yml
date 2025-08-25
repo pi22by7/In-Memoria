@@ -117,6 +117,9 @@ jobs:
           cache: npm
           registry-url: https://registry.npmjs.org/
           
+      - name: Update lock file for platform packages
+        run: npm install --package-lock-only
+        
       - name: Install dependencies
         run: npm ci
         
