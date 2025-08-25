@@ -120,8 +120,8 @@ export class SQLiteDatabase {
       evolutionHistory: JSON.parse(row.evolution_history || '{}'),
       filePath: row.file_path,
       lineRange: JSON.parse(row.line_range || '{"start": 0, "end": 0}'),
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at)
+      createdAt: new Date(row.created_at + ' UTC'),
+      updatedAt: new Date(row.updated_at + ' UTC')
     }));
   }
 
@@ -167,8 +167,8 @@ export class SQLiteDatabase {
       contexts: JSON.parse(row.contexts || '[]'),
       examples: JSON.parse(row.examples || '[]'),
       confidence: row.confidence,
-      createdAt: new Date(row.created_at),
-      lastSeen: new Date(row.last_seen)
+      createdAt: new Date(row.created_at + ' UTC'),
+      lastSeen: new Date(row.last_seen + ' UTC')
     }));
   }
 
@@ -204,8 +204,8 @@ export class SQLiteDatabase {
       patternsUsed: JSON.parse(row.patterns_used || '[]'),
       complexityMetrics: JSON.parse(row.complexity_metrics || '{}'),
       dependencies: JSON.parse(row.dependencies || '[]'),
-      lastAnalyzed: new Date(row.last_analyzed),
-      createdAt: new Date(row.created_at)
+      lastAnalyzed: new Date(row.last_analyzed + ' UTC'),
+      createdAt: new Date(row.created_at + ' UTC')
     };
   }
 
@@ -251,7 +251,7 @@ export class SQLiteDatabase {
       sourceAgent: row.source_agent,
       validationStatus: row.validation_status as 'pending' | 'validated' | 'rejected',
       impactPrediction: JSON.parse(row.impact_prediction || '{}'),
-      createdAt: new Date(row.created_at)
+      createdAt: new Date(row.created_at + ' UTC')
     }));
   }
 

@@ -11,34 +11,7 @@ export declare class AstParser {
 
 export declare class PatternLearner {
   constructor()
-  /**
-   * Learns patterns from analyzing an entire codebase
-   *
-   * # Safety
-   * This function uses unsafe because it needs to interact with the Node.js runtime
-   * through N-API bindings. The caller must ensure the path exists and is readable.
-   */
-  learnFromCodebase(path: string): Promise<Array<Pattern>>
-  extractPatterns(path: string): Promise<Array<Pattern>>
-  analyzeFileChange(changeData: string): Promise<PatternAnalysisResult>
-  findRelevantPatterns(problemDescription: string, currentFile?: string | undefined | null, selectedCode?: string | undefined | null): Promise<Array<Pattern>>
-  predictApproach(problemDescription: string, context: Record<string, string>): Promise<ApproachPrediction>
-  /**
-   * Updates patterns based on analysis data
-   *
-   * # Safety
-   * This function uses unsafe because it needs to interact with the Node.js runtime
-   * through N-API bindings. The caller must ensure the analysis data is valid JSON.
-   */
-  learnFromAnalysis(analysisData: string): Promise<boolean>
-  /**
-   * Updates patterns based on file changes
-   *
-   * # Safety
-   * This function uses unsafe because it needs to interact with the Node.js runtime
-   * through N-API bindings. The caller must ensure the change data is valid JSON.
-   */
-  updateFromChange(changeData: string): Promise<boolean>
+  learnFromCodebase(path: string): Promise<ApiResult<Array<Pattern>>>
 }
 
 export declare class SemanticAnalyzer {

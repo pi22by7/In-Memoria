@@ -1,6 +1,7 @@
 import { Surreal } from 'surrealdb';
 import * as SurrealNodeModule from '@surrealdb/node';
 import { CircuitBreaker, createOpenAICircuitBreaker } from '../utils/circuit-breaker.js';
+import { globalProfiler, PerformanceOptimizer } from '../utils/performance-profiler.js';
 
 export interface CodeMetadata {
   id: string;
@@ -35,6 +36,13 @@ export class SemanticVectorDB {
   private initialized: boolean = false;
   private openaiCircuitBreaker: CircuitBreaker;
   private apiKey?: string;
+  
+  // Memory optimization: Batch operations to reduce memory pressure
+  private embeddingBatcher?: ReturnType<typeof PerformanceOptimizer.createBatcher>;
+  
+  // Cache for embeddings to avoid regenerating
+  private embeddingCache = new Map<string, number[]>();
+  private readonly EMBEDDING_CACHE_SIZE = 1000; // Limit cache size
 
   constructor(apiKey?: string) {
     this.db = new Surreal({

@@ -6,9 +6,13 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib"]
 
+[features]
+default = ["napi-bindings"]
+napi-bindings = ["dep:napi", "dep:napi-derive"]
+
 [dependencies]
-napi = { version = "3.2", default-features = false, features = ["napi6", "async", "tokio_rt"] }
-napi-derive = "3.2"
+napi = { version = "3.2", default-features = false, features = ["napi6", "async", "tokio_rt"], optional = true }
+napi-derive = { version = "3.2", optional = true }
 tree-sitter = "0.25"
 tree-sitter-typescript = "0.23"
 tree-sitter-javascript = "0.23"

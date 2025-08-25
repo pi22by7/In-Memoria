@@ -28,7 +28,7 @@ export class DatabaseMigrator {
       CREATE TABLE IF NOT EXISTS migrations (
         version INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
-        applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        applied_at DATETIME DEFAULT (datetime('now', 'utc'))
       );
     `);
   }
@@ -75,7 +75,7 @@ export class DatabaseMigrator {
           id TEXT PRIMARY KEY,
           content_hash TEXT NOT NULL,
           embedding BLOB NOT NULL,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          created_at DATETIME DEFAULT (datetime('now', 'utc'))
         );
         
         CREATE INDEX IF NOT EXISTS idx_vector_cache_content_hash ON vector_cache(content_hash);
@@ -83,6 +83,173 @@ export class DatabaseMigrator {
       down: `
         DROP TABLE IF EXISTS vector_cache;
         -- Note: SQLite doesn't support DROP COLUMN, so we leave the embedding_vector columns
+      `
+    });
+
+    // Migration 4: Fix timezone handling - update existing timestamp columns to use UTC
+    this.migrations.push({
+      version: 4,
+      name: 'fix_timezone_handling',
+      up: `
+        -- Create new tables with UTC timestamps
+        DROP TABLE IF EXISTS semantic_concepts_new;
+        CREATE TABLE semantic_concepts_new (
+          id TEXT PRIMARY KEY,
+          concept_name TEXT NOT NULL,
+          concept_type TEXT NOT NULL,
+          confidence_score REAL DEFAULT 0.0,
+          relationships TEXT,
+          evolution_history TEXT,
+          file_path TEXT,
+          line_range TEXT,
+          created_at DATETIME DEFAULT (datetime('now', 'utc')),
+          updated_at DATETIME DEFAULT (datetime('now', 'utc'))
+        );
+
+        -- Copy data with UTC conversion
+        INSERT INTO semantic_concepts_new (id, concept_name, concept_type, confidence_score, relationships, evolution_history, file_path, line_range, created_at, updated_at)
+        SELECT id, concept_name, concept_type, confidence_score, relationships, evolution_history, file_path, line_range, 
+               datetime(created_at, 'utc'), datetime(updated_at, 'utc')
+        FROM semantic_concepts;
+
+        -- Replace old table
+        DROP TABLE semantic_concepts;
+        ALTER TABLE semantic_concepts_new RENAME TO semantic_concepts;
+
+        -- Same for developer_patterns
+        DROP TABLE IF EXISTS developer_patterns_new;
+        CREATE TABLE developer_patterns_new (
+          pattern_id TEXT PRIMARY KEY,
+          pattern_type TEXT NOT NULL,
+          pattern_content TEXT NOT NULL,
+          frequency INTEGER DEFAULT 1,
+          contexts TEXT,
+          examples TEXT,
+          confidence REAL DEFAULT 0.0,
+          created_at DATETIME DEFAULT (datetime('now', 'utc')),
+          last_seen DATETIME DEFAULT (datetime('now', 'utc'))
+        );
+
+        INSERT INTO developer_patterns_new (pattern_id, pattern_type, pattern_content, frequency, contexts, examples, confidence, created_at, last_seen)
+        SELECT pattern_id, pattern_type, pattern_content, frequency, contexts, examples, confidence, 
+               datetime(created_at, 'utc'), datetime(last_seen, 'utc')
+        FROM developer_patterns;
+
+        DROP TABLE developer_patterns;
+        ALTER TABLE developer_patterns_new RENAME TO developer_patterns;
+
+        -- Fix other tables similarly
+        DROP TABLE IF EXISTS architectural_decisions_new;
+        CREATE TABLE architectural_decisions_new (
+          decision_id TEXT PRIMARY KEY,
+          decision_context TEXT NOT NULL,
+          decision_rationale TEXT,
+          alternatives_considered TEXT,
+          impact_analysis TEXT,
+          decision_date DATETIME DEFAULT (datetime('now', 'utc')),
+          files_affected TEXT,
+          created_at DATETIME DEFAULT (datetime('now', 'utc'))
+        );
+
+        INSERT INTO architectural_decisions_new SELECT decision_id, decision_context, decision_rationale, alternatives_considered, impact_analysis, 
+               datetime(decision_date, 'utc'), files_affected, datetime(created_at, 'utc')
+        FROM architectural_decisions WHERE 1=1;
+
+        DROP TABLE architectural_decisions;
+        ALTER TABLE architectural_decisions_new RENAME TO architectural_decisions;
+
+        -- Fix file_intelligence
+        DROP TABLE IF EXISTS file_intelligence_new;
+        CREATE TABLE file_intelligence_new (
+          file_path TEXT PRIMARY KEY,
+          file_hash TEXT NOT NULL,
+          semantic_concepts TEXT,
+          patterns_used TEXT,
+          complexity_metrics TEXT,
+          dependencies TEXT,
+          last_analyzed DATETIME DEFAULT (datetime('now', 'utc')),
+          created_at DATETIME DEFAULT (datetime('now', 'utc'))
+        );
+
+        INSERT INTO file_intelligence_new SELECT file_path, file_hash, semantic_concepts, patterns_used, complexity_metrics, dependencies,
+               datetime(last_analyzed, 'utc'), datetime(created_at, 'utc')
+        FROM file_intelligence WHERE 1=1;
+
+        DROP TABLE file_intelligence;
+        ALTER TABLE file_intelligence_new RENAME TO file_intelligence;
+
+        -- Fix other tables
+        DROP TABLE IF EXISTS shared_patterns_new;
+        CREATE TABLE shared_patterns_new (
+          pattern_id TEXT PRIMARY KEY,
+          pattern_name TEXT NOT NULL,
+          pattern_description TEXT,
+          pattern_data TEXT,
+          usage_count INTEGER DEFAULT 0,
+          community_rating REAL DEFAULT 0.0,
+          tags TEXT,
+          created_at DATETIME DEFAULT (datetime('now', 'utc'))
+        );
+
+        INSERT INTO shared_patterns_new SELECT pattern_id, pattern_name, pattern_description, pattern_data, usage_count, community_rating, tags,
+               datetime(created_at, 'utc')
+        FROM shared_patterns WHERE 1=1;
+
+        DROP TABLE shared_patterns;
+        ALTER TABLE shared_patterns_new RENAME TO shared_patterns;
+
+        DROP TABLE IF EXISTS ai_insights_new;
+        CREATE TABLE ai_insights_new (
+          insight_id TEXT PRIMARY KEY,
+          insight_type TEXT NOT NULL,
+          insight_content TEXT NOT NULL,
+          confidence_score REAL DEFAULT 0.0,
+          source_agent TEXT,
+          validation_status TEXT DEFAULT 'pending',
+          impact_prediction TEXT,
+          created_at DATETIME DEFAULT (datetime('now', 'utc'))
+        );
+
+        INSERT INTO ai_insights_new SELECT insight_id, insight_type, insight_content, confidence_score, source_agent, validation_status, impact_prediction,
+               datetime(created_at, 'utc')
+        FROM ai_insights WHERE 1=1;
+
+        DROP TABLE ai_insights;
+        ALTER TABLE ai_insights_new RENAME TO ai_insights;
+
+        DROP TABLE IF EXISTS project_metadata_new;
+        CREATE TABLE project_metadata_new (
+          project_id TEXT PRIMARY KEY,
+          project_path TEXT NOT NULL,
+          project_name TEXT,
+          language_primary TEXT,
+          languages_detected TEXT,
+          framework_detected TEXT,
+          intelligence_version TEXT,
+          last_full_scan DATETIME,
+          created_at DATETIME DEFAULT (datetime('now', 'utc')),
+          updated_at DATETIME DEFAULT (datetime('now', 'utc'))
+        );
+
+        INSERT INTO project_metadata_new SELECT project_id, project_path, project_name, language_primary, languages_detected, framework_detected, intelligence_version,
+               datetime(last_full_scan, 'utc'), datetime(created_at, 'utc'), datetime(updated_at, 'utc')
+        FROM project_metadata WHERE 1=1;
+
+        DROP TABLE project_metadata;
+        ALTER TABLE project_metadata_new RENAME TO project_metadata;
+
+        -- Recreate indexes
+        CREATE INDEX IF NOT EXISTS idx_semantic_concepts_type ON semantic_concepts(concept_type);
+        CREATE INDEX IF NOT EXISTS idx_semantic_concepts_file ON semantic_concepts(file_path);
+        CREATE INDEX IF NOT EXISTS idx_developer_patterns_type ON developer_patterns(pattern_type);
+        CREATE INDEX IF NOT EXISTS idx_developer_patterns_frequency ON developer_patterns(frequency DESC);
+        CREATE INDEX IF NOT EXISTS idx_file_intelligence_analyzed ON file_intelligence(last_analyzed);
+        CREATE INDEX IF NOT EXISTS idx_ai_insights_type ON ai_insights(insight_type);
+        CREATE INDEX IF NOT EXISTS idx_ai_insights_confidence ON ai_insights(confidence_score DESC);
+      `,
+      down: `
+        -- This rollback is complex and risky, so we'll just warn
+        SELECT 'WARNING: Rolling back timezone fix may cause data issues' as warning;
       `
     });
   }

@@ -1,12 +1,43 @@
+#[cfg(feature = "napi-bindings")]
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
+
+// Simple error type for when napi is not available
+#[derive(Debug)]
+pub struct SimpleError {
+    message: String,
+}
+
+impl SimpleError {
+    pub fn from_reason<S: Into<String>>(message: S) -> Self {
+        Self {
+            message: message.into(),
+        }
+    }
+}
+
+impl std::fmt::Display for SimpleError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl std::error::Error for SimpleError {}
+
+// Conditional type aliases - use proper napi::Result when available
+#[cfg(feature = "napi-bindings")]
+pub type ApiResult<T> = napi::Result<T>;
+
+#[cfg(not(feature = "napi-bindings"))]
+pub type ApiResult<T> = Result<T, SimpleError>;
+
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use walkdir::WalkDir;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[napi(object)]
+#[cfg_attr(feature = "napi-bindings", napi(object))]
 pub struct Pattern {
     pub id: String,
     pub pattern_type: String,
@@ -18,7 +49,7 @@ pub struct Pattern {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[napi(object)]
+#[cfg_attr(feature = "napi-bindings", napi(object))]
 pub struct PatternExample {
     pub code: String,
     pub file_path: String,
@@ -26,14 +57,14 @@ pub struct PatternExample {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[napi(object)]
+#[cfg_attr(feature = "napi-bindings", napi(object))]
 pub struct LineRange {
     pub start: u32,
     pub end: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[napi(object)]
+#[cfg_attr(feature = "napi-bindings", napi(object))]
 pub struct PatternAnalysisResult {
     pub detected: Vec<String>,
     pub violations: Vec<String>,
@@ -42,7 +73,7 @@ pub struct PatternAnalysisResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[napi(object)]
+#[cfg_attr(feature = "napi-bindings", napi(object))]
 pub struct ApproachPrediction {
     pub approach: String,
     pub confidence: f64,
@@ -51,8 +82,9 @@ pub struct ApproachPrediction {
     pub complexity: String,
 }
 
-#[napi]
+// Temporarily disabled napi export
 #[derive(Default)]
+#[cfg_attr(feature = "napi-bindings", napi)]
 pub struct PatternLearner {
     patterns: HashMap<String, Pattern>,
     #[allow(dead_code)]
@@ -84,20 +116,22 @@ struct ImplementationPattern {
     code_signatures: Vec<String>,
 }
 
-#[napi]
+// Temporarily disabled napi export
+#[cfg_attr(feature = "napi-bindings", napi)]
 impl PatternLearner {
-    #[napi(constructor)]
+    #[cfg_attr(feature = "napi-bindings", napi(constructor))]
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Learns patterns from analyzing an entire codebase
-    ///
-    /// # Safety
-    /// This function uses unsafe because it needs to interact with the Node.js runtime
-    /// through N-API bindings. The caller must ensure the path exists and is readable.
-    #[napi]
-    pub async unsafe fn learn_from_codebase(&mut self, path: String) -> napi::Result<Vec<Pattern>> {
+    // napi-exported methods for JavaScript integration
+    #[cfg_attr(feature = "napi-bindings", napi)]
+    pub async unsafe fn learn_from_codebase(&mut self, path: String) -> ApiResult<Vec<Pattern>> {
+        self.learn_from_codebase_internal(path).await
+    }
+
+    // Internal implementation that works without napi
+    pub async fn learn_from_codebase_internal(&mut self, path: String) -> ApiResult<Vec<Pattern>> {
         let mut learned_patterns = Vec::new();
 
         // Learn different types of patterns
@@ -113,8 +147,8 @@ impl PatternLearner {
         Ok(learned_patterns)
     }
 
-    #[napi]
-    pub async fn extract_patterns(&self, _path: String) -> napi::Result<Vec<Pattern>> {
+    // Temporarily disabled napi export
+    pub async fn extract_patterns_internal(&self, _path: String) -> ApiResult<Vec<Pattern>> {
         // Extract patterns from a specific path
         let mut patterns = Vec::new();
 
@@ -143,11 +177,11 @@ impl PatternLearner {
         Ok(patterns)
     }
 
-    #[napi]
-    pub async fn analyze_file_change(
+    // Temporarily disabled napi export
+    pub async fn analyze_file_change_internal(
         &self,
         change_data: String,
-    ) -> napi::Result<PatternAnalysisResult> {
+    ) -> ApiResult<PatternAnalysisResult> {
         // Parse the change data (would be JSON in real implementation)
         let detected = self.detect_patterns_in_change(&change_data)?;
         let violations = self.detect_pattern_violations(&change_data)?;
@@ -161,13 +195,13 @@ impl PatternLearner {
         })
     }
 
-    #[napi]
-    pub async fn find_relevant_patterns(
+    // Temporarily disabled napi export
+    pub async fn find_relevant_patterns_internal(
         &self,
         problem_description: String,
         current_file: Option<String>,
         selected_code: Option<String>,
-    ) -> napi::Result<Vec<Pattern>> {
+    ) -> ApiResult<Vec<Pattern>> {
         let mut relevant_patterns = Vec::new();
 
         // Analyze problem description for keywords
@@ -195,12 +229,12 @@ impl PatternLearner {
         Ok(relevant_patterns.into_iter().take(5).collect())
     }
 
-    #[napi]
-    pub async fn predict_approach(
+    // Temporarily disabled napi export
+    pub async fn predict_approach_internal(
         &self,
         problem_description: String,
         context: HashMap<String, String>,
-    ) -> napi::Result<ApproachPrediction> {
+    ) -> ApiResult<ApproachPrediction> {
         let keywords = self.extract_keywords(&problem_description);
         let relevant_patterns = self.find_patterns_by_keywords(&keywords);
 
@@ -229,11 +263,8 @@ impl PatternLearner {
     /// # Safety
     /// This function uses unsafe because it needs to interact with the Node.js runtime
     /// through N-API bindings. The caller must ensure the analysis data is valid JSON.
-    #[napi]
-    pub async unsafe fn learn_from_analysis(
-        &mut self,
-        _analysis_data: String,
-    ) -> napi::Result<bool> {
+    // Temporarily disabled napi export
+    pub async unsafe fn learn_from_analysis(&mut self, _analysis_data: String) -> ApiResult<bool> {
         // Learn from change analysis results
         // This would update pattern frequencies and discover new patterns
         Ok(true)
@@ -244,13 +275,13 @@ impl PatternLearner {
     /// # Safety
     /// This function uses unsafe because it needs to interact with the Node.js runtime
     /// through N-API bindings. The caller must ensure the change data is valid JSON.
-    #[napi]
-    pub async unsafe fn update_from_change(&mut self, _change_data: String) -> napi::Result<bool> {
+    // Temporarily disabled napi export
+    pub async unsafe fn update_from_change(&mut self, _change_data: String) -> ApiResult<bool> {
         // Update patterns based on file changes
         Ok(true)
     }
 
-    async fn learn_naming_patterns(&mut self, path: &str) -> napi::Result<Vec<Pattern>> {
+    async fn learn_naming_patterns(&mut self, path: &str) -> ApiResult<Vec<Pattern>> {
         let mut patterns = Vec::new();
         let mut naming_stats = HashMap::new();
 
@@ -573,7 +604,7 @@ impl PatternLearner {
             .to_string()
     }
 
-    async fn learn_structural_patterns(&mut self, path: &str) -> napi::Result<Vec<Pattern>> {
+    async fn learn_structural_patterns(&mut self, path: &str) -> ApiResult<Vec<Pattern>> {
         let mut patterns = Vec::new();
 
         // Analyze directory structure
@@ -591,7 +622,7 @@ impl PatternLearner {
         Ok(patterns)
     }
 
-    fn analyze_directory_structure(&self, path: &str) -> napi::Result<Vec<Pattern>> {
+    fn analyze_directory_structure(&self, path: &str) -> ApiResult<Vec<Pattern>> {
         let mut patterns = Vec::new();
         let mut directory_stats = HashMap::new();
 
@@ -646,7 +677,7 @@ impl PatternLearner {
         Ok(patterns)
     }
 
-    fn analyze_file_organization(&self, path: &str) -> napi::Result<Vec<Pattern>> {
+    fn analyze_file_organization(&self, path: &str) -> ApiResult<Vec<Pattern>> {
         let mut patterns = Vec::new();
         let mut file_types = HashMap::new();
 
@@ -688,7 +719,7 @@ impl PatternLearner {
         Ok(patterns)
     }
 
-    fn analyze_dependency_patterns(&self, path: &str) -> napi::Result<Vec<Pattern>> {
+    fn analyze_dependency_patterns(&self, path: &str) -> ApiResult<Vec<Pattern>> {
         let mut patterns = Vec::new();
         let mut import_patterns = HashMap::new();
 
@@ -778,7 +809,7 @@ impl PatternLearner {
         )
     }
 
-    async fn learn_implementation_patterns(&mut self, path: &str) -> napi::Result<Vec<Pattern>> {
+    async fn learn_implementation_patterns(&mut self, path: &str) -> ApiResult<Vec<Pattern>> {
         let mut patterns = Vec::new();
         let mut implementation_stats = HashMap::new();
 
@@ -1010,12 +1041,12 @@ impl PatternLearner {
         contexts
     }
 
-    fn detect_patterns_in_change(&self, _change_data: &str) -> napi::Result<Vec<String>> {
+    fn detect_patterns_in_change(&self, _change_data: &str) -> ApiResult<Vec<String>> {
         // Detect which patterns are present in the change
         Ok(vec!["naming_camelCase_function".to_string()])
     }
 
-    fn detect_pattern_violations(&self, _change_data: &str) -> napi::Result<Vec<String>> {
+    fn detect_pattern_violations(&self, _change_data: &str) -> ApiResult<Vec<String>> {
         // Detect violations of established patterns
         Ok(vec![])
     }
@@ -1024,7 +1055,7 @@ impl PatternLearner {
         &self,
         _detected: &[String],
         _violations: &[String],
-    ) -> napi::Result<Vec<String>> {
+    ) -> ApiResult<Vec<String>> {
         // Generate recommendations based on detected patterns and violations
         Ok(vec![
             "Consider using consistent naming convention".to_string()
@@ -1158,4 +1189,51 @@ struct GeneratedApproach {
     description: String,
     confidence: f64,
     reasoning: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pattern_learner_creation() {
+        let learner = PatternLearner::new();
+        assert!(learner.patterns.is_empty());
+        assert!(learner.naming_patterns.is_empty());
+        assert!(learner.structural_patterns.is_empty());
+        assert!(learner.implementation_patterns.is_empty());
+    }
+
+    #[test]
+    fn test_pattern_creation() {
+        let pattern = Pattern {
+            id: "test_pattern".to_string(),
+            pattern_type: "naming".to_string(),
+            description: "Test pattern".to_string(),
+            frequency: 5,
+            confidence: 0.8,
+            examples: vec![],
+            contexts: vec!["test".to_string()],
+        };
+
+        assert_eq!(pattern.id, "test_pattern");
+        assert_eq!(pattern.pattern_type, "naming");
+        assert_eq!(pattern.frequency, 5);
+        assert_eq!(pattern.confidence, 0.8);
+    }
+
+    #[test]
+    fn test_pattern_analysis_result() {
+        let result = PatternAnalysisResult {
+            detected: vec!["pattern1".to_string()],
+            violations: vec!["violation1".to_string()],
+            recommendations: vec!["Use consistent naming".to_string()],
+            learned: None,
+        };
+
+        assert_eq!(result.detected.len(), 1);
+        assert_eq!(result.violations.len(), 1);
+        assert_eq!(result.recommendations.len(), 1);
+        assert!(result.learned.is_none());
+    }
 }

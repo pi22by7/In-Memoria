@@ -3,6 +3,7 @@ import { SQLiteDatabase, SemanticConcept } from '../storage/sqlite-db.js';
 import { SemanticVectorDB } from '../storage/vector-db.js';
 import { nanoid } from 'nanoid';
 import { CircuitBreaker, createRustAnalyzerCircuitBreaker } from '../utils/circuit-breaker.js';
+import { globalProfiler, PerformanceOptimizer } from '../utils/performance-profiler.js';
 
 export interface CodebaseAnalysisResult {
   languages: string[];
@@ -30,62 +31,134 @@ export interface FileAnalysisResult {
 }
 
 export class SemanticEngine {
-  private rustAnalyzer: InstanceType<typeof SemanticAnalyzer>;
+  private rustAnalyzer: InstanceType<typeof SemanticAnalyzer> | null = null;
   private rustCircuitBreaker: CircuitBreaker;
+  private initializationPromise: Promise<void> | null = null;
+
+  // Performance caches
+  private fileAnalysisCache = new Map<string, { result: FileAnalysisResult['concepts']; timestamp: number }>();
+  private codebaseAnalysisCache = new Map<string, { result: CodebaseAnalysisResult; timestamp: number }>();
+  
+  // Cache TTL in milliseconds (5 minutes)
+  private readonly CACHE_TTL = 5 * 60 * 1000;
 
   constructor(
     private database: SQLiteDatabase,
     private vectorDB: SemanticVectorDB
   ) {
-    this.rustAnalyzer = new SemanticAnalyzer();
     this.rustCircuitBreaker = createRustAnalyzerCircuitBreaker();
+    
+    // Create memoized versions of expensive operations
+    this.memoizedLanguageDetection = PerformanceOptimizer.memoize(
+      this.detectLanguageFromPath.bind(this),
+      (filePath: string) => filePath.split('.').pop() || 'unknown'
+    );
+
+    // Schedule periodic cache cleanup
+    setInterval(() => {
+      this.cleanupCaches();
+    }, 5 * 60 * 1000); // Every 5 minutes
   }
 
+  /**
+   * Lazy initialization of Rust analyzer
+   */
+  private async initializeRustAnalyzer(): Promise<void> {
+    if (this.rustAnalyzer) return;
+    
+    if (!this.initializationPromise) {
+      this.initializationPromise = globalProfiler.timeAsync('RustAnalyzer.initialization', async () => {
+        this.rustAnalyzer = new SemanticAnalyzer();
+      });
+    }
+    
+    await this.initializationPromise;
+  }
+
+  private memoizedLanguageDetection: (filePath: string) => string;
+
   async analyzeCodebase(path: string): Promise<CodebaseAnalysisResult> {
-    return this.rustCircuitBreaker.execute(
-      async () => {
-        const result = await this.rustAnalyzer.analyzeCodebase(path);
-        return {
-          languages: result.languages,
-          frameworks: result.frameworks,
-          complexity: {
-            cyclomatic: result.complexity.cyclomatic,
-            cognitive: result.complexity.cognitive,
-            lines: result.complexity.lines
-          },
-          concepts: result.concepts.map(c => ({
-            name: c.name,
-            type: c.conceptType,
-            confidence: c.confidence
-          }))
-        };
-      },
-      // Fallback to TypeScript analysis
-      async () => this.fallbackAnalysis(path)
-    );
+    return globalProfiler.timeAsync('SemanticEngine.analyzeCodebase', async () => {
+      // Check cache first
+      const cacheKey = `codebase:${path}`;
+      const cached = this.codebaseAnalysisCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+        return cached.result;
+      }
+
+      // Ensure Rust analyzer is initialized
+      await this.initializeRustAnalyzer();
+      
+      const result = await this.rustCircuitBreaker.execute(
+        async () => {
+          const result = await this.rustAnalyzer!.analyzeCodebase(path);
+          return {
+            languages: result.languages,
+            frameworks: result.frameworks,
+            complexity: {
+              cyclomatic: result.complexity.cyclomatic,
+              cognitive: result.complexity.cognitive,
+              lines: result.complexity.lines
+            },
+            concepts: result.concepts.map(c => ({
+              name: c.name,
+              type: c.conceptType,
+              confidence: c.confidence
+            }))
+          };
+        },
+        // Fallback to TypeScript analysis
+        async () => this.fallbackAnalysis(path)
+      );
+
+      // Cache the result
+      this.codebaseAnalysisCache.set(cacheKey, { result, timestamp: Date.now() });
+      
+      return result;
+    });
   }
 
   async analyzeFileContent(filePath: string, content: string): Promise<FileAnalysisResult['concepts']> {
-    return this.rustCircuitBreaker.execute(
-      async () => {
-        const concepts = await this.rustAnalyzer.analyzeFileContent(filePath, content);
-        return concepts.map(c => ({
-          name: c.name,
-          type: c.conceptType,
-          confidence: c.confidence,
-          filePath: c.filePath,
-          lineRange: {
-            start: c.lineRange.start,
-            end: c.lineRange.end
-          }
-        }));
-      },
-      // Fallback to empty analysis
-      async () => {
-        console.warn('Using fallback for file analysis');
-        return [];
+    return globalProfiler.timeAsync('SemanticEngine.analyzeFileContent', async () => {
+      // Create cache key based on file path and content hash
+      const contentHash = this.hashString(content);
+      const cacheKey = `file:${filePath}:${contentHash}`;
+      
+      // Check cache first
+      const cached = this.fileAnalysisCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+        return cached.result;
       }
-    );
+
+      // Ensure Rust analyzer is initialized
+      await this.initializeRustAnalyzer();
+      
+      const result = await this.rustCircuitBreaker.execute(
+        async () => {
+          const concepts = await this.rustAnalyzer!.analyzeFileContent(filePath, content);
+          return concepts.map(c => ({
+            name: c.name,
+            type: c.conceptType,
+            confidence: c.confidence,
+            filePath: c.filePath,
+            lineRange: {
+              start: c.lineRange.start,
+              end: c.lineRange.end
+            }
+          }));
+        },
+        // Fallback to pattern-based analysis
+        async () => {
+          console.warn('Using fallback for file analysis');
+          return this.fallbackFileAnalysis(filePath, content);
+        }
+      );
+
+      // Cache the result
+      this.fileAnalysisCache.set(cacheKey, { result, timestamp: Date.now() });
+      
+      return result;
+    });
   }
 
   async learnFromCodebase(path: string): Promise<Array<{
@@ -98,7 +171,10 @@ export class SemanticEngine {
     relationships: Record<string, any>;
   }>> {
     try {
-      const concepts = await this.rustAnalyzer.learnFromCodebase(path);
+      // Ensure Rust analyzer is initialized
+      await this.initializeRustAnalyzer();
+      
+      const concepts = await this.rustAnalyzer!.learnFromCodebase(path);
       
       // Store in vector database for semantic search
       await this.vectorDB.initialize();
@@ -272,6 +348,56 @@ export class SemanticEngine {
     });
 
     return concepts;
+  }
+
+  /**
+   * Simple hash function for cache keys
+   */
+  private hashString(str: string): string {
+    let hash = 0;
+    if (str.length === 0) return hash.toString();
+    
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    
+    return hash.toString();
+  }
+
+  /**
+   * Clean up old cache entries to prevent memory leaks
+   */
+  private cleanupCaches(): void {
+    const now = Date.now();
+    
+    // Clean file analysis cache
+    for (const [key, cached] of this.fileAnalysisCache.entries()) {
+      if (now - cached.timestamp >= this.CACHE_TTL) {
+        this.fileAnalysisCache.delete(key);
+      }
+    }
+    
+    // Clean codebase analysis cache
+    for (const [key, cached] of this.codebaseAnalysisCache.entries()) {
+      if (now - cached.timestamp >= this.CACHE_TTL) {
+        this.codebaseAnalysisCache.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Get cache statistics for monitoring
+   */
+  getCacheStats(): {
+    fileCache: { size: number; hitRate?: number };
+    codebaseCache: { size: number; hitRate?: number };
+  } {
+    return {
+      fileCache: { size: this.fileAnalysisCache.size },
+      codebaseCache: { size: this.codebaseAnalysisCache.size }
+    };
   }
 
   private detectLanguageFromPath(filePath: string): string {

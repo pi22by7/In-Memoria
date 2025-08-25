@@ -218,6 +218,13 @@ export class CodeCartographerMCP {
     console.error('In Memoria MCP Server started');
   }
 
+  /**
+   * Initialize components for testing without starting transport
+   */
+  async initializeForTesting(): Promise<void> {
+    await this.initializeComponents();
+  }
+
   async stop(): Promise<void> {
     this.database.close();
     await this.server.close();

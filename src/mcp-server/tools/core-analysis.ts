@@ -13,6 +13,7 @@ import { IntelligenceTools } from './intelligence-tools.js';
 import { readFileSync, statSync, readdirSync, lstatSync } from 'fs';
 import { join, relative, extname, basename } from 'path';
 import { glob } from 'glob';
+import { ErrorFactory, MCPErrorUtils, ErrorUtils, InMemoriaError, MCPErrorCode } from '../../utils/error-types.js';
 
 export class CoreAnalysisTools {
   private intelligenceTools: IntelligenceTools;
@@ -241,7 +242,21 @@ export class CoreAnalysisTools {
         }
       };
     } catch (error) {
-      throw new Error(`Failed to analyze file ${args.path}: ${error}`);
+      if (error instanceof InMemoriaError) {
+        throw error;
+      }
+      
+      // Convert to proper InMemoria error with MCP compliance
+      const inMemoriaError = ErrorUtils.fromError(
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          operation: 'file-analysis',
+          filePath: args.path,
+          component: 'core-analysis-tools'
+        }
+      );
+      
+      throw inMemoriaError;
     }
   }
 

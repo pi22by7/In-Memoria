@@ -1,5 +1,33 @@
+#[cfg(feature = "napi-bindings")]
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
+
+// Simple error type for when napi is not available
+#[derive(Debug)]
+pub struct SimpleError {
+    message: String,
+}
+
+impl SimpleError {
+    pub fn from_reason<S: Into<String>>(message: S) -> Self {
+        Self {
+            message: message.into(),
+        }
+    }
+}
+
+impl std::fmt::Display for SimpleError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl std::error::Error for SimpleError {}
+
+#[cfg(feature = "napi-bindings")]
+type ParseError = napi::Error;
+#[cfg(not(feature = "napi-bindings"))]
+type ParseError = SimpleError;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -13,7 +41,7 @@ use tree_sitter_rust::LANGUAGE as tree_sitter_rust;
 use tree_sitter_typescript::LANGUAGE_TYPESCRIPT as tree_sitter_typescript;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[napi(object)]
+#[cfg_attr(feature = "napi-bindings", napi(object))]
 pub struct SemanticConcept {
     pub id: String,
     pub name: String,
@@ -26,14 +54,14 @@ pub struct SemanticConcept {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[napi(object)]
+#[cfg_attr(feature = "napi-bindings", napi(object))]
 pub struct LineRange {
     pub start: u32,
     pub end: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[napi(object)]
+#[cfg_attr(feature = "napi-bindings", napi(object))]
 pub struct CodebaseAnalysisResult {
     pub languages: Vec<String>,
     pub frameworks: Vec<String>,
@@ -42,24 +70,24 @@ pub struct CodebaseAnalysisResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[napi(object)]
+#[cfg_attr(feature = "napi-bindings", napi(object))]
 pub struct ComplexityMetrics {
     pub cyclomatic: f64,
     pub cognitive: f64,
     pub lines: u32,
 }
 
-#[napi]
+#[cfg_attr(feature = "napi-bindings", napi)]
 pub struct SemanticAnalyzer {
     parsers: HashMap<String, Parser>,
     concepts: HashMap<String, SemanticConcept>,
     relationships: HashMap<String, Vec<String>>,
 }
 
-#[napi]
+#[cfg_attr(feature = "napi-bindings", napi)]
 impl SemanticAnalyzer {
-    #[napi(constructor)]
-    pub fn new() -> napi::Result<Self> {
+    #[cfg_attr(feature = "napi-bindings", napi(constructor))]
+    pub fn new() -> Result<Self, ParseError> {
         let mut analyzer = SemanticAnalyzer {
             parsers: HashMap::new(),
             concepts: HashMap::new(),
@@ -75,11 +103,11 @@ impl SemanticAnalyzer {
     /// # Safety
     /// This function uses unsafe because it needs to interact with the Node.js runtime
     /// through N-API bindings. The caller must ensure the path exists and is readable.
-    #[napi]
+    #[cfg_attr(feature = "napi-bindings", napi)]
     pub async unsafe fn analyze_codebase(
         &mut self,
         path: String,
-    ) -> napi::Result<CodebaseAnalysisResult> {
+    ) -> Result<CodebaseAnalysisResult, ParseError> {
         let languages = self.detect_languages(&path).await?;
         let frameworks = self.detect_frameworks(&path).await?;
         let concepts = self.extract_concepts(&path).await?;
@@ -98,12 +126,12 @@ impl SemanticAnalyzer {
     /// # Safety
     /// This function uses unsafe because it needs to interact with the Node.js runtime
     /// through N-API bindings. The caller must ensure the file content is valid UTF-8.
-    #[napi]
+    #[cfg_attr(feature = "napi-bindings", napi)]
     pub async unsafe fn analyze_file_content(
         &mut self,
         file_path: String,
         content: String,
-    ) -> napi::Result<Vec<SemanticConcept>> {
+    ) -> Result<Vec<SemanticConcept>, ParseError> {
         let language = self.detect_language_from_path(&file_path);
 
         let concepts = match self
@@ -130,11 +158,11 @@ impl SemanticAnalyzer {
     /// # Safety
     /// This function uses unsafe because it needs to interact with the Node.js runtime
     /// through N-API bindings. The caller must ensure the path exists and is readable.
-    #[napi]
+    #[cfg_attr(feature = "napi-bindings", napi)]
     pub async unsafe fn learn_from_codebase(
         &mut self,
         path: String,
-    ) -> napi::Result<Vec<SemanticConcept>> {
+    ) -> Result<Vec<SemanticConcept>, ParseError> {
         let concepts = self.extract_concepts(&path).await?;
 
         // Learn relationships between concepts
@@ -153,18 +181,18 @@ impl SemanticAnalyzer {
     /// # Safety
     /// This function uses unsafe because it needs to interact with the Node.js runtime
     /// through N-API bindings. The caller must ensure the analysis data is valid JSON.
-    #[napi]
+    #[cfg_attr(feature = "napi-bindings", napi)]
     pub async unsafe fn update_from_analysis(
         &mut self,
         _analysis_data: String,
-    ) -> napi::Result<bool> {
+    ) -> Result<bool, ParseError> {
         // Parse analysis data and update internal state
         // This would typically be called when file changes are detected
         Ok(true)
     }
 
-    #[napi]
-    pub fn get_concept_relationships(&self, concept_id: String) -> napi::Result<Vec<String>> {
+    #[cfg_attr(feature = "napi-bindings", napi)]
+    pub fn get_concept_relationships(&self, concept_id: String) -> Result<Vec<String>, ParseError> {
         Ok(self
             .relationships
             .get(&concept_id)
@@ -172,12 +200,12 @@ impl SemanticAnalyzer {
             .unwrap_or_default())
     }
 
-    fn initialize_parsers(&mut self) -> napi::Result<()> {
+    fn initialize_parsers(&mut self) -> Result<(), ParseError> {
         let mut ts_parser = Parser::new();
         ts_parser
             .set_language(&tree_sitter_typescript.into())
             .map_err(|e| {
-                napi::Error::from_reason(format!("Failed to set TypeScript language: {}", e))
+                ParseError::from_reason(format!("Failed to set TypeScript language: {}", e))
             })?;
         self.parsers.insert("typescript".to_string(), ts_parser);
 
@@ -185,28 +213,28 @@ impl SemanticAnalyzer {
         js_parser
             .set_language(&tree_sitter_javascript.into())
             .map_err(|e| {
-                napi::Error::from_reason(format!("Failed to set JavaScript language: {}", e))
+                ParseError::from_reason(format!("Failed to set JavaScript language: {}", e))
             })?;
         self.parsers.insert("javascript".to_string(), js_parser);
 
         let mut rust_parser = Parser::new();
         rust_parser
             .set_language(&tree_sitter_rust.into())
-            .map_err(|e| napi::Error::from_reason(format!("Failed to set Rust language: {}", e)))?;
+            .map_err(|e| ParseError::from_reason(format!("Failed to set Rust language: {}", e)))?;
         self.parsers.insert("rust".to_string(), rust_parser);
 
         let mut python_parser = Parser::new();
         python_parser
             .set_language(&tree_sitter_python.into())
             .map_err(|e| {
-                napi::Error::from_reason(format!("Failed to set Python language: {}", e))
+                ParseError::from_reason(format!("Failed to set Python language: {}", e))
             })?;
         self.parsers.insert("python".to_string(), python_parser);
 
         Ok(())
     }
 
-    async fn detect_languages(&self, path: &str) -> napi::Result<Vec<String>> {
+    async fn detect_languages(&self, path: &str) -> Result<Vec<String>, ParseError> {
         let mut languages = std::collections::HashSet::new();
 
         for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
@@ -235,7 +263,7 @@ impl SemanticAnalyzer {
         Ok(languages.into_iter().collect())
     }
 
-    async fn detect_frameworks(&self, path: &str) -> napi::Result<Vec<String>> {
+    async fn detect_frameworks(&self, path: &str) -> Result<Vec<String>, ParseError> {
         let mut frameworks = std::collections::HashSet::new();
 
         // Check package.json for JavaScript/TypeScript frameworks
@@ -301,7 +329,7 @@ impl SemanticAnalyzer {
         Ok(frameworks.into_iter().collect())
     }
 
-    async fn extract_concepts(&mut self, path: &str) -> napi::Result<Vec<SemanticConcept>> {
+    async fn extract_concepts(&mut self, path: &str) -> Result<Vec<SemanticConcept>, ParseError> {
         let mut all_concepts = Vec::new();
 
         for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
@@ -594,14 +622,14 @@ impl SemanticAnalyzer {
         file_path: &str,
         content: &str,
         language: &str,
-    ) -> napi::Result<Vec<SemanticConcept>> {
+    ) -> Result<Vec<SemanticConcept>, ParseError> {
         let parser = self.parsers.get_mut(language).ok_or_else(|| {
-            napi::Error::from_reason(format!("Unsupported language: {}", language))
+            ParseError::from_reason(format!("Unsupported language: {}", language))
         })?;
 
         let tree = parser
             .parse(content, None)
-            .ok_or_else(|| napi::Error::from_reason("Failed to parse file content"))?;
+            .ok_or_else(|| ParseError::from_reason("Failed to parse file content"))?;
 
         let mut concepts = Vec::new();
 
@@ -630,7 +658,7 @@ impl SemanticAnalyzer {
         tree: &Tree,
         file_path: &str,
         content: &str,
-    ) -> napi::Result<Vec<SemanticConcept>> {
+    ) -> Result<Vec<SemanticConcept>, ParseError> {
         let mut concepts = Vec::new();
         let root_node = tree.root_node();
 
@@ -643,7 +671,7 @@ impl SemanticAnalyzer {
         tree: &Tree,
         file_path: &str,
         content: &str,
-    ) -> napi::Result<Vec<SemanticConcept>> {
+    ) -> Result<Vec<SemanticConcept>, ParseError> {
         let mut concepts = Vec::new();
         let root_node = tree.root_node();
 
@@ -656,7 +684,7 @@ impl SemanticAnalyzer {
         tree: &Tree,
         file_path: &str,
         content: &str,
-    ) -> napi::Result<Vec<SemanticConcept>> {
+    ) -> Result<Vec<SemanticConcept>, ParseError> {
         let mut concepts = Vec::new();
         let root_node = tree.root_node();
 
@@ -669,7 +697,7 @@ impl SemanticAnalyzer {
         tree: &Tree,
         file_path: &str,
         content: &str,
-    ) -> napi::Result<Vec<SemanticConcept>> {
+    ) -> Result<Vec<SemanticConcept>, ParseError> {
         let mut concepts = Vec::new();
         let root_node = tree.root_node();
 
@@ -684,7 +712,7 @@ impl SemanticAnalyzer {
         content: &str,
         concepts: &mut Vec<SemanticConcept>,
         language: &str,
-    ) -> napi::Result<()> {
+    ) -> Result<(), ParseError> {
         // Extract concepts based on node types (language-specific)
         match language {
             "typescript" | "javascript" => match node.kind() {
@@ -801,7 +829,7 @@ impl SemanticAnalyzer {
         content: &str,
         concept_type: &str,
         _language: &str,
-    ) -> napi::Result<Option<SemanticConcept>> {
+    ) -> Result<Option<SemanticConcept>, ParseError> {
         // Extract name from node
         let name = self.extract_name_from_node(node, content)?;
 
@@ -832,7 +860,7 @@ impl SemanticAnalyzer {
         Ok(Some(concept))
     }
 
-    fn extract_name_from_node(&self, node: Node, content: &str) -> napi::Result<String> {
+    fn extract_name_from_node(&self, node: Node, content: &str) -> Result<String, ParseError> {
         // Try to find identifier node recursively
         if let Some(name) = self.find_identifier_recursive(node, content) {
             return Ok(name);
@@ -840,8 +868,11 @@ impl SemanticAnalyzer {
         Ok(String::new())
     }
 
-    #[allow(clippy::only_used_in_recursion)]
     fn find_identifier_recursive(&self, node: Node, content: &str) -> Option<String> {
+        Self::find_identifier_recursive_impl(node, content)
+    }
+
+    fn find_identifier_recursive_impl(node: Node, content: &str) -> Option<String> {
         // Check if this node is an identifier
         match node.kind() {
             "identifier" | "property_identifier" | "type_identifier" => {
@@ -857,7 +888,7 @@ impl SemanticAnalyzer {
         // Search children recursively (but limit depth to avoid infinite recursion)
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
-            if let Some(name) = self.find_identifier_recursive(child, content) {
+            if let Some(name) = Self::find_identifier_recursive_impl(child, content) {
                 return Some(name);
             }
         }
@@ -1092,5 +1123,173 @@ mod tests {
         assert_eq!(concepts.len(), 1);
         assert_eq!(concepts[0].name, "test");
         assert_eq!(concepts[0].concept_type, "file");
+    }
+
+    // Helper function for creating test concepts
+    fn create_test_concept(name: &str, concept_type: &str) -> SemanticConcept {
+        SemanticConcept {
+            id: format!("test_{}", name),
+            name: name.to_string(),
+            concept_type: concept_type.to_string(),
+            confidence: 0.8,
+            file_path: "test.ts".to_string(),
+            line_range: LineRange { start: 1, end: 1 },
+            relationships: HashMap::new(),
+            metadata: HashMap::new(),
+        }
+    }
+
+    #[test]
+    fn test_semantic_concept_creation() {
+        let concept = create_test_concept("UserService", "class");
+
+        assert_eq!(concept.name, "UserService");
+        assert_eq!(concept.concept_type, "class");
+        assert_eq!(concept.confidence, 0.8);
+        assert_eq!(concept.file_path, "test.ts");
+        assert!(concept.id.starts_with("test_"));
+    }
+
+    #[test]
+    fn test_line_range_validation() {
+        let range = LineRange { start: 1, end: 10 };
+        assert!(range.end >= range.start);
+
+        let single_line = LineRange { start: 5, end: 5 };
+        assert_eq!(single_line.start, single_line.end);
+    }
+
+    #[test]
+    fn test_complexity_metrics_calculation() {
+        let metrics = ComplexityMetrics {
+            cyclomatic: 5.0,
+            cognitive: 8.0,
+            lines: 100,
+        };
+
+        assert!(metrics.cyclomatic > 0.0);
+        assert!(metrics.cognitive >= metrics.cyclomatic);
+        assert!(metrics.lines > 0);
+    }
+
+    #[test]
+    fn test_concept_relationships() {
+        let mut concept = create_test_concept("UserService", "class");
+        concept
+            .relationships
+            .insert("extends".to_string(), "BaseService".to_string());
+        concept
+            .relationships
+            .insert("implements".to_string(), "IUserService".to_string());
+
+        assert_eq!(
+            concept.relationships.get("extends"),
+            Some(&"BaseService".to_string())
+        );
+        assert_eq!(
+            concept.relationships.get("implements"),
+            Some(&"IUserService".to_string())
+        );
+        assert_eq!(concept.relationships.len(), 2);
+    }
+
+    #[test]
+    fn test_concept_metadata() {
+        let mut concept = create_test_concept("calculateTotal", "function");
+        concept
+            .metadata
+            .insert("visibility".to_string(), "public".to_string());
+        concept
+            .metadata
+            .insert("async".to_string(), "false".to_string());
+        concept
+            .metadata
+            .insert("parameters".to_string(), "2".to_string());
+
+        assert_eq!(
+            concept.metadata.get("visibility"),
+            Some(&"public".to_string())
+        );
+        assert_eq!(concept.metadata.get("async"), Some(&"false".to_string()));
+        assert_eq!(concept.metadata.get("parameters"), Some(&"2".to_string()));
+    }
+
+    #[test]
+    fn test_codebase_analysis_result_structure() {
+        let analysis = CodebaseAnalysisResult {
+            languages: vec!["typescript".to_string(), "javascript".to_string()],
+            frameworks: vec!["react".to_string(), "express".to_string()],
+            complexity: ComplexityMetrics {
+                cyclomatic: 15.0,
+                cognitive: 22.0,
+                lines: 500,
+            },
+            concepts: vec![
+                create_test_concept("UserService", "class"),
+                create_test_concept("getUser", "function"),
+            ],
+        };
+
+        assert_eq!(analysis.languages.len(), 2);
+        assert_eq!(analysis.frameworks.len(), 2);
+        assert_eq!(analysis.concepts.len(), 2);
+        assert!(analysis.languages.contains(&"typescript".to_string()));
+        assert!(analysis.frameworks.contains(&"react".to_string()));
+    }
+
+    #[test]
+    fn test_concept_confidence_bounds() {
+        let mut concept = create_test_concept("test", "function");
+
+        // Test valid confidence values
+        concept.confidence = 0.0;
+        assert!(concept.confidence >= 0.0 && concept.confidence <= 1.0);
+
+        concept.confidence = 1.0;
+        assert!(concept.confidence >= 0.0 && concept.confidence <= 1.0);
+
+        concept.confidence = 0.75;
+        assert!(concept.confidence >= 0.0 && concept.confidence <= 1.0);
+    }
+
+    #[test]
+    fn test_multiple_concept_types() {
+        let concepts = vec![
+            create_test_concept("UserService", "class"),
+            create_test_concept("IUserService", "interface"),
+            create_test_concept("getUser", "function"),
+            create_test_concept("userId", "variable"),
+            create_test_concept("UserType", "type"),
+        ];
+
+        let types: Vec<&str> = concepts.iter().map(|c| c.concept_type.as_str()).collect();
+        assert!(types.contains(&"class"));
+        assert!(types.contains(&"interface"));
+        assert!(types.contains(&"function"));
+        assert!(types.contains(&"variable"));
+        assert!(types.contains(&"type"));
+    }
+
+    #[test]
+    fn test_concept_hierarchy() {
+        let mut parent_concept = create_test_concept("UserService", "class");
+        let mut method_concept = create_test_concept("getUser", "function");
+
+        // Simulate parent-child relationship
+        method_concept
+            .relationships
+            .insert("parent".to_string(), parent_concept.id.clone());
+        parent_concept
+            .relationships
+            .insert("methods".to_string(), method_concept.id.clone());
+
+        assert_eq!(
+            method_concept.relationships.get("parent"),
+            Some(&parent_concept.id)
+        );
+        assert_eq!(
+            parent_concept.relationships.get("methods"),
+            Some(&method_concept.id)
+        );
     }
 }

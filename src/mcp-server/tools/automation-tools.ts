@@ -5,13 +5,15 @@ import { SQLiteDatabase } from '../../storage/sqlite-db.js';
 import { ProgressTracker } from '../../utils/progress-tracker.js';
 import { ConsoleProgressRenderer } from '../../utils/console-progress.js';
 import { glob } from 'glob';
+import { statSync, existsSync } from 'fs';
+import { join } from 'path';
 
 export class AutomationTools {
   constructor(
     private semanticEngine: SemanticEngine,
     private patternEngine: PatternEngine,
     private database: SQLiteDatabase
-  ) {}
+  ) { }
 
   get tools(): Tool[] {
     return [
@@ -31,7 +33,7 @@ export class AutomationTools {
               default: false
             },
             includeProgress: {
-              type: 'boolean', 
+              type: 'boolean',
               description: 'Include detailed progress information in response',
               default: true
             }
@@ -85,7 +87,7 @@ export class AutomationTools {
 
     // Check if learning is needed
     const status = await this.getLearningStatus({ path: projectPath });
-    
+
     if (!force && status.hasIntelligence && !status.isStale) {
       return {
         action: 'skipped',
@@ -155,7 +157,7 @@ export class AutomationTools {
     } catch (error) {
       progressRenderer.stop();
       console.error('❌ Auto-learning failed:', error);
-      
+
       return {
         action: 'failed',
         error: error.message,
@@ -167,19 +169,19 @@ export class AutomationTools {
 
   async getLearningStatus(args: { path?: string }): Promise<any> {
     const projectPath = args.path || process.cwd();
-    
+
     try {
       // Check for existing intelligence
       const concepts = this.database.getSemanticConcepts();
       const patterns = this.database.getDeveloperPatterns();
-      
+
       // Count project files
       const files = await this.countProjectFiles(projectPath);
-      
-      // Check if data is stale (basic heuristic)
+
+      // Check if data is stale (based on file modification times)
       const hasIntelligence = concepts.length > 0 || patterns.length > 0;
-      const isStale = false; // TODO: Implement staleness detection based on file modification times
-      
+      const isStale = hasIntelligence ? await this.detectStaleness(projectPath, concepts, patterns) : false;
+
       return {
         path: projectPath,
         hasIntelligence,
@@ -189,8 +191,8 @@ export class AutomationTools {
         filesInProject: files.total,
         codeFilesInProject: files.codeFiles,
         lastLearningTime: hasIntelligence ? this.getLastLearningTime() : null,
-        recommendation: hasIntelligence && !isStale 
-          ? 'ready' 
+        recommendation: hasIntelligence && !isStale
+          ? 'ready'
           : 'learning_recommended',
         message: hasIntelligence && !isStale
           ? `Intelligence is ready! ${concepts.length} concepts and ${patterns.length} patterns available.`
@@ -219,7 +221,7 @@ export class AutomationTools {
 
     const steps = [];
     let success = true;
-    
+
     try {
       // Step 1: Check project structure
       steps.push({
@@ -247,7 +249,7 @@ export class AutomationTools {
           force: false,
           includeProgress: false
         });
-        
+
         steps.push({
           step: 'learning',
           status: learningResult.action === 'failed' ? 'failed' : 'completed',
@@ -279,7 +281,7 @@ export class AutomationTools {
         success,
         projectPath,
         steps,
-        message: success 
+        message: success
           ? '✅ Quick setup completed! In Memoria is ready for AI agent use.'
           : '⚠️  Setup completed with warnings. Some features may have limited functionality.',
         readyForAgents: success,
@@ -288,7 +290,7 @@ export class AutomationTools {
 
     } catch (error) {
       console.error('❌ Quick setup failed:', error);
-      
+
       steps.push({
         step: 'error',
         status: 'failed',
@@ -323,7 +325,7 @@ export class AutomationTools {
         nodir: true
       });
 
-      const codeFiles = allFiles.filter(file => 
+      const codeFiles = allFiles.filter(file =>
         /\.(ts|tsx|js|jsx|py|rs|go|java|c|cpp|h|hpp)$/.test(file)
       );
 
@@ -341,7 +343,7 @@ export class AutomationTools {
     try {
       const latestConcept = this.database.getSemanticConcepts()
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-      
+
       const latestPattern = this.database.getDeveloperPatterns()
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
@@ -355,6 +357,124 @@ export class AutomationTools {
 
       return latestTime > 0 ? new Date(latestTime).toISOString() : null;
     } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Detect if intelligence data is stale based on file modification times
+   * @param projectPath Path to the project directory
+   * @param concepts Stored semantic concepts
+   * @param patterns Stored patterns
+   * @returns True if data is stale, false otherwise
+   */
+  private async detectStaleness(
+    projectPath: string,
+    concepts: any[],
+    patterns: any[]
+  ): Promise<boolean> {
+    try {
+      // Get the most recent intelligence data timestamp
+      let latestIntelligenceTime = 0;
+
+      // Check concept timestamps (ensure UTC)
+      for (const concept of concepts) {
+        const conceptTime = concept.createdAt ? new Date(concept.createdAt).getTime() : 0;
+        latestIntelligenceTime = Math.max(latestIntelligenceTime, conceptTime);
+      }
+
+      // Check pattern timestamps
+      for (const pattern of patterns) {
+        const patternTime = pattern.createdAt ? new Date(pattern.createdAt).getTime() : 0;
+        latestIntelligenceTime = Math.max(latestIntelligenceTime, patternTime);
+      }
+
+      if (latestIntelligenceTime === 0) {
+        return true; // No valid timestamps, consider stale
+      }
+
+      // Get the most recent file modification time in the project
+      const mostRecentFileTime = await this.getMostRecentFileModificationTime(projectPath);
+
+      if (mostRecentFileTime === null) {
+        return false; // Can't determine file times, assume not stale
+      }
+
+      // Consider data stale if any source file has been modified after the intelligence data
+      const timeDiff = mostRecentFileTime - latestIntelligenceTime;
+      const rawIsStale = timeDiff > 0; // Files are newer than intelligence
+
+      // Add a buffer to avoid false positives from minor timestamp differences
+      const bufferMs = 5 * 60 * 1000; // 5 minutes
+
+      // Data is considered stale only if files are significantly newer (beyond buffer)
+      return rawIsStale && (timeDiff > bufferMs);
+
+    } catch (error) {
+      // If we can't determine staleness, err on the side of caution and assume not stale
+      console.warn('Failed to detect staleness:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get the most recent file modification time in the project
+   * @param projectPath Path to the project directory
+   * @returns Most recent modification timestamp in milliseconds, or null if error
+   */
+  private async getMostRecentFileModificationTime(projectPath: string): Promise<number | null> {
+    try {
+      // Use glob to find all source files
+      const sourcePatterns = [
+        '**/*.ts',
+        '**/*.tsx',
+        '**/*.js',
+        '**/*.jsx',
+        '**/*.py',
+        '**/*.rs',
+        '**/*.go',
+        '**/*.java',
+        '**/*.c',
+        '**/*.cpp',
+        '**/*.cs'
+      ];
+
+      let mostRecentTime = 0;
+
+      for (const pattern of sourcePatterns) {
+        const files = await glob(pattern, {
+          cwd: projectPath,
+          ignore: [
+            'node_modules/**',
+            '.git/**',
+            'target/**',
+            'dist/**',
+            'build/**',
+            '.next/**',
+            '__pycache__/**',
+            '**/*.min.js',
+            '**/*.min.css'
+          ],
+          absolute: true
+        });
+
+        for (const file of files) {
+          try {
+            if (existsSync(file)) {
+              const stats = statSync(file);
+              const modTime = stats.mtime.getTime();
+              mostRecentTime = Math.max(mostRecentTime, modTime);
+            }
+          } catch (fileError) {
+            // Skip files that can't be accessed
+            continue;
+          }
+        }
+      }
+
+      return mostRecentTime > 0 ? mostRecentTime : null;
+    } catch (error) {
+      console.warn('Failed to get file modification times:', error);
       return null;
     }
   }

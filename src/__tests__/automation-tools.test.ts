@@ -51,6 +51,9 @@ describe('AutomationTools', () => {
     });
 
     it('should detect existing intelligence data', async () => {
+      // Wait a moment to ensure database timestamp is newer than file creation
+      await new Promise(resolve => setTimeout(resolve, 10));
+      
       // Add some test data
       database.insertSemanticConcept({
         id: 'test-concept',
@@ -67,12 +70,16 @@ describe('AutomationTools', () => {
       
       expect(result.hasIntelligence).toBe(true);
       expect(result.conceptsStored).toBe(1);
+      expect(result.isStale).toBe(false);
       expect(result.recommendation).toBe('ready');
     });
   });
 
   describe('autoLearnIfNeeded', () => {
     it('should skip learning when data is current', async () => {
+      // Wait a moment to ensure database timestamp is newer than file creation
+      await new Promise(resolve => setTimeout(resolve, 10));
+      
       // Add some test intelligence data
       database.insertSemanticConcept({
         id: 'existing-concept',

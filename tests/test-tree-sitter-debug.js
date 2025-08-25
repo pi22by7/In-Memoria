@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { SemanticAnalyzer } from './rust-core/index.js';
+import { SemanticAnalyzer } from '../rust-core/index.js';
 
 async function testTreeSitterBasics() {
   console.log('🔍 Testing basic tree-sitter functionality...\n');

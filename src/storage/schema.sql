@@ -10,8 +10,8 @@ CREATE TABLE IF NOT EXISTS semantic_concepts (
   evolution_history TEXT, -- JSON: how concept has changed over time
   file_path TEXT,
   line_range TEXT, -- JSON: start and end line numbers
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT (datetime('now', 'utc')),
+  updated_at DATETIME DEFAULT (datetime('now', 'utc'))
 );
 
 -- Developer-specific coding patterns learned over time
@@ -23,8 +23,8 @@ CREATE TABLE IF NOT EXISTS developer_patterns (
   contexts TEXT, -- JSON: contexts where pattern is used
   examples TEXT, -- JSON: code examples demonstrating pattern
   confidence REAL DEFAULT 0.0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  last_seen DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT (datetime('now', 'utc')),
+  last_seen DATETIME DEFAULT (datetime('now', 'utc'))
 );
 
 -- Architectural decisions and their reasoning
@@ -34,9 +34,9 @@ CREATE TABLE IF NOT EXISTS architectural_decisions (
   decision_rationale TEXT,
   alternatives_considered TEXT, -- JSON
   impact_analysis TEXT, -- JSON
-  decision_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+  decision_date DATETIME DEFAULT (datetime('now', 'utc')),
   files_affected TEXT, -- JSON: list of affected files
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT (datetime('now', 'utc'))
 );
 
 -- Per-file intelligence and analysis results
@@ -47,8 +47,8 @@ CREATE TABLE IF NOT EXISTS file_intelligence (
   patterns_used TEXT, -- JSON: patterns detected in this file
   complexity_metrics TEXT, -- JSON: various complexity measurements
   dependencies TEXT, -- JSON: file dependencies
-  last_analyzed DATETIME DEFAULT CURRENT_TIMESTAMP,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  last_analyzed DATETIME DEFAULT (datetime('now', 'utc')),
+  created_at DATETIME DEFAULT (datetime('now', 'utc'))
 );
 
 -- Cross-project pattern sharing and community insights
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS shared_patterns (
   usage_count INTEGER DEFAULT 0,
   community_rating REAL DEFAULT 0.0,
   tags TEXT, -- JSON: searchable tags
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT (datetime('now', 'utc'))
 );
 
 -- AI agent insights and contributions
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS ai_insights (
   source_agent TEXT, -- which AI agent provided this insight
   validation_status TEXT DEFAULT 'pending', -- 'pending', 'validated', 'rejected'
   impact_prediction TEXT, -- JSON
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT (datetime('now', 'utc'))
 );
 
 -- Project metadata and configuration
@@ -85,8 +85,8 @@ CREATE TABLE IF NOT EXISTS project_metadata (
   framework_detected TEXT, -- JSON: detected frameworks
   intelligence_version TEXT,
   last_full_scan DATETIME,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT (datetime('now', 'utc')),
+  updated_at DATETIME DEFAULT (datetime('now', 'utc'))
 );
 
 -- Indexes for performance
