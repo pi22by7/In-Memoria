@@ -67,7 +67,9 @@ in-memoria/
 │   └── Cargo.toml
 ├── schemas/                     # Data schemas and SQL
 ├── docs/                        # Documentation
-└── tests/                       # Test suites
+├── tests/                       # Test suites
+│   └── integration/            # Real-world MCP server tests
+└── src/__tests__/              # Unit test suites
 ```
 
 ## 🛠️ Development Workflow
@@ -174,6 +176,13 @@ cd rust-core && cargo test
 ```bash
 # End-to-end MCP tool testing
 npm run test:integration
+
+# Manual integration testing with real MCP server
+cd tests/integration
+node test-mcp-client.js        # Basic MCP functionality
+node test-advanced-mcp.js      # Advanced features
+node test-error-handling.js    # Error validation  
+node test-server-lifecycle.js  # Server lifecycle
 ```
 
 #### Performance Tests

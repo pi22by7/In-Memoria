@@ -21,12 +21,12 @@ describe('AutomationTools', () => {
     tempDir = mkdtempSync(join(tmpdir(), 'automation-test-'));
     projectDir = join(tempDir, 'test-project');
     mkdirSync(projectDir, { recursive: true });
-    
+
     // Create some test files
     writeFileSync(join(projectDir, 'package.json'), JSON.stringify({ name: 'test-project' }));
     writeFileSync(join(projectDir, 'index.ts'), 'export const hello = () => "world";');
     writeFileSync(join(projectDir, 'utils.ts'), 'export function add(a: number, b: number) { return a + b; }');
-    
+
     database = new SQLiteDatabase(join(tempDir, 'test.db'));
     vectorDB = new SemanticVectorDB();
     semanticEngine = new SemanticEngine(database, vectorDB);
@@ -42,7 +42,7 @@ describe('AutomationTools', () => {
   describe('getLearningStatus', () => {
     it('should return correct status for empty database', async () => {
       const result = await automationTools.getLearningStatus({ path: projectDir });
-      
+
       expect(result.hasIntelligence).toBe(false);
       expect(result.conceptsStored).toBe(0);
       expect(result.patternsStored).toBe(0);
@@ -53,7 +53,7 @@ describe('AutomationTools', () => {
     it('should detect existing intelligence data', async () => {
       // Wait a moment to ensure database timestamp is newer than file creation
       await new Promise(resolve => setTimeout(resolve, 10));
-      
+
       // Add some test data
       database.insertSemanticConcept({
         id: 'test-concept',
@@ -67,7 +67,7 @@ describe('AutomationTools', () => {
       });
 
       const result = await automationTools.getLearningStatus({ path: projectDir });
-      
+
       expect(result.hasIntelligence).toBe(true);
       expect(result.conceptsStored).toBe(1);
       expect(result.isStale).toBe(false);
@@ -79,7 +79,7 @@ describe('AutomationTools', () => {
     it('should skip learning when data is current', async () => {
       // Wait a moment to ensure database timestamp is newer than file creation
       await new Promise(resolve => setTimeout(resolve, 10));
-      
+
       // Add some test intelligence data
       database.insertSemanticConcept({
         id: 'existing-concept',
@@ -92,7 +92,7 @@ describe('AutomationTools', () => {
         lineRange: { start: 1, end: 3 }
       });
 
-      const result = await automationTools.autoLearnIfNeeded({ 
+      const result = await automationTools.autoLearnIfNeeded({
         path: projectDir,
         includeProgress: false
       });
@@ -102,7 +102,7 @@ describe('AutomationTools', () => {
     });
 
     it('should perform learning when forced', async () => {
-      const result = await automationTools.autoLearnIfNeeded({ 
+      const result = await automationTools.autoLearnIfNeeded({
         path: projectDir,
         force: true,
         includeProgress: false
@@ -120,11 +120,11 @@ describe('AutomationTools', () => {
       const mockSemanticEngine = {
         learnFromCodebase: vi.fn().mockRejectedValue(new Error('Test error'))
       };
-      
+
       const tools = new AutomationTools({} as any, {} as any, {} as any);
       (tools as any).semanticEngine = mockSemanticEngine;
-      
-      const result = await tools.autoLearnIfNeeded({ 
+
+      const result = await tools.autoLearnIfNeeded({
         path: projectDir,
         includeProgress: false,
         force: true  // Force learning to trigger the error
@@ -137,7 +137,7 @@ describe('AutomationTools', () => {
 
   describe('quickSetup', () => {
     it('should perform complete setup successfully', async () => {
-      const result = await automationTools.quickSetup({ 
+      const result = await automationTools.quickSetup({
         path: projectDir,
         skipLearning: true
       });
@@ -153,7 +153,7 @@ describe('AutomationTools', () => {
     });
 
     it('should include learning when not skipped', async () => {
-      const result = await automationTools.quickSetup({ 
+      const result = await automationTools.quickSetup({
         path: projectDir,
         skipLearning: false
       });
@@ -165,8 +165,8 @@ describe('AutomationTools', () => {
     it('should handle setup errors gracefully', async () => {
       // Close database to force an error
       database.close();
-      
-      const result = await automationTools.quickSetup({ 
+
+      const result = await automationTools.quickSetup({
         path: projectDir
       });
 
@@ -178,14 +178,14 @@ describe('AutomationTools', () => {
   describe('tools property', () => {
     it('should expose correct tool definitions', () => {
       const tools = automationTools.tools;
-      
+
       expect(tools).toHaveLength(3);
       expect(tools.map(t => t.name)).toEqual([
         'auto_learn_if_needed',
-        'get_learning_status', 
+        'get_learning_status',
         'quick_setup'
       ]);
-      
+
       // Check tool schemas
       tools.forEach(tool => {
         expect(tool.inputSchema).toBeDefined();

@@ -54,7 +54,7 @@ export function formatMessage(message: string): string {
     process.env.IN_MEMORIA_DB_PATH = join(tempDir, 'test.db');
 
     server = new CodeCartographerMCP();
-    
+
     // Initialize components without starting the transport (for testing)
     await server.initializeForTesting();
   });
@@ -163,7 +163,7 @@ export function formatMessage(message: string): string {
       });
 
       expect(result.success).toBe(true);
-      expect(result.status.version).toBe('0.3.2');
+      expect(result.status.version).toBe('0.4.0');
       expect(result.status.components.database).toBeDefined();
       expect(result.status.intelligence).toBeDefined();
       expect(result.status.status).toMatch(/operational|ready_for_learning|degraded|critical/);
@@ -273,7 +273,7 @@ export function formatMessage(message: string): string {
       // Test by checking if we can access all expected tools through routeToolCall
       const toolsToTest = [
         'analyze_codebase',
-        'get_file_content', 
+        'get_file_content',
         'get_project_structure',
         'search_codebase',
         'generate_documentation',
