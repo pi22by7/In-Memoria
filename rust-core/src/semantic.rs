@@ -40,6 +40,15 @@ use tree_sitter_python::LANGUAGE as tree_sitter_python;
 use tree_sitter_rust::LANGUAGE as tree_sitter_rust;
 use tree_sitter_typescript::LANGUAGE_TYPESCRIPT as tree_sitter_typescript;
 
+// Import new tree-sitter languages
+use tree_sitter_sequel::LANGUAGE as tree_sitter_sql;
+use tree_sitter_go::LANGUAGE as tree_sitter_go;
+use tree_sitter_java::LANGUAGE as tree_sitter_java;
+use tree_sitter_c::LANGUAGE as tree_sitter_c;
+use tree_sitter_cpp::LANGUAGE as tree_sitter_cpp;
+use tree_sitter_c_sharp::LANGUAGE as tree_sitter_csharp;
+use tree_sitter_svelte_ng::LANGUAGE as tree_sitter_svelte;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "napi-bindings", napi(object))]
 pub struct SemanticConcept {
@@ -243,6 +252,55 @@ impl SemanticAnalyzer {
             })?;
         self.parsers.insert("python".to_string(), python_parser);
 
+        // SQL parser
+        let mut sql_parser = Parser::new();
+        sql_parser.set_language(&tree_sitter_sql.into()).map_err(|e| {
+            ParseError::from_reason(format!("Failed to set SQL language: {}", e))
+        })?;
+        self.parsers.insert("sql".to_string(), sql_parser);
+
+        // Go parser
+        let mut go_parser = Parser::new();
+        go_parser.set_language(&tree_sitter_go.into()).map_err(|e| {
+            ParseError::from_reason(format!("Failed to set Go language: {}", e))
+        })?;
+        self.parsers.insert("go".to_string(), go_parser);
+
+        // Java parser
+        let mut java_parser = Parser::new();
+        java_parser.set_language(&tree_sitter_java.into()).map_err(|e| {
+            ParseError::from_reason(format!("Failed to set Java language: {}", e))
+        })?;
+        self.parsers.insert("java".to_string(), java_parser);
+
+        // C parser
+        let mut c_parser = Parser::new();
+        c_parser.set_language(&tree_sitter_c.into()).map_err(|e| {
+            ParseError::from_reason(format!("Failed to set C language: {}", e))
+        })?;
+        self.parsers.insert("c".to_string(), c_parser);
+
+        // C++ parser
+        let mut cpp_parser = Parser::new();
+        cpp_parser.set_language(&tree_sitter_cpp.into()).map_err(|e| {
+            ParseError::from_reason(format!("Failed to set C++ language: {}", e))
+        })?;
+        self.parsers.insert("cpp".to_string(), cpp_parser);
+
+        // C# parser
+        let mut csharp_parser = Parser::new();
+        csharp_parser.set_language(&tree_sitter_csharp.into()).map_err(|e| {
+            ParseError::from_reason(format!("Failed to set C# language: {}", e))
+        })?;
+        self.parsers.insert("csharp".to_string(), csharp_parser);
+
+        // Svelte parser (using svelte-ng)
+        let mut svelte_parser = Parser::new();
+        svelte_parser.set_language(&tree_sitter_svelte.into()).map_err(|e| {
+            ParseError::from_reason(format!("Failed to set Svelte language: {}", e))
+        })?;
+        self.parsers.insert("svelte".to_string(), svelte_parser);
+
         Ok(())
     }
 
@@ -264,7 +322,7 @@ impl SemanticAnalyzer {
                         "cpp" | "cc" | "cxx" => Some("cpp"),
                         "cs" => Some("csharp"),
                         "svelte" => Some("svelte"),
-                        "vue" => Some("vue"),
+                        "vue" => Some("javascript"), // Fallback to JS for Vue (parser not available)
                         _ => None,
                     };
 
@@ -497,7 +555,7 @@ impl SemanticAnalyzer {
         if let Some(extension) = file_path.extension().and_then(|s| s.to_str()) {
             matches!(
                 extension.to_lowercase().as_str(),
-                "ts" | "tsx" | "js" | "jsx" | "rs" | "py" | "go" | "java" | "cpp" | "c" | "cs" | "svelte" | "vue" | "sql"
+                "ts" | "tsx" | "js" | "jsx" | "rs" | "py" | "go" | "java" | "cpp" | "c" | "cs" | "svelte" | "sql"
             )
         } else {
             false
@@ -747,8 +805,13 @@ impl SemanticAnalyzer {
             "python" => {
                 concepts.extend(self.extract_python_concepts(&tree, file_path, content)?);
             }
+            "sql" | "go" | "java" | "c" | "cpp" | "csharp" | "svelte" => {
+                // Use generic extraction for new languages
+                // TODO: Add specific extractors for each language
+                concepts.extend(self.extract_generic_concepts(&tree, file_path, content)?);
+            }
             _ => {
-                // Generic extraction for unsupported languages
+                // Generic extraction for truly unsupported languages
                 concepts.extend(self.extract_generic_concepts(&tree, file_path, content)?);
             }
         }
@@ -1013,7 +1076,6 @@ impl SemanticAnalyzer {
                 "cpp" | "cc" | "cxx" => "cpp".to_string(),
                 "cs" => "csharp".to_string(),
                 "svelte" => "svelte".to_string(),
-                "vue" => "vue".to_string(),
                 _ => "generic".to_string(),
             }
         } else {
@@ -1402,5 +1464,96 @@ mod tests {
             parent_concept.relationships.get("methods"),
             Some(&method_concept.id)
         );
+    }
+
+    #[tokio::test]
+    async fn test_new_language_support() {
+        let mut analyzer = SemanticAnalyzer::new().unwrap();
+        
+        // Test SQL
+        let sql_content = "CREATE TABLE users (id INTEGER PRIMARY KEY, name VARCHAR(255));";
+        println!("🔍 Testing SQL parsing...");
+        let sql_result = analyzer.parse_file_content("test.sql", sql_content, "sql").await;
+        match &sql_result {
+            Ok(concepts) => println!("✅ SQL: Found {} concepts", concepts.len()),
+            Err(e) => println!("❌ SQL failed: {}", e),
+        }
+        assert!(sql_result.is_ok(), "SQL parsing should succeed: {:?}", sql_result.err());
+        
+        // Test Go
+        let go_content = "package main\nfunc main() {\n    println(\"Hello World\")\n}";
+        println!("🔍 Testing Go parsing...");
+        let go_result = analyzer.parse_file_content("test.go", go_content, "go").await;
+        match &go_result {
+            Ok(concepts) => println!("✅ Go: Found {} concepts", concepts.len()),
+            Err(e) => println!("❌ Go failed: {}", e),
+        }
+        assert!(go_result.is_ok(), "Go parsing should succeed: {:?}", go_result.err());
+        
+        // Test Java
+        let java_content = "public class HelloWorld {\n    public static void main(String[] args) {\n        System.out.println(\"Hello\");\n    }\n}";
+        println!("🔍 Testing Java parsing...");
+        let java_result = analyzer.parse_file_content("test.java", java_content, "java").await;
+        match &java_result {
+            Ok(concepts) => println!("✅ Java: Found {} concepts", concepts.len()),
+            Err(e) => println!("❌ Java failed: {}", e),
+        }
+        assert!(java_result.is_ok(), "Java parsing should succeed: {:?}", java_result.err());
+        
+        // Test C
+        let c_content = "#include <stdio.h>\nint main() {\n    printf(\"Hello World\");\n    return 0;\n}";
+        println!("🔍 Testing C parsing...");
+        let c_result = analyzer.parse_file_content("test.c", c_content, "c").await;
+        assert!(c_result.is_ok(), "C parsing should succeed");
+        
+        // Test C++
+        let cpp_content = "#include <iostream>\nclass HelloWorld {\npublic:\n    void sayHello() {\n        std::cout << \"Hello\";\n    }\n};";
+        println!("🔍 Testing C++ parsing...");
+        let cpp_result = analyzer.parse_file_content("test.cpp", cpp_content, "cpp").await;
+        assert!(cpp_result.is_ok(), "C++ parsing should succeed");
+        
+        // Test C#
+        let csharp_content = "using System;\npublic class Program {\n    public static void Main() {\n        Console.WriteLine(\"Hello World\");\n    }\n}";
+        println!("🔍 Testing C# parsing...");
+        let csharp_result = analyzer.parse_file_content("test.cs", csharp_content, "csharp").await;
+        assert!(csharp_result.is_ok(), "C# parsing should succeed");
+        
+        // Test Svelte
+        let svelte_content = "<script>\n  let name = \"world\";\n  function greet() {\n    alert(`Hello ${name}!`);\n  }\n</script>";
+        println!("🔍 Testing Svelte parsing...");
+        let svelte_result = analyzer.parse_file_content("test.svelte", svelte_content, "svelte").await;
+        assert!(svelte_result.is_ok(), "Svelte parsing should succeed");
+        
+        println!("✅ All language parsing tests passed!");
+    }
+
+    #[test]
+    fn test_file_extension_filtering() {
+        let analyzer = SemanticAnalyzer::new().unwrap();
+        
+        // Test supported extensions
+        assert!(analyzer.should_analyze_file(std::path::Path::new("test.ts")));
+        assert!(analyzer.should_analyze_file(std::path::Path::new("test.js")));
+        assert!(analyzer.should_analyze_file(std::path::Path::new("test.py")));
+        assert!(analyzer.should_analyze_file(std::path::Path::new("test.rs")));
+        assert!(analyzer.should_analyze_file(std::path::Path::new("test.go")));
+        assert!(analyzer.should_analyze_file(std::path::Path::new("test.java")));
+        assert!(analyzer.should_analyze_file(std::path::Path::new("test.c")));
+        assert!(analyzer.should_analyze_file(std::path::Path::new("test.cpp")));
+        assert!(analyzer.should_analyze_file(std::path::Path::new("test.cs")));
+        assert!(analyzer.should_analyze_file(std::path::Path::new("test.svelte")));
+        assert!(analyzer.should_analyze_file(std::path::Path::new("test.sql")));
+        
+        // Test unsupported extensions
+        assert!(!analyzer.should_analyze_file(std::path::Path::new("test.md")));
+        assert!(!analyzer.should_analyze_file(std::path::Path::new("test.json")));
+        assert!(!analyzer.should_analyze_file(std::path::Path::new("test.css")));
+        assert!(!analyzer.should_analyze_file(std::path::Path::new("test.html")));
+        
+        // Test build directories
+        assert!(!analyzer.should_analyze_file(std::path::Path::new("dist/test.js")));
+        assert!(!analyzer.should_analyze_file(std::path::Path::new("build/test.js")));
+        assert!(!analyzer.should_analyze_file(std::path::Path::new("node_modules/test.js")));
+        assert!(!analyzer.should_analyze_file(std::path::Path::new(".next/test.js")));
     }
 }
