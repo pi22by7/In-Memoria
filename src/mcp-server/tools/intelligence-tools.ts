@@ -421,7 +421,8 @@ export class IntelligenceTools {
       return { concepts, patterns };
     }
     
-    return null;
+    console.warn('⚠️  No existing intelligence found - starting fresh analysis');
+    return null; // Null is honest here - we genuinely found no existing data
   }
 
   private async storeIntelligence(

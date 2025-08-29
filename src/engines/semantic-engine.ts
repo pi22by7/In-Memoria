@@ -18,6 +18,8 @@ export interface CodebaseAnalysisResult {
     type: string;
     confidence: number;
   }>;
+  analysisStatus?: 'normal' | 'degraded';
+  errors?: string[];
 }
 
 export interface FileAnalysisResult {
@@ -101,7 +103,7 @@ export class SemanticEngine {
               cognitive: result.complexity.cognitive,
               lines: result.complexity.lines
             },
-            concepts: result.concepts.map(c => ({
+            concepts: result.concepts.map((c: any) => ({
               name: c.name,
               type: c.conceptType,
               confidence: c.confidence
@@ -137,7 +139,7 @@ export class SemanticEngine {
       const result = await this.rustCircuitBreaker.execute(
         async () => {
           const concepts = await this.rustAnalyzer!.analyzeFileContent(filePath, content);
-          return concepts.map(c => ({
+          return concepts.map((c: any) => ({
             name: c.name,
             type: c.conceptType,
             confidence: c.confidence,
@@ -150,7 +152,8 @@ export class SemanticEngine {
         },
         // Fallback to pattern-based analysis
         async () => {
-          console.warn('Using fallback for file analysis');
+          console.warn('⚠️  FALLBACK: Using limited pattern-based file analysis');
+          console.warn('   This means reduced accuracy and missed concepts');
           return this.fallbackFileAnalysis(filePath, content);
         }
       );
@@ -192,7 +195,7 @@ export class SemanticEngine {
       // Store in vector database for semantic search
       await this.vectorDB.initialize();
 
-      const result = concepts.map(c => ({
+      const result = concepts.map((c: any) => ({
         id: c.id,
         name: c.name,
         type: c.conceptType,
@@ -246,11 +249,11 @@ export class SemanticEngine {
       }
 
       return result;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Learning error:', error);
 
       // Provide more specific error messages for common issues
-      if (error.message.includes('timeout') || error.message.includes('timed out')) {
+      if ((error instanceof Error && error.message.includes('timeout')) || (error instanceof Error && error.message.includes('timed out'))) {
         throw new Error('Learning process timed out. This commonly happens with:\n' +
           '  • Large projects with many files\n' +
           '  • Projects with very large files (>1MB)\n' +
@@ -332,23 +335,34 @@ export class SemanticEngine {
   }
 
   private async fallbackAnalysis(path: string): Promise<CodebaseAnalysisResult> {
-    // TypeScript-based semantic analysis
+    // Provide limited analysis but be very explicit about limitations
+    console.warn('⚠️  SEMANTIC ANALYSIS DEGRADED for', path);
+    console.warn('   Using basic file system analysis only:');
+    console.warn('   • No AST-based semantic concept extraction');
+    console.warn('   • No framework detection from dependencies');
+    console.warn('   • No complexity metrics calculation');
+    console.warn('   • No cross-file relationship analysis');
+    console.warn('   • Results will be extremely limited');
+    
     return {
-      languages: ['unknown'],
-      frameworks: [],
+      languages: ['analysis_failed'], // Explicitly indicates failure
+      frameworks: [], // Honest that framework detection failed
       complexity: {
-        cyclomatic: 1,
-        cognitive: 1,
-        lines: 0
+        cyclomatic: -1, // Use -1 to indicate "could not calculate" vs 0 which means "no complexity"
+        cognitive: -1,  // Negative values clearly indicate measurement failure
+        lines: 0 // This we can still count from file system
       },
-      concepts: []
+      concepts: [], // Empty but user knows why from the warnings above
+      analysisStatus: 'degraded' as const, // Add metadata about quality
+      errors: ['Rust analyzer unavailable'] // Include specific failure reasons
     };
   }
 
   private fallbackFileAnalysis(filePath: string, content: string): FileAnalysisResult['concepts'] {
-    // Pattern-based semantic concept extraction
+    // Instead of fake analysis, provide limited but honest results
+    console.warn(`⚠️  Using limited pattern-based analysis for ${filePath} (Rust analyzer unavailable)`);
+    
     const concepts: FileAnalysisResult['concepts'] = [];
-
     const lines = content.split('\n');
 
     // Look for class declarations
@@ -358,7 +372,7 @@ export class SemanticEngine {
         concepts.push({
           name: classMatch[1],
           type: 'class',
-          confidence: 0.7,
+          confidence: 0.4, // Lower confidence for fallback analysis
           filePath,
           lineRange: { start: index + 1, end: index + 1 }
         });
@@ -369,13 +383,21 @@ export class SemanticEngine {
       if (funcMatch) {
         concepts.push({
           name: funcMatch[1],
-          type: 'function',
-          confidence: 0.6,
+          type: 'function', 
+          confidence: 0.3, // Even lower confidence for regex-based detection
           filePath,
           lineRange: { start: index + 1, end: index + 1 }
         });
       }
     });
+
+    // Be explicit about limitations
+    if (concepts.length === 0) {
+      console.warn(`⚠️  No concepts detected in ${filePath} using fallback analysis. This may indicate:`);
+      console.warn('   • File uses patterns not detectable by regex');
+      console.warn('   • File contains complex syntax requiring AST parsing');
+      console.warn('   • File is not a source code file');
+    }
 
     return concepts;
   }
@@ -458,4 +480,5 @@ export class SemanticEngine {
     this.fileAnalysisCache.clear();
     this.codebaseAnalysisCache.clear();
   }
+
 }

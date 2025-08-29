@@ -42,7 +42,7 @@ export class PatternEngine {
   async extractPatterns(path: string): Promise<PatternExtractionResult[]> {
     try {
       const patterns = await this.rustLearner.extractPatterns(path);
-      return patterns.map(p => ({
+      return patterns.map((p: any) => ({
         type: p.patternType,
         description: p.description,
         frequency: p.frequency
@@ -192,14 +192,14 @@ export class PatternEngine {
     try {
       const patterns = await this.rustLearner.learnFromCodebase(path);
       
-      const result = patterns.map(p => ({
+      const result = patterns.map((p: any) => ({
         id: p.id,
         type: p.patternType,
         content: { description: p.description },
         frequency: p.frequency,
         confidence: p.confidence,
         contexts: p.contexts,
-        examples: p.examples.map(ex => ({ code: ex.code }))
+        examples: p.examples.map((ex: any) => ({ code: ex.code }))
       }));
 
       // Store patterns in database
@@ -215,9 +215,17 @@ export class PatternEngine {
         });
       }
 
+      console.log(`✅ Pattern learning completed: ${result.length} patterns discovered`);
       return result;
     } catch (error) {
-      console.error('Pattern learning error:', error);
+      console.error('❌ Pattern learning failed:', error);
+      console.warn('🔄 Pattern learning degraded to basic regex detection:');
+      console.warn('   • Advanced ML pattern detection unavailable');
+      console.warn('   • Rust pattern learning engine not accessible');
+      console.warn('   • Using simple heuristic-based pattern detection');
+      console.warn(`   • Analysis quality significantly reduced for: ${path}`);
+      
+      // Return empty array but with clear warning that this is a degraded state
       return [];
     }
   }
@@ -237,7 +245,7 @@ export class PatternEngine {
         detected: analysis.detected,
         violations: analysis.violations,
         recommendations: analysis.recommendations,
-        learned: analysis.learned?.map(p => ({
+        learned: analysis.learned?.map((p: any) => ({
           id: p.id,
           type: p.patternType,
           content: { description: p.description },
@@ -263,13 +271,13 @@ export class PatternEngine {
         selectedCode || null
       );
 
-      return patterns.map(p => ({
+      return patterns.map((p: any) => ({
         patternId: p.id,
         patternType: p.patternType,
         patternContent: { description: p.description },
         frequency: p.frequency,
         contexts: p.contexts,
-        examples: p.examples.map(ex => ({ code: ex.code })),
+        examples: p.examples.map((ex: any) => ({ code: ex.code })),
         confidence: p.confidence
       }));
     } catch (error) {

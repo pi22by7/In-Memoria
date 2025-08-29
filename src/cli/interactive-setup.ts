@@ -47,8 +47,8 @@ export class InteractiveSetup {
       console.log('2. Add In Memoria to your Claude Desktop/Code configuration');
       console.log('3. Start using AI agents with persistent intelligence!');
 
-    } catch (error) {
-      console.error('\n❌ Setup failed:', error.message);
+    } catch (error: unknown) {
+      console.error('\n❌ Setup failed:', error instanceof Error ? error.message : String(error));
       process.exit(1);
     } finally {
       this.rl.close();
@@ -158,7 +158,7 @@ export class InteractiveSetup {
 
     // Create configuration file
     const configFile = {
-      version: "0.4.2",
+      version: "0.4.3",
       project: {
         name: config.projectName,
         languages: config.languages
@@ -238,8 +238,8 @@ export class InteractiveSetup {
 
       database.close();
 
-    } catch (error) {
-      console.error(`\n❌ Learning failed: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`\n❌ Learning failed: ${error instanceof Error ? error.message : String(error)}`);
       console.log('You can run learning later with: in-memoria learn');
     }
   }

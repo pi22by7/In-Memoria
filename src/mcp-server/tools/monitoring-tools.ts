@@ -75,7 +75,7 @@ export class MonitoringTools {
 
     const status = {
       timestamp: new Date().toISOString(),
-      version: '0.4.2',
+      version: '0.4.3',
       status: 'operational',
       components: {} as any,
       intelligence: {} as any,
@@ -110,13 +110,13 @@ export class MonitoringTools {
         summary: this.generateStatusSummary(status)
       };
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Status check failed:', error);
 
       return {
         success: false,
         status: 'error',
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         message: 'Failed to retrieve system status'
       };
     }
@@ -215,12 +215,12 @@ export class MonitoringTools {
         message: `Intelligence metrics: ${concepts.length} concepts, ${patterns.length} patterns`
       };
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Intelligence metrics failed:', error);
 
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         message: 'Failed to retrieve intelligence metrics'
       };
     }
@@ -294,12 +294,12 @@ export class MonitoringTools {
         message: `Performance: DB ${performance.database?.size?.mb}MB, Memory ${performance.memory.heapUsed}MB`
       };
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Performance check failed:', error);
 
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         message: 'Failed to retrieve performance metrics'
       };
     }
@@ -325,11 +325,11 @@ export class MonitoringTools {
           patterns: patterns.length
         }
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         status: 'error',
         connected: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -349,10 +349,10 @@ export class MonitoringTools {
         patternCount: patterns.length,
         lastUpdate: this.getLastUpdateTime(concepts, patterns)
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         status: 'error',
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }

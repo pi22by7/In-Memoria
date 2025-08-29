@@ -179,17 +179,17 @@ export class DebugTools {
         db.close();
         results.passed++;
 
-      } catch (error) {
-        console.log(`  ❌ Database connection failed: ${error.message}`);
+      } catch (error: unknown) {
+        console.log(`  ❌ Database connection failed: ${error instanceof Error ? error.message : String(error)}`);
         results.errors++;
         
         if (this.verbose) {
-          console.log(`     Details: ${error.stack}`);
+          console.log(`     Details: ${error instanceof Error ? error.stack : 'No stack trace available'}`);
         }
       }
 
-    } catch (error) {
-      console.log(`  ❌ Database check failed: ${error.message}`);
+    } catch (error: unknown) {
+      console.log(`  ❌ Database check failed: ${error instanceof Error ? error.message : String(error)}`);
       results.errors++;
     }
 
@@ -249,19 +249,19 @@ export class DebugTools {
           results.suggestions.push('Set OPENAI_API_KEY environment variable for enhanced features');
         }
 
-      } catch (error) {
-        console.log(`  ❌ Intelligence data access failed: ${error.message}`);
+      } catch (error: unknown) {
+        console.log(`  ❌ Intelligence data access failed: ${error instanceof Error ? error.message : String(error)}`);
         results.errors++;
       }
 
       database.close();
 
-    } catch (error) {
-      console.log(`  ❌ Intelligence initialization failed: ${error.message}`);
+    } catch (error: unknown) {
+      console.log(`  ❌ Intelligence initialization failed: ${error instanceof Error ? error.message : String(error)}`);
       results.errors++;
       
       if (this.verbose) {
-        console.log(`     Details: ${error.stack}`);
+        console.log(`     Details: ${error instanceof Error ? error.stack : 'No stack trace available'}`);
       }
     }
 
@@ -340,8 +340,8 @@ export class DebugTools {
         }
       }
 
-    } catch (error) {
-      console.log(`  ❌ File system check failed: ${error.message}`);
+    } catch (error: unknown) {
+      console.log(`  ❌ File system check failed: ${error instanceof Error ? error.message : String(error)}`);
       results.errors++;
     }
 
@@ -415,8 +415,8 @@ export class DebugTools {
 
       database.close();
 
-    } catch (error) {
-      console.log(`  ❌ Validation failed: ${error.message}`);
+    } catch (error: unknown) {
+      console.log(`  ❌ Validation failed: ${error instanceof Error ? error.message : String(error)}`);
       results.errors++;
     }
 
@@ -469,8 +469,8 @@ export class DebugTools {
 
       database.close();
 
-    } catch (error) {
-      console.log(`  ❌ Performance analysis failed: ${error.message}`);
+    } catch (error: unknown) {
+      console.log(`  ❌ Performance analysis failed: ${error instanceof Error ? error.message : String(error)}`);
       results.errors++;
     }
 
@@ -493,7 +493,7 @@ export class DebugTools {
     
     if (results.suggestions.length > 0) {
       console.log('\n💡 SUGGESTIONS:');
-      results.suggestions.forEach((suggestion, index) => {
+      results.suggestions.forEach((suggestion: string, index: number) => {
         console.log(`${index + 1}. ${suggestion}`);
       });
     }

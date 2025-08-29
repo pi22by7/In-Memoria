@@ -170,18 +170,18 @@ export class AutomationTools {
       };
 
       if (includeProgress) {
-        result['progressData'] = progressRenderer.getProgressData();
+        (result as any).progressData = progressRenderer.getProgressData();
       }
 
       return result;
 
-    } catch (error) {
+    } catch (error: unknown) {
       progressRenderer.stop();
       console.error('❌ Auto-learning failed:', error);
 
       return {
         action: 'failed',
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         message: 'Learning failed. The system will continue with limited intelligence.',
         status: await this.getLearningStatus({ path: projectPath })
       };
@@ -219,12 +219,12 @@ export class AutomationTools {
           ? `Intelligence is ready! ${concepts.length} concepts and ${patterns.length} patterns available.`
           : `Learning recommended. Found ${files.codeFiles} code files to analyze.`
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         path: projectPath,
         hasIntelligence: false,
         isStale: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         recommendation: 'learning_needed',
         message: 'No intelligence data available. Learning needed for optimal functionality.'
       };
@@ -309,14 +309,14 @@ export class AutomationTools {
         intelligenceStatus: status
       };
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Quick setup failed:', error);
 
       steps.push({
         step: 'error',
         status: 'failed',
-        message: `Setup failed: ${error.message}`,
-        error: error.message
+        message: `Setup failed: ${error instanceof Error ? error.message : String(error)}`,
+        error: error instanceof Error ? error.message : String(error)
       });
 
       return {
@@ -325,7 +325,7 @@ export class AutomationTools {
         steps,
         message: '❌ Quick setup failed. Manual intervention may be required.',
         readyForAgents: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }

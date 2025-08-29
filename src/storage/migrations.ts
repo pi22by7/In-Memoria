@@ -294,21 +294,163 @@ export class DatabaseMigrator {
             // Execute the migration
             this.db.exec(migration.up);
             
+            // Validate migration success by checking data integrity
+            this.validateMigration(migration);
+            
             // Record the migration
             this.db.prepare(`
               INSERT INTO migrations (version, name) VALUES (?, ?)
             `).run(migration.version, migration.name);
             
-            console.log(`✅ Migration ${migration.version} applied successfully`);
+            console.log(`✅ Migration ${migration.version} applied and validated successfully`);
           } catch (error) {
             console.error(`❌ Migration ${migration.version} failed:`, error);
-            throw error;
+            // Don't just log - provide recovery instructions
+            console.error(`\n🚨 MIGRATION FAILURE RECOVERY:`);
+            console.error(`   1. Database may be in inconsistent state`);
+            console.error(`   2. Check database backup before proceeding`);
+            console.error(`   3. Consider manual rollback: npm run db:rollback ${migration.version - 1}`);
+            console.error(`   4. Investigate root cause: ${error instanceof Error ? error.message : String(error)}`);
+            throw new Error(`Migration ${migration.version} failed: ${error instanceof Error ? error.message : String(error)}. Database integrity may be compromised.`);
           }
         }
       }
     })();
 
-    console.log('✅ All migrations completed successfully');
+    // Final validation of entire migration process
+    this.validateDatabaseIntegrity();
+    console.log('✅ All migrations completed and validated successfully');
+  }
+
+  /**
+   * Validate that a migration was applied correctly
+   */
+  private validateMigration(migration: Migration): void {
+    try {
+      switch (migration.version) {
+        case 1: // Initial schema
+          this.validateTableExists(['semantic_concepts', 'developer_patterns', 'file_intelligence']);
+          break;
+        case 2: // Performance indexes
+          this.validateIndexExists(['idx_semantic_concepts_file_path', 'idx_developer_patterns_pattern_type']);
+          break;
+        case 3: // Vector embeddings
+          this.validateTableExists(['vector_cache']);
+          this.validateColumnExists('semantic_concepts', 'embedding_vector');
+          break;
+        case 4: // Timezone handling
+          this.validateTimezoneColumns();
+          break;
+        default:
+          // Generic validation - check migration was recorded
+          break;
+      }
+    } catch (validationError: unknown) {
+      throw new Error(`Migration validation failed: ${validationError instanceof Error ? validationError.message : String(validationError)}`);
+    }
+  }
+
+  /**
+   * Validate database integrity after all migrations
+   */
+  private validateDatabaseIntegrity(): void {
+    try {
+      // Check all required tables exist
+      const requiredTables = [
+        'semantic_concepts', 'developer_patterns', 'file_intelligence',
+        'architectural_decisions', 'shared_patterns', 'ai_insights',
+        'project_metadata', 'migrations'
+      ];
+
+      for (const table of requiredTables) {
+        this.validateTableExists([table]);
+      }
+
+      // Check data consistency
+      const conceptCount = this.db.prepare('SELECT COUNT(*) as count FROM semantic_concepts').get() as { count: number };
+      const patternCount = this.db.prepare('SELECT COUNT(*) as count FROM developer_patterns').get() as { count: number };
+      
+      console.log(`📊 Database integrity check: ${conceptCount.count} concepts, ${patternCount.count} patterns`);
+      
+      // Validate no orphaned records (basic referential integrity)
+      this.validateReferentialIntegrity();
+      
+    } catch (error: unknown) {
+      console.error(`❌ Database integrity validation failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  private validateTableExists(tables: string[]): void {
+    for (const table of tables) {
+      const result = this.db.prepare(`
+        SELECT name FROM sqlite_master WHERE type='table' AND name=?
+      `).get(table);
+      
+      if (!result) {
+        throw new Error(`Required table '${table}' does not exist`);
+      }
+    }
+  }
+
+  private validateIndexExists(indexes: string[]): void {
+    for (const index of indexes) {
+      const result = this.db.prepare(`
+        SELECT name FROM sqlite_master WHERE type='index' AND name=?
+      `).get(index);
+      
+      if (!result) {
+        throw new Error(`Required index '${index}' does not exist`);
+      }
+    }
+  }
+
+  private validateColumnExists(table: string, column: string): void {
+    const tableInfo = this.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+    const hasColumn = tableInfo.some(col => col.name === column);
+    
+    if (!hasColumn) {
+      throw new Error(`Required column '${column}' does not exist in table '${table}'`);
+    }
+  }
+
+  private validateTimezoneColumns(): void {
+    // Check that timestamp columns are using UTC
+    const testResult = this.db.prepare(`
+      SELECT created_at FROM semantic_concepts LIMIT 1
+    `).get() as { created_at: string } | undefined;
+    
+    if (testResult && testResult.created_at) {
+      // Basic check that timestamps look like UTC format
+      const timestamp = new Date(testResult.created_at);
+      if (isNaN(timestamp.getTime())) {
+        throw new Error('Timestamp columns contain invalid date format after timezone migration');
+      }
+    }
+  }
+
+  private validateReferentialIntegrity(): void {
+    // Check for any obvious data corruption
+    try {
+      // Validate JSON columns are valid JSON
+      const concepts = this.db.prepare(`
+        SELECT id, relationships, evolution_history FROM semantic_concepts 
+        WHERE relationships != '' OR evolution_history != ''
+        LIMIT 10
+      `).all() as Array<{ id: string; relationships: string; evolution_history: string }>;
+      
+      for (const concept of concepts) {
+        if (concept.relationships && concept.relationships !== '') {
+          JSON.parse(concept.relationships); // Will throw if invalid
+        }
+        if (concept.evolution_history && concept.evolution_history !== '') {
+          JSON.parse(concept.evolution_history); // Will throw if invalid
+        }
+      }
+      
+    } catch (error: unknown) {
+      throw new Error(`Data integrity check failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   rollback(targetVersion?: number): void {

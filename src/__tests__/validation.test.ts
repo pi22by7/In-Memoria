@@ -32,11 +32,11 @@ describe('Input Validation', () => {
       try {
         validateInput(AnalyzeCodebaseSchema, invalidInput, 'test_tool');
         expect.fail('Should have thrown an error');
-      } catch (error) {
+      } catch (error: unknown) {
         expect(error).toBeInstanceOf(McpError);
-        expect(error.code).toBe(ErrorCode.InvalidParams);
-        expect(error.message).toContain('Invalid input for test_tool');
-        expect(error.message).toContain('path');
+        expect((error as McpError).code).toBe(ErrorCode.InvalidParams);
+        expect((error as McpError).message).toContain('Invalid input for test_tool');
+        expect((error as McpError).message).toContain('path');
       }
     });
 
@@ -250,9 +250,9 @@ describe('Input Validation', () => {
       try {
         validateInput(ContributeInsightsSchema, complexInput, 'contribute_insights');
         expect.fail('Should have thrown');
-      } catch (error) {
+      } catch (error: unknown) {
         expect(error).toBeInstanceOf(McpError);
-        expect(error.message).toContain('content');
+        expect((error as McpError).message).toContain('content');
       }
     });
 

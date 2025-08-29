@@ -32,6 +32,18 @@ async function testLearning() {
     console.log('   - Insights:');
     result.insights.forEach(insight => console.log(`     • ${insight}`));
 
+    // Add proper test assertions
+    if (!result.success) {
+      throw new Error('Learning pipeline failed');
+    }
+    if (result.conceptsLearned < 0) {
+      throw new Error('Invalid concepts count');
+    }
+    if (result.patternsLearned < 0) {
+      throw new Error('Invalid patterns count');
+    }
+    console.log('   ✅ Learning assertions passed');
+
     console.log('\n🔍 Testing semantic insights...');
     const insights = await intelligenceTools.getSemanticInsights({
       limit: 5
@@ -41,6 +53,15 @@ async function testLearning() {
     insights.insights.forEach(insight => {
       console.log(`   - ${insight.concept} (${insight.usage.frequency.toFixed(1)}% confidence)`);
     });
+
+    // Add assertions for insights
+    if (insights.totalAvailable < 0) {
+      throw new Error('Invalid total insights count');
+    }
+    if (insights.insights.length > insights.totalAvailable) {
+      throw new Error('Returned more insights than available');
+    }
+    console.log('   ✅ Insights assertions passed');
 
     console.log('\n🎯 Testing pattern recommendations...');
     const recommendations = await intelligenceTools.getPatternRecommendations({
@@ -53,6 +74,20 @@ async function testLearning() {
       console.log(`   - ${rec.description} (${(rec.confidence * 100).toFixed(1)}% confidence)`);
     });
     console.log(`   Reasoning: ${recommendations.reasoning}`);
+
+    // Add assertions for recommendations
+    if (!Array.isArray(recommendations.recommendations)) {
+      throw new Error('Recommendations should be an array');
+    }
+    if (typeof recommendations.reasoning !== 'string') {
+      throw new Error('Reasoning should be a string');
+    }
+    recommendations.recommendations.forEach(rec => {
+      if (rec.confidence < 0 || rec.confidence > 1) {
+        throw new Error(`Invalid confidence score: ${rec.confidence}`);
+      }
+    });
+    console.log('   ✅ Recommendations assertions passed');
 
     console.log('\n🔮 Testing coding approach prediction...');
     const prediction = await intelligenceTools.predictCodingApproach({

@@ -361,8 +361,8 @@ export class ChangeAnalyzer extends EventEmitter {
       
       // Remove duplicates and return
       return [...new Set(dependentFiles)];
-    } catch (error) {
-      console.warn('Could not find dependent files:', error.message);
+    } catch (error: unknown) {
+      console.warn('Could not find dependent files:', error instanceof Error ? error.message : String(error));
       return [];
     }
   }

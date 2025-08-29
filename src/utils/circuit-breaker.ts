@@ -24,6 +24,32 @@ export interface CircuitBreakerStats {
   totalRequests: number;
 }
 
+export interface ErrorDetails {
+  message: string;
+  state: CircuitState;
+  failures: number;
+  lastFailureTime?: number;
+  successRate: number;
+  timeSinceLastFailure?: number;
+  stats: CircuitBreakerStats;
+}
+
+export class CircuitBreakerError extends Error {
+  public readonly details: ErrorDetails;
+  public readonly options: CircuitBreakerOptions;
+  
+  constructor(message: string, details: any, options: CircuitBreakerOptions) {
+    super(message);
+    this.name = 'CircuitBreakerError';
+    this.details = details;
+    this.options = options;
+  }
+  
+  toString(): string {
+    return `${this.name}: ${this.message}\nDetails: ${JSON.stringify(this.details, null, 2)}`;
+  }
+}
+
 export class CircuitBreaker {
   private state: CircuitState = CircuitState.CLOSED;
   private failures: number = 0;
@@ -45,10 +71,18 @@ export class CircuitBreaker {
       if (this.canAttemptReset()) {
         this.state = CircuitState.HALF_OPEN;
       } else {
+        // Don't mask the real error - provide detailed failure information
+        const errorDetails = this.getDetailedErrorInfo();
         if (fallback) {
+          console.warn(`Circuit breaker OPEN: ${errorDetails.message}. Using fallback.`);
           return await fallback();
         }
-        throw new Error(`Circuit breaker is OPEN. Last failure: ${new Date(this.lastFailureTime!)}`);
+        // Throw a proper error with context instead of generic message
+        throw new CircuitBreakerError(
+          'Circuit breaker is OPEN',
+          errorDetails,
+          this.options
+        );
       }
     }
 
@@ -60,18 +94,31 @@ export class CircuitBreaker {
       this.onSuccess();
       return result;
     } catch (error) {
-      // Failure
+      // Failure - preserve original error details
       this.onFailure();
       
       // Try fallback
       if (fallback) {
         try {
+          console.warn(`Primary operation failed: ${error instanceof Error ? error.message : String(error)}. Using fallback.`);
           return await fallback();
-        } catch (fallbackError) {
-          throw error; // Throw original error, not fallback error
+        } catch (fallbackError: unknown) {
+          // Throw the original error with fallback context, not just original error
+          throw new CircuitBreakerError(
+            'Both primary and fallback operations failed',
+            {
+              primaryError: error instanceof Error ? error.message : String(error),
+              fallbackError: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+              state: this.state,
+              failures: this.failures,
+              stats: this.getStats()
+            },
+            this.options
+          );
         }
       }
       
+      // No fallback - throw original error with circuit context
       throw error;
     }
   }
@@ -147,6 +194,26 @@ export class CircuitBreaker {
     this.lastFailureTime = undefined;
     this.totalRequests = 0;
     this.requestTimeouts = [];
+  }
+
+  private getDetailedErrorInfo(): ErrorDetails {
+    const successRate = this.totalRequests > 0 
+      ? this.successes / this.totalRequests 
+      : 0;
+    
+    const timeSinceLastFailure = this.lastFailureTime
+      ? Date.now() - this.lastFailureTime
+      : undefined;
+
+    return {
+      message: `Circuit breaker is ${this.state}. Failures: ${this.failures}/${this.options.failureThreshold}`,
+      state: this.state,
+      failures: this.failures,
+      lastFailureTime: this.lastFailureTime,
+      successRate,
+      timeSinceLastFailure,
+      stats: this.getStats()
+    };
   }
 }
 

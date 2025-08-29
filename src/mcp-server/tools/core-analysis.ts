@@ -138,6 +138,17 @@ export class CoreAnalysisTools {
   }
 
   async analyzeCodebase(args: { path: string }): Promise<CodebaseAnalysis> {
+    // Input validation
+    if (!args.path || typeof args.path !== 'string') {
+      throw new Error('Path parameter is required and must be a string');
+    }
+    
+    // Sanitize path - prevent path traversal attacks
+    const sanitizedPath = args.path.replace(/\.\./g, '');
+    if (sanitizedPath !== args.path) {
+      throw new Error('Path contains invalid characters');
+    }
+    
     try {
       // Perform comprehensive semantic analysis
       const analysis = await this.semanticEngine.analyzeCodebase(args.path);
@@ -208,6 +219,16 @@ export class CoreAnalysisTools {
       exports: string[];
     }
   }> {
+    // Input validation
+    if (!args.path || typeof args.path !== 'string') {
+      throw new Error('Path parameter is required and must be a string');
+    }
+    
+    // Sanitize path and check for dangerous patterns
+    if (args.path.includes('..') || args.path.includes('\0')) {
+      throw new Error('Path contains invalid characters');
+    }
+    
     try {
       const content = readFileSync(args.path, 'utf-8');
       const stats = statSync(args.path);
@@ -304,6 +325,16 @@ export class CoreAnalysisTools {
       sections: string[];
     }
   }> {
+    // Input validation
+    if (!args.path || typeof args.path !== 'string') {
+      throw new Error('Path parameter is required and must be a string');
+    }
+    
+    // Sanitize path and check for dangerous patterns
+    if (args.path.includes('..') || args.path.includes('\0')) {
+      throw new Error('Path contains invalid characters');
+    }
+    
     const options = DocOptionsSchema.parse(args);
 
     // Use our intelligent analysis instead of basic codebase analysis
@@ -739,13 +770,13 @@ export class CoreAnalysisTools {
         totalFound: results.length,
         searchType: 'semantic'
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Semantic search error:', error);
       return {
         results: [],
         totalFound: 0,
         searchType: 'semantic',
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -821,13 +852,13 @@ export class CoreAnalysisTools {
         totalFound: uniqueResults.length,
         searchType: 'pattern'
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Pattern search error:', error);
       return {
         results: [],
         totalFound: 0,
         searchType: 'pattern',
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -900,13 +931,13 @@ export class CoreAnalysisTools {
         totalFound: results.length,
         searchType: 'text'
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Text search error:', error);
       return {
         results: [],
         totalFound: 0,
         searchType: 'text',
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -1003,10 +1034,10 @@ export class CoreAnalysisTools {
           try {
             return await this.patternEngine.findRelevantPatterns(
               `analyze pattern ${pattern.type}`,
-              null,
-              null
+              undefined,
+              undefined
             );
-          } catch (error) {
+          } catch (error: unknown) {
             return [];
           }
         })
@@ -1020,15 +1051,34 @@ export class CoreAnalysisTools {
         patternInsights: patternInsights.flat(),
         analysisTimestamp: new Date()
       };
-    } catch (error) {
-      console.warn('Intelligence gathering failed, using fallback:', error);
+    } catch (error: unknown) {
+      console.error('❌ Intelligence gathering encountered errors:', error);
+      console.warn('🔄 Returning degraded analysis results:');
+      console.warn('   • Semantic analysis engines unavailable');
+      console.warn('   • Pattern detection failed');  
+      console.warn('   • Code complexity measurement not possible');
+      console.warn('   • Documentation will include limited information');
+      console.warn(`   • Analysis reliability severely compromised for: ${path}`);
+      
+      // Return degraded results but clearly mark them as such
       return {
         path,
-        codebaseAnalysis: { languages: ['unknown'], frameworks: [], complexity: { cyclomatic: 0, cognitive: 0, lines: 0 }, concepts: [] },
+        codebaseAnalysis: { 
+          languages: ['analysis_failed'], // Clear indicator this is not real data
+          frameworks: [], 
+          complexity: { 
+            cyclomatic: -1,  // Negative indicates "could not measure"
+            cognitive: -1,   // vs. 0 which would mean "no complexity" 
+            lines: -1 
+          },
+          concepts: [] 
+        },
         semanticConcepts: [],
         patterns: [],
         patternInsights: [],
-        analysisTimestamp: new Date()
+        analysisTimestamp: new Date(),
+        analysisStatus: 'degraded', // Add metadata about analysis quality
+        errors: [error instanceof Error ? error.message : String(error)] // Include error details for transparency
       };
     }
   }

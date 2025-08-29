@@ -1008,8 +1008,15 @@ impl SemanticAnalyzer {
                 "concept_{}",
                 std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_millis()
+                    .map(|d| d.as_millis())
+                    .unwrap_or_else(|_| {
+                        // Fallback to hash-based ID if system time fails
+                        use std::collections::hash_map::DefaultHasher;
+                        use std::hash::{Hash, Hasher};
+                        let mut hasher = DefaultHasher::new();
+                        format!("{}{}", file_path, name).hash(&mut hasher);
+                        hasher.finish() as u128
+                    })
             ),
             name,
             concept_type: concept_type.to_string(),
@@ -1148,7 +1155,8 @@ mod tests {
             }
             Err(e) => {
                 println!("❌ Parsing failed: {}", e);
-                panic!("TypeScript parsing should succeed");
+                // Don't panic - assert with proper error message
+                assert!(false, "TypeScript parsing should succeed, but failed with: {}", e);
             }
         }
     }
@@ -1175,7 +1183,8 @@ mod tests {
             }
             Err(e) => {
                 println!("❌ Parsing failed: {}", e);
-                panic!("JavaScript parsing should succeed");
+                // Don't panic - assert with proper error message
+                assert!(false, "JavaScript parsing should succeed, but failed with: {}", e);
             }
         }
     }
@@ -1202,7 +1211,8 @@ mod tests {
             }
             Err(e) => {
                 println!("❌ Parsing failed: {}", e);
-                panic!("Python parsing should succeed");
+                // Don't panic - assert with proper error message
+                assert!(false, "Python parsing should succeed, but failed with: {}", e);
             }
         }
     }
@@ -1229,7 +1239,8 @@ mod tests {
             }
             Err(e) => {
                 println!("❌ Parsing failed: {}", e);
-                panic!("Rust parsing should succeed");
+                // Don't panic - assert with proper error message
+                assert!(false, "Rust parsing should succeed, but failed with: {}", e);
             }
         }
     }
@@ -1271,7 +1282,9 @@ mod tests {
                     }
                 }
                 None => {
-                    panic!("Tree-sitter failed to parse simple TypeScript class");
+                    // Don't panic - return error instead
+                    eprintln!("❌ Tree-sitter failed to parse simple TypeScript class");
+                    assert!(false, "Tree-sitter failed to parse simple TypeScript class - this indicates a critical parsing failure");
                 }
             }
         }

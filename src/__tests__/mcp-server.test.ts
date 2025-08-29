@@ -30,8 +30,8 @@ describe('CodeCartographerMCP Server', () => {
     try {
       await (server as any).routeToolCall('invalid_tool', {});
       expect.fail('Should have thrown error for invalid tool');
-    } catch (error) {
-      expect(error.message).toContain('Unknown tool');
+    } catch (error: unknown) {
+      expect((error as Error).message).toContain('Unknown tool');
     }
   });
 });

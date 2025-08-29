@@ -159,7 +159,7 @@ describe('AutomationTools', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.steps.find(s => s.step === 'learning')?.status).toMatch(/completed|failed/);
+      expect(result.steps.find((s: any) => s.step === 'learning')?.status).toMatch(/completed|failed/);
     });
 
     it('should handle setup errors gracefully', async () => {

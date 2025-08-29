@@ -16,23 +16,24 @@ import { PatternEngine } from '../engines/pattern-engine.js';
 import { SQLiteDatabase } from '../storage/sqlite-db.js';
 import { SemanticVectorDB } from '../storage/vector-db.js';
 import { validateInput, VALIDATION_SCHEMAS } from './validation.js';
+import { config } from '../config/config.js';
 
 export class CodeCartographerMCP {
   private server: Server;
-  private database: SQLiteDatabase;
-  private vectorDB: SemanticVectorDB;
-  private semanticEngine: SemanticEngine;
-  private patternEngine: PatternEngine;
-  private coreTools: CoreAnalysisTools;
-  private intelligenceTools: IntelligenceTools;
-  private automationTools: AutomationTools;
-  private monitoringTools: MonitoringTools;
+  private database!: SQLiteDatabase;
+  private vectorDB!: SemanticVectorDB;
+  private semanticEngine!: SemanticEngine;
+  private patternEngine!: PatternEngine;
+  private coreTools!: CoreAnalysisTools;
+  private intelligenceTools!: IntelligenceTools;
+  private automationTools!: AutomationTools;
+  private monitoringTools!: MonitoringTools;
 
   constructor() {
     this.server = new Server(
       {
         name: 'in-memoria',
-        version: '0.4.2',
+        version: '0.4.3',
       },
       {
         capabilities: {
@@ -48,17 +49,19 @@ export class CodeCartographerMCP {
     try {
       console.error('Initializing In Memoria components...');
 
-      // Initialize storage with better path handling and fallback
-      const dbPath = process.env.IN_MEMORIA_DB_PATH || './in-memoria.db';
+      // Initialize storage using configuration management
+      // Database path is determined by config based on the analyzed project
+      const appConfig = config.getConfig();
+      const dbPath = config.getDatabasePath(); // Will use current directory as project path
       console.error(`Attempting to initialize database at: ${dbPath}`);
 
       try {
         this.database = new SQLiteDatabase(dbPath);
         console.error('SQLite database initialized successfully');
-      } catch (dbError) {
+      } catch (dbError: unknown) {
         console.error('Failed to initialize SQLite database:', dbError);
         console.error('The MCP server will continue with limited functionality');
-        throw new Error(`Database initialization failed: ${dbError.message}`);
+        throw new Error(`Database initialization failed: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
       }
 
       this.vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
@@ -90,9 +93,9 @@ export class CodeCartographerMCP {
       console.error('Tool collections initialized');
 
       console.error('In Memoria components initialized successfully');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to initialize In Memoria components:', error);
-      console.error('Stack trace:', error.stack);
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
       throw error;
     }
   }
@@ -231,7 +234,7 @@ export class CodeCartographerMCP {
     if (this.semanticEngine) {
       this.semanticEngine.cleanup();
     }
-    
+
     // Close vector database
     if (this.vectorDB) {
       try {
@@ -240,12 +243,12 @@ export class CodeCartographerMCP {
         console.warn('Warning: Failed to close vector database:', error);
       }
     }
-    
+
     // Close SQLite database
     if (this.database) {
       this.database.close();
     }
-    
+
     // Close MCP server
     await this.server.close();
   }
