@@ -74,7 +74,8 @@ export class CodeCartographerMCP {
       this.intelligenceTools = new IntelligenceTools(
         this.semanticEngine,
         this.patternEngine,
-        this.database
+        this.database,
+        this.vectorDB // Pass shared vectorDB instance
       );
       this.automationTools = new AutomationTools(
         this.semanticEngine,
@@ -226,7 +227,26 @@ export class CodeCartographerMCP {
   }
 
   async stop(): Promise<void> {
-    this.database.close();
+    // Clean up semantic engine resources
+    if (this.semanticEngine) {
+      this.semanticEngine.cleanup();
+    }
+    
+    // Close vector database
+    if (this.vectorDB) {
+      try {
+        await this.vectorDB.close();
+      } catch (error) {
+        console.warn('Warning: Failed to close vector database:', error);
+      }
+    }
+    
+    // Close SQLite database
+    if (this.database) {
+      this.database.close();
+    }
+    
+    // Close MCP server
     await this.server.close();
   }
 }

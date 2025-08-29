@@ -34,11 +34,12 @@ export class SemanticEngine {
   private rustAnalyzer: InstanceType<typeof SemanticAnalyzer> | null = null;
   private rustCircuitBreaker: CircuitBreaker;
   private initializationPromise: Promise<void> | null = null;
+  private cleanupInterval: NodeJS.Timeout | null = null;
 
   // Performance caches
   private fileAnalysisCache = new Map<string, { result: FileAnalysisResult['concepts']; timestamp: number }>();
   private codebaseAnalysisCache = new Map<string, { result: CodebaseAnalysisResult; timestamp: number }>();
-  
+
   // Cache TTL in milliseconds (5 minutes)
   private readonly CACHE_TTL = 5 * 60 * 1000;
 
@@ -47,7 +48,7 @@ export class SemanticEngine {
     private vectorDB: SemanticVectorDB
   ) {
     this.rustCircuitBreaker = createRustAnalyzerCircuitBreaker();
-    
+
     // Create memoized versions of expensive operations
     this.memoizedLanguageDetection = PerformanceOptimizer.memoize(
       this.detectLanguageFromPath.bind(this),
@@ -55,7 +56,7 @@ export class SemanticEngine {
     );
 
     // Schedule periodic cache cleanup
-    setInterval(() => {
+    this.cleanupInterval = setInterval(() => {
       this.cleanupCaches();
     }, 5 * 60 * 1000); // Every 5 minutes
   }
@@ -65,13 +66,13 @@ export class SemanticEngine {
    */
   private async initializeRustAnalyzer(): Promise<void> {
     if (this.rustAnalyzer) return;
-    
+
     if (!this.initializationPromise) {
       this.initializationPromise = globalProfiler.timeAsync('RustAnalyzer.initialization', async () => {
         this.rustAnalyzer = new SemanticAnalyzer();
       });
     }
-    
+
     await this.initializationPromise;
   }
 
@@ -88,7 +89,7 @@ export class SemanticEngine {
 
       // Ensure Rust analyzer is initialized
       await this.initializeRustAnalyzer();
-      
+
       const result = await this.rustCircuitBreaker.execute(
         async () => {
           const result = await this.rustAnalyzer!.analyzeCodebase(path);
@@ -113,7 +114,7 @@ export class SemanticEngine {
 
       // Cache the result
       this.codebaseAnalysisCache.set(cacheKey, { result, timestamp: Date.now() });
-      
+
       return result;
     });
   }
@@ -123,7 +124,7 @@ export class SemanticEngine {
       // Create cache key based on file path and content hash
       const contentHash = this.hashString(content);
       const cacheKey = `file:${filePath}:${contentHash}`;
-      
+
       // Check cache first
       const cached = this.fileAnalysisCache.get(cacheKey);
       if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
@@ -132,7 +133,7 @@ export class SemanticEngine {
 
       // Ensure Rust analyzer is initialized
       await this.initializeRustAnalyzer();
-      
+
       const result = await this.rustCircuitBreaker.execute(
         async () => {
           const concepts = await this.rustAnalyzer!.analyzeFileContent(filePath, content);
@@ -156,7 +157,7 @@ export class SemanticEngine {
 
       // Cache the result
       this.fileAnalysisCache.set(cacheKey, { result, timestamp: Date.now() });
-      
+
       return result;
     });
   }
@@ -172,10 +173,10 @@ export class SemanticEngine {
   }>> {
     try {
       console.error(`🧠 Starting semantic learning for: ${path}`);
-      
+
       // Ensure Rust analyzer is initialized
       await this.initializeRustAnalyzer();
-      
+
       // Add timeout protection for the entire learning process
       const concepts = await Promise.race([
         this.rustAnalyzer!.learnFromCodebase(path),
@@ -185,12 +186,12 @@ export class SemanticEngine {
           }, 300000); // 5 minutes
         })
       ]);
-      
+
       console.error(`✅ Learned ${concepts.length} concepts from codebase`);
-      
+
       // Store in vector database for semantic search
       await this.vectorDB.initialize();
-      
+
       const result = concepts.map(c => ({
         id: c.id,
         name: c.name,
@@ -247,7 +248,7 @@ export class SemanticEngine {
       return result;
     } catch (error) {
       console.error('Learning error:', error);
-      
+
       // Provide more specific error messages for common issues
       if (error.message.includes('timeout') || error.message.includes('timed out')) {
         throw new Error('Learning process timed out. This commonly happens with:\n' +
@@ -258,7 +259,7 @@ export class SemanticEngine {
           'Try running on a smaller subset of your codebase first.'
         );
       }
-      
+
       return [];
     }
   }
@@ -267,13 +268,13 @@ export class SemanticEngine {
     try {
       // Update the Rust analyzer with new analysis data
       await this.rustAnalyzer.updateFromAnalysis(JSON.stringify(analysisData));
-      
+
       // Update local intelligence based on the analysis
       if (analysisData.change && analysisData.impact.affectedConcepts) {
         for (const conceptName of analysisData.impact.affectedConcepts) {
           const existingConcepts = this.database.getSemanticConcepts();
           const concept = existingConcepts.find(c => c.conceptName === conceptName);
-          
+
           if (concept) {
             // Update concept's evolution history
             const updatedHistory = {
@@ -318,7 +319,7 @@ export class SemanticEngine {
     try {
       await this.vectorDB.initialize();
       const results = await this.vectorDB.findSimilarCode(query, limit);
-      
+
       return results.map(result => ({
         concept: result.metadata.functionName || result.metadata.className || 'unknown',
         similarity: result.similarity,
@@ -347,9 +348,9 @@ export class SemanticEngine {
   private fallbackFileAnalysis(filePath: string, content: string): FileAnalysisResult['concepts'] {
     // Pattern-based semantic concept extraction
     const concepts: FileAnalysisResult['concepts'] = [];
-    
+
     const lines = content.split('\n');
-    
+
     // Look for class declarations
     lines.forEach((line, index) => {
       const classMatch = line.match(/class\s+(\w+)/);
@@ -385,13 +386,13 @@ export class SemanticEngine {
   private hashString(str: string): string {
     let hash = 0;
     if (str.length === 0) return hash.toString();
-    
+
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
-    
+
     return hash.toString();
   }
 
@@ -400,14 +401,14 @@ export class SemanticEngine {
    */
   private cleanupCaches(): void {
     const now = Date.now();
-    
+
     // Clean file analysis cache
     for (const [key, cached] of this.fileAnalysisCache.entries()) {
       if (now - cached.timestamp >= this.CACHE_TTL) {
         this.fileAnalysisCache.delete(key);
       }
     }
-    
+
     // Clean codebase analysis cache
     for (const [key, cached] of this.codebaseAnalysisCache.entries()) {
       if (now - cached.timestamp >= this.CACHE_TTL) {
@@ -442,5 +443,19 @@ export class SemanticEngine {
       'java': 'java'
     };
     return languageMap[ext || ''] || 'unknown';
+  }
+
+  /**
+   * Clean up resources to prevent process hanging
+   */
+  cleanup(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+
+    // Clear caches
+    this.fileAnalysisCache.clear();
+    this.codebaseAnalysisCache.clear();
   }
 }

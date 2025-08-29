@@ -19,6 +19,54 @@ export declare class PatternLearner {
    * through N-API bindings. The caller must ensure the path exists and is readable.
    */
   learnFromCodebase(path: string): Promise<ApiResult<Array<Pattern>>>
+  /**
+   * Extract patterns from a given path
+   *
+   * # Safety
+   * This function is marked unsafe due to NAPI bindings requirements.
+   * It should only be called from properly initialized JavaScript contexts.
+   */
+  extractPatterns(path: string): Promise<ApiResult<Array<Pattern>>>
+  /**
+   * Analyze file changes to identify patterns
+   *
+   * # Safety
+   * This function is marked unsafe due to NAPI bindings requirements.
+   * It should only be called from properly initialized JavaScript contexts.
+   */
+  analyzeFileChange(changeData: string): Promise<ApiResult<PatternAnalysisResult>>
+  /**
+   * Find patterns relevant to a given problem description
+   *
+   * # Safety
+   * This function is marked unsafe due to NAPI bindings requirements.
+   * It should only be called from properly initialized JavaScript contexts.
+   */
+  findRelevantPatterns(problemDescription: string, currentFile?: string | undefined | null, selectedCode?: string | undefined | null): Promise<ApiResult<Array<Pattern>>>
+  /**
+   * Predict coding approach based on problem description and context
+   *
+   * # Safety
+   * This function is marked unsafe due to NAPI bindings requirements.
+   * It should only be called from properly initialized JavaScript contexts.
+   */
+  predictApproach(problemDescription: string, context: Record<string, string>): Promise<ApiResult<ApproachPrediction>>
+  /**
+   * Updates patterns based on analysis data
+   *
+   * # Safety
+   * This function uses unsafe because it needs to interact with the Node.js runtime
+   * through N-API bindings. The caller must ensure the analysis data is valid JSON.
+   */
+  learnFromAnalysis(analysisData: string): Promise<ApiResult<boolean>>
+  /**
+   * Updates patterns based on file changes
+   *
+   * # Safety
+   * This function uses unsafe because it needs to interact with the Node.js runtime
+   * through N-API bindings. The caller must ensure the change data is valid JSON.
+   */
+  updateFromChange(changeData: string): Promise<ApiResult<boolean>>
 }
 
 export declare class SemanticAnalyzer {

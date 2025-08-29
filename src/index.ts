@@ -176,7 +176,21 @@ async function learnCodebase(path: string): Promise<void> {
   } catch (error) {
     console.error(`Learning failed: ${error}`);
   } finally {
+    // Clean up all resources to prevent hanging
+    try {
+      await vectorDB.close();
+    } catch (error) {
+      console.warn('Warning: Failed to close vector database:', error);
+    }
+
+    // Clean up semantic engine resources
+    semanticEngine.cleanup();
+
     database.close();
+    // console.debug("database closed");
+
+    // Force process exit to ensure cleanup of any remaining resources
+    process.exit(0);
   }
 }
 
@@ -240,6 +254,16 @@ async function analyzeCodebase(path: string): Promise<void> {
   } catch (error) {
     console.error(`Analysis failed: ${error}`);
   } finally {
+    // Clean up all resources to prevent hanging
+    try {
+      await vectorDB.close();
+    } catch (error) {
+      console.warn('Warning: Failed to close vector database:', error);
+    }
+
+    // Clean up semantic engine resources
+    semanticEngine.cleanup();
+
     database.close();
   }
 }

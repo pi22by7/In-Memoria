@@ -96,7 +96,7 @@ const useUserData = () => { ... }
 const handleSubmit = () => { ... }
 const formatUserName = (name: string) => { ... }
 
-// AI gets context: "This developer uses camelCase, 'use' prefix for hooks, 
+// AI gets context: "This developer uses camelCase, 'use' prefix for hooks,
 // 'handle' for events, 'format' for data transformation"
 ```
 
@@ -104,7 +104,7 @@ const formatUserName = (name: string) => { ... }
 
 ```typescript
 // Learns you consistently use Result types instead of throwing
-type ApiResult<T> = 
+type ApiResult<T> =
   | { success: true; data: T }
   | { success: false; error: string };
 
@@ -126,10 +126,10 @@ class UserProcessor { ... } // Rarely used in your codebase
 ```
 src/
   components/     # UI components
-  services/      # Business logic  
+  services/      # Business logic
   utils/         # Pure functions
   types/         # Type definitions
-  
+
 // AI learns your directory structure preferences
 ```
 
@@ -138,28 +138,33 @@ src/
 In Memoria provides 17 tools that AI assistants can use to understand your codebase:
 
 **Getting Started:**
+
 - `get_learning_status` - Check what intelligence exists for a project
 - `auto_learn_if_needed` - Automatically learn from codebase if no intelligence exists
 - `quick_setup` - Initialize In Memoria for a new project
 
 **Code Analysis:**
+
 - `analyze_codebase` - Get architectural overview, complexity metrics, and language breakdown
 - `get_file_content` - Retrieve files with rich metadata and analysis
 - `get_project_structure` - Understand directory hierarchy and organization patterns
 - `search_codebase` - Semantic search that finds code by meaning, not just keywords
 
 **Pattern Intelligence:**
+
 - `get_pattern_recommendations` - Get coding suggestions that match your established style
 - `predict_coding_approach` - Predict how you'd solve similar problems based on your patterns
 - `get_developer_profile` - Access your learned coding preferences and decision patterns
 - `get_semantic_insights` - Discover code relationships and architectural concepts
 
 **Learning & Memory:**
+
 - `learn_codebase_intelligence` - Manually trigger analysis of a codebase
 - `contribute_insights` - Allow AI to add observations back to the knowledge base
 - `generate_documentation` - Create docs that understand your project's patterns
 
 **System Monitoring:**
+
 - `get_system_status` - Health check and component status
 - `get_intelligence_metrics` - Quality and completeness of learned patterns
 - `get_performance_status` - System performance and benchmarking
@@ -176,7 +181,7 @@ In Memoria provides 17 tools that AI assistants can use to understand your codeb
 
 **Performance:**
 
-- **Smart file filtering** - Automatically excludes build artifacts, dependencies, and generated files  
+- **Smart file filtering** - Automatically excludes build artifacts, dependencies, and generated files
 - **Timeout protection** - Prevents analysis from hanging on complex files
 - **Fast analysis** - Optimized processing that skips `node_modules/`, `dist/`, `.next/`, and other non-source files
 - **File size limits** - Skips very large files to prevent memory issues
@@ -255,7 +260,7 @@ npm run build:rust  # Build Rust components
 This is infrastructure for the AI development ecosystem. Contributions welcome:
 
 - **Language support** - Add tree-sitter parsers or extend file filtering
-- **Pattern learning improvements** - Enhance statistical analysis and concept extraction  
+- **Pattern learning improvements** - Enhance statistical analysis and concept extraction
 - **MCP tool additions** - New tools for AI assistant integration
 - **Performance optimizations** - Further speed improvements and memory usage reduction
 - **Timeout and reliability** - Additional safeguards for edge cases

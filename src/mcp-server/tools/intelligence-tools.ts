@@ -15,15 +15,12 @@ import { SQLiteDatabase } from '../../storage/sqlite-db.js';
 import { SemanticVectorDB } from '../../storage/vector-db.js';
 
 export class IntelligenceTools {
-  private vectorDB: SemanticVectorDB;
-
   constructor(
     private semanticEngine: SemanticEngine,
     private patternEngine: PatternEngine,
-    private database: SQLiteDatabase
-  ) {
-    this.vectorDB = new SemanticVectorDB();
-  }
+    private database: SQLiteDatabase,
+    private vectorDB?: SemanticVectorDB // Receive vectorDB instance from server
+  ) {}
 
   get tools(): Tool[] {
     return [
@@ -587,8 +584,15 @@ export class IntelligenceTools {
 
   private async buildSemanticIndex(concepts: any[], patterns: any[]): Promise<number> {
     try {
+      // Use the shared vector DB instance if available
+      const vectorDB = this.vectorDB;
+      if (!vectorDB) {
+        console.warn('No vector database available for semantic indexing');
+        return 0;
+      }
+      
       // Initialize vector DB if not already done
-      await this.vectorDB.initialize('in-memoria-intelligence');
+      await vectorDB.initialize('in-memoria-intelligence');
       
       let vectorCount = 0;
       
@@ -596,7 +600,7 @@ export class IntelligenceTools {
       for (const concept of concepts) {
         const conceptType = concept.type || 'unknown';
         const text = `${concept.name} ${conceptType}`;
-        await this.vectorDB.storeCodeEmbedding(text, {
+        await vectorDB.storeCodeEmbedding(text, {
           id: concept.id,
           filePath: concept.filePath,
           functionName: conceptType === 'function' ? concept.name : undefined,
@@ -613,7 +617,7 @@ export class IntelligenceTools {
       for (const pattern of patterns) {
         const patternType = pattern.type || 'unknown';
         const text = `${patternType} ${pattern.content?.description || ''}`;
-        await this.vectorDB.storeCodeEmbedding(text, {
+        await vectorDB.storeCodeEmbedding(text, {
           id: pattern.id,
           filePath: `pattern-${patternType}`,
           language: 'pattern',

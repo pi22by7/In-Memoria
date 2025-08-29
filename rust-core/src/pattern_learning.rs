@@ -152,7 +152,18 @@ impl PatternLearner {
         Ok(learned_patterns)
     }
 
-    // Temporarily disabled napi export
+    // Export extract_patterns for JavaScript integration
+    /// Extract patterns from a given path
+    /// 
+    /// # Safety
+    /// This function is marked unsafe due to NAPI bindings requirements.
+    /// It should only be called from properly initialized JavaScript contexts.
+    #[cfg_attr(feature = "napi-bindings", napi)]
+    pub async unsafe fn extract_patterns(&self, path: String) -> ApiResult<Vec<Pattern>> {
+        self.extract_patterns_internal(path).await
+    }
+
+    // Internal implementation
     pub async fn extract_patterns_internal(&self, _path: String) -> ApiResult<Vec<Pattern>> {
         // Extract patterns from a specific path
         let mut patterns = Vec::new();
@@ -182,7 +193,21 @@ impl PatternLearner {
         Ok(patterns)
     }
 
-    // Temporarily disabled napi export
+    // Export analyze_file_change for JavaScript integration
+    /// Analyze file changes to identify patterns
+    /// 
+    /// # Safety
+    /// This function is marked unsafe due to NAPI bindings requirements.
+    /// It should only be called from properly initialized JavaScript contexts.
+    #[cfg_attr(feature = "napi-bindings", napi)]
+    pub async unsafe fn analyze_file_change(
+        &self,
+        change_data: String,
+    ) -> ApiResult<PatternAnalysisResult> {
+        self.analyze_file_change_internal(change_data).await
+    }
+
+    // Internal implementation
     pub async fn analyze_file_change_internal(
         &self,
         change_data: String,
@@ -200,7 +225,24 @@ impl PatternLearner {
         })
     }
 
-    // Temporarily disabled napi export
+    // Export find_relevant_patterns for JavaScript integration
+    /// Find patterns relevant to a given problem description
+    /// 
+    /// # Safety
+    /// This function is marked unsafe due to NAPI bindings requirements.
+    /// It should only be called from properly initialized JavaScript contexts.
+    #[cfg_attr(feature = "napi-bindings", napi)]
+    pub async unsafe fn find_relevant_patterns(
+        &self,
+        problem_description: String,
+        current_file: Option<String>,
+        selected_code: Option<String>,
+    ) -> ApiResult<Vec<Pattern>> {
+        self.find_relevant_patterns_internal(problem_description, current_file, selected_code)
+            .await
+    }
+
+    // Internal implementation
     pub async fn find_relevant_patterns_internal(
         &self,
         problem_description: String,
@@ -234,7 +276,23 @@ impl PatternLearner {
         Ok(relevant_patterns.into_iter().take(5).collect())
     }
 
-    // Temporarily disabled napi export
+    // Export predict_approach for JavaScript integration
+    /// Predict coding approach based on problem description and context
+    /// 
+    /// # Safety
+    /// This function is marked unsafe due to NAPI bindings requirements.
+    /// It should only be called from properly initialized JavaScript contexts.
+    #[cfg_attr(feature = "napi-bindings", napi)]
+    pub async unsafe fn predict_approach(
+        &self,
+        problem_description: String,
+        context: std::collections::HashMap<String, String>,
+    ) -> ApiResult<ApproachPrediction> {
+        self.predict_approach_internal(problem_description, context)
+            .await
+    }
+
+    // Internal implementation
     pub async fn predict_approach_internal(
         &self,
         problem_description: String,
@@ -268,11 +326,257 @@ impl PatternLearner {
     /// # Safety
     /// This function uses unsafe because it needs to interact with the Node.js runtime
     /// through N-API bindings. The caller must ensure the analysis data is valid JSON.
-    // Temporarily disabled napi export
-    pub async unsafe fn learn_from_analysis(&mut self, _analysis_data: String) -> ApiResult<bool> {
-        // Learn from change analysis results
-        // This would update pattern frequencies and discover new patterns
-        Ok(true)
+    #[cfg_attr(feature = "napi-bindings", napi)]
+    pub async unsafe fn learn_from_analysis(&mut self, analysis_data: String) -> ApiResult<bool> {
+        self.learn_from_analysis_internal(analysis_data).await
+    }
+
+    // Internal implementation for learning from analysis data
+    pub async fn learn_from_analysis_internal(&mut self, analysis_data: String) -> ApiResult<bool> {
+        // Parse the analysis data JSON
+        let analysis: serde_json::Value = match serde_json::from_str(&analysis_data) {
+            Ok(data) => data,
+            Err(e) => {
+                eprintln!("Failed to parse analysis data: {}", e);
+                return Ok(false);
+            }
+        };
+
+        let mut patterns_updated = false;
+
+        // Extract patterns from the analysis
+        if let Some(patterns) = analysis.get("patterns") {
+            if let Some(detected_patterns) = patterns.get("detected").and_then(|d| d.as_array()) {
+                for pattern_name in detected_patterns {
+                    if let Some(pattern_str) = pattern_name.as_str() {
+                        patterns_updated |= self.update_pattern_frequency(pattern_str, 1).await?;
+                    }
+                }
+            }
+
+            // Handle learned patterns from the analysis
+            if let Some(learned_patterns) = patterns.get("learned").and_then(|l| l.as_array()) {
+                for learned_pattern in learned_patterns {
+                    if let Ok(pattern) = self.parse_pattern_from_json(learned_pattern) {
+                        self.patterns.insert(pattern.id.clone(), pattern);
+                        patterns_updated = true;
+                    }
+                }
+            }
+        }
+
+        // Extract impact information to adjust pattern confidence
+        if let Some(impact) = analysis.get("impact") {
+            if let Some(affected_concepts) =
+                impact.get("affectedConcepts").and_then(|c| c.as_array())
+            {
+                let confidence_boost = impact
+                    .get("confidence")
+                    .and_then(|c| c.as_f64())
+                    .unwrap_or(0.1);
+
+                for concept in affected_concepts {
+                    if let Some(concept_str) = concept.as_str() {
+                        patterns_updated |= self
+                            .boost_related_pattern_confidence(concept_str, confidence_boost)
+                            .await?;
+                    }
+                }
+            }
+        }
+
+        // Learn from change types
+        if let Some(change) = analysis.get("change") {
+            if let Some(change_type) = change.get("type").and_then(|t| t.as_str()) {
+                patterns_updated |= self.learn_from_change_type(change_type).await?;
+            }
+
+            // Learn from file patterns in the change
+            if let Some(file_path) = change.get("path").and_then(|p| p.as_str()) {
+                patterns_updated |= self.learn_from_file_context(file_path).await?;
+            }
+        }
+
+        Ok(patterns_updated)
+    }
+
+    // Helper method to update pattern frequency
+    async fn update_pattern_frequency(
+        &mut self,
+        pattern_type: &str,
+        increment: u32,
+    ) -> ApiResult<bool> {
+        if let Some(pattern) = self.patterns.get_mut(pattern_type) {
+            pattern.frequency += increment;
+            // Adjust confidence based on increased usage
+            pattern.confidence = (pattern.confidence + 0.05).min(0.95);
+            Ok(true)
+        } else {
+            // Create a new pattern if it doesn't exist
+            let new_pattern = Pattern {
+                id: format!("learned_{}_{}", pattern_type, self.generate_pattern_id()),
+                pattern_type: pattern_type.to_string(),
+                description: format!("Pattern learned from analysis: {}", pattern_type),
+                frequency: increment,
+                confidence: 0.3, // Start with low confidence for new patterns
+                examples: vec![],
+                contexts: vec!["learned".to_string()],
+            };
+            self.patterns.insert(new_pattern.id.clone(), new_pattern);
+            Ok(true)
+        }
+    }
+
+    // Helper method to boost confidence of patterns related to a concept
+    async fn boost_related_pattern_confidence(
+        &mut self,
+        concept: &str,
+        boost: f64,
+    ) -> ApiResult<bool> {
+        let mut updated = false;
+
+        for pattern in self.patterns.values_mut() {
+            // Check if pattern is related to the concept
+            if pattern
+                .description
+                .to_lowercase()
+                .contains(&concept.to_lowercase())
+                || pattern
+                    .pattern_type
+                    .to_lowercase()
+                    .contains(&concept.to_lowercase())
+                || pattern
+                    .contexts
+                    .iter()
+                    .any(|c| c.to_lowercase().contains(&concept.to_lowercase()))
+            {
+                pattern.confidence = (pattern.confidence + boost).min(0.95);
+                updated = true;
+            }
+        }
+
+        Ok(updated)
+    }
+
+    // Helper method to learn from change type
+    async fn learn_from_change_type(&mut self, change_type: &str) -> ApiResult<bool> {
+        let pattern_type = format!("change_{}", change_type);
+        self.update_pattern_frequency(&pattern_type, 1).await
+    }
+
+    // Helper method to learn from file context
+    async fn learn_from_file_context(&mut self, file_path: &str) -> ApiResult<bool> {
+        let mut updated = false;
+
+        // Learn from file extension
+        if let Some(extension) = std::path::Path::new(file_path)
+            .extension()
+            .and_then(|s| s.to_str())
+        {
+            let pattern_type = format!("file_type_{}", extension);
+            updated |= self.update_pattern_frequency(&pattern_type, 1).await?;
+        }
+
+        // Learn from directory structure
+        if let Some(parent) = std::path::Path::new(file_path).parent() {
+            if let Some(dir_name) = parent.file_name().and_then(|s| s.to_str()) {
+                let pattern_type = format!("directory_{}", dir_name);
+                updated |= self.update_pattern_frequency(&pattern_type, 1).await?;
+            }
+        }
+
+        Ok(updated)
+    }
+
+    // Helper method to parse pattern from JSON
+    fn parse_pattern_from_json(
+        &self,
+        json: &serde_json::Value,
+    ) -> Result<Pattern, serde_json::Error> {
+        // Extract pattern fields from JSON
+        let id = json
+            .get("id")
+            .and_then(|v| v.as_str())
+            .unwrap_or(&format!("parsed_{}", self.generate_pattern_id()))
+            .to_string();
+
+        let pattern_type = json
+            .get("type")
+            .or_else(|| json.get("patternType"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown")
+            .to_string();
+
+        let description = json
+            .get("description")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Pattern learned from analysis")
+            .to_string();
+
+        let frequency = json.get("frequency").and_then(|v| v.as_u64()).unwrap_or(1) as u32;
+
+        let confidence = json
+            .get("confidence")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.5);
+
+        let contexts = json
+            .get("contexts")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                    .collect()
+            })
+            .unwrap_or_else(|| vec!["analysis".to_string()]);
+
+        // Parse examples if available
+        let examples = json
+            .get("examples")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|ex| self.parse_example_from_json(ex))
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        Ok(Pattern {
+            id,
+            pattern_type,
+            description,
+            frequency,
+            confidence,
+            examples,
+            contexts,
+        })
+    }
+
+    // Helper method to parse example from JSON
+    fn parse_example_from_json(&self, json: &serde_json::Value) -> Option<PatternExample> {
+        let code = json.get("code")?.as_str()?.to_string();
+        let file_path = json
+            .get("filePath")
+            .or_else(|| json.get("file_path"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown")
+            .to_string();
+
+        let line_range =
+            if let Some(range) = json.get("lineRange").or_else(|| json.get("line_range")) {
+                LineRange {
+                    start: range.get("start").and_then(|v| v.as_u64()).unwrap_or(1) as u32,
+                    end: range.get("end").and_then(|v| v.as_u64()).unwrap_or(1) as u32,
+                }
+            } else {
+                LineRange { start: 1, end: 1 }
+            };
+
+        Some(PatternExample {
+            code,
+            file_path,
+            line_range,
+        })
     }
 
     /// Updates patterns based on file changes
@@ -280,10 +584,413 @@ impl PatternLearner {
     /// # Safety
     /// This function uses unsafe because it needs to interact with the Node.js runtime
     /// through N-API bindings. The caller must ensure the change data is valid JSON.
-    // Temporarily disabled napi export
-    pub async unsafe fn update_from_change(&mut self, _change_data: String) -> ApiResult<bool> {
-        // Update patterns based on file changes
-        Ok(true)
+    #[cfg_attr(feature = "napi-bindings", napi)]
+    pub async unsafe fn update_from_change(&mut self, change_data: String) -> ApiResult<bool> {
+        self.update_from_change_internal(change_data).await
+    }
+
+    // Internal implementation for updating patterns from file changes
+    pub async fn update_from_change_internal(&mut self, change_data: String) -> ApiResult<bool> {
+        // Parse the change data JSON
+        let change: serde_json::Value = match serde_json::from_str(&change_data) {
+            Ok(data) => data,
+            Err(e) => {
+                eprintln!("Failed to parse change data: {}", e);
+                return Ok(false);
+            }
+        };
+
+        let mut patterns_updated = false;
+
+        // Extract change information
+        let change_type = change
+            .get("type")
+            .and_then(|t| t.as_str())
+            .unwrap_or("unknown");
+        let file_path = change.get("path").and_then(|p| p.as_str());
+        let content = change.get("content").and_then(|c| c.as_str());
+        let language = change.get("language").and_then(|l| l.as_str());
+
+        // Update patterns based on change type
+        match change_type {
+            "add" | "create" => {
+                patterns_updated |= self
+                    .handle_file_addition(file_path, content, language)
+                    .await?;
+            }
+            "modify" | "change" => {
+                patterns_updated |= self
+                    .handle_file_modification(file_path, content, language)
+                    .await?;
+            }
+            "delete" | "remove" => {
+                patterns_updated |= self.handle_file_deletion(file_path).await?;
+            }
+            "rename" | "move" => {
+                patterns_updated |= self.handle_file_rename(file_path, &change).await?;
+            }
+            _ => {
+                // Handle unknown change types by treating as modification
+                patterns_updated |= self
+                    .handle_file_modification(file_path, content, language)
+                    .await?;
+            }
+        }
+
+        // Learn from the overall change pattern
+        patterns_updated |= self
+            .learn_from_change_pattern(change_type, file_path, language)
+            .await?;
+
+        // Update usage statistics for related patterns
+        if let (Some(path), Some(lang)) = (file_path, language) {
+            patterns_updated |= self.update_language_usage_patterns(path, lang).await?;
+        }
+
+        Ok(patterns_updated)
+    }
+
+    // Handle file addition
+    async fn handle_file_addition(
+        &mut self,
+        file_path: Option<&str>,
+        content: Option<&str>,
+        language: Option<&str>,
+    ) -> ApiResult<bool> {
+        let mut updated = false;
+
+        if let Some(path) = file_path {
+            // Learn from file structure patterns
+            if let Some(extension) = std::path::Path::new(path)
+                .extension()
+                .and_then(|s| s.to_str())
+            {
+                let pattern_type = format!("file_creation_{}", extension);
+                updated |= self.update_pattern_frequency(&pattern_type, 1).await?;
+            }
+
+            // Learn from directory patterns
+            if let Some(parent) = std::path::Path::new(path).parent() {
+                if let Some(dir_name) = parent.file_name().and_then(|s| s.to_str()) {
+                    let pattern_type = format!("directory_usage_{}", dir_name);
+                    updated |= self.update_pattern_frequency(&pattern_type, 1).await?;
+                }
+            }
+
+            // Analyze content if available
+            if let (Some(content_str), Some(lang)) = (content, language) {
+                updated |= self
+                    .analyze_new_file_content(path, content_str, lang)
+                    .await?;
+            }
+        }
+
+        Ok(updated)
+    }
+
+    // Handle file modification
+    async fn handle_file_modification(
+        &mut self,
+        file_path: Option<&str>,
+        content: Option<&str>,
+        language: Option<&str>,
+    ) -> ApiResult<bool> {
+        let mut updated = false;
+
+        if let (Some(path), Some(content_str)) = (file_path, content) {
+            // Analyze patterns in the modified content
+            updated |= self
+                .analyze_content_patterns(path, content_str, language)
+                .await?;
+
+            // Update modification frequency for file type
+            if let Some(extension) = std::path::Path::new(path)
+                .extension()
+                .and_then(|s| s.to_str())
+            {
+                let pattern_type = format!("file_modification_{}", extension);
+                updated |= self.update_pattern_frequency(&pattern_type, 1).await?;
+            }
+
+            // Learn from naming patterns in the content
+            updated |= self
+                .learn_naming_patterns_from_content(path, content_str)
+                .await?;
+        }
+
+        Ok(updated)
+    }
+
+    // Handle file deletion
+    async fn handle_file_deletion(&mut self, file_path: Option<&str>) -> ApiResult<bool> {
+        let mut updated = false;
+
+        if let Some(path) = file_path {
+            // Update deletion patterns
+            if let Some(extension) = std::path::Path::new(path)
+                .extension()
+                .and_then(|s| s.to_str())
+            {
+                let pattern_type = format!("file_deletion_{}", extension);
+                updated |= self.update_pattern_frequency(&pattern_type, 1).await?;
+            }
+
+            // Decrease confidence of patterns related to deleted files
+            updated |= self.adjust_patterns_for_deleted_file(path).await?;
+        }
+
+        Ok(updated)
+    }
+
+    // Handle file rename/move
+    async fn handle_file_rename(
+        &mut self,
+        file_path: Option<&str>,
+        change: &serde_json::Value,
+    ) -> ApiResult<bool> {
+        let mut updated = false;
+
+        if let Some(old_path) = change.get("oldPath").and_then(|p| p.as_str()) {
+            let new_path = file_path.unwrap_or("unknown");
+
+            // Learn from file movement patterns
+            let old_dir = std::path::Path::new(old_path)
+                .parent()
+                .and_then(|p| p.file_name())
+                .and_then(|s| s.to_str())
+                .unwrap_or("root");
+            let new_dir = std::path::Path::new(new_path)
+                .parent()
+                .and_then(|p| p.file_name())
+                .and_then(|s| s.to_str())
+                .unwrap_or("root");
+
+            if old_dir != new_dir {
+                let pattern_type = format!("file_movement_{}_{}", old_dir, new_dir);
+                updated |= self.update_pattern_frequency(&pattern_type, 1).await?;
+            }
+
+            // Learn from renaming patterns
+            let old_name = std::path::Path::new(old_path)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("unknown");
+            let new_name = std::path::Path::new(new_path)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("unknown");
+
+            if old_name != new_name {
+                let pattern_type = "file_renaming".to_string();
+                updated |= self.update_pattern_frequency(&pattern_type, 1).await?;
+            }
+        }
+
+        Ok(updated)
+    }
+
+    // Learn from change patterns
+    async fn learn_from_change_pattern(
+        &mut self,
+        change_type: &str,
+        #[allow(unused_variables)] file_path: Option<&str>,
+        language: Option<&str>,
+    ) -> ApiResult<bool> {
+        let mut updated = false;
+
+        // Create pattern type based on change and context
+        let base_pattern = format!("change_{}", change_type);
+        updated |= self.update_pattern_frequency(&base_pattern, 1).await?;
+
+        // Language-specific change patterns
+        if let Some(lang) = language {
+            let lang_pattern = format!("change_{}_{}", change_type, lang);
+            updated |= self.update_pattern_frequency(&lang_pattern, 1).await?;
+        }
+
+        // Time-based patterns (hour of day, day of week)
+        let now = std::time::SystemTime::now();
+        if let Ok(duration) = now.duration_since(std::time::UNIX_EPOCH) {
+            let hour = (duration.as_secs() / 3600) % 24;
+            let time_pattern = format!("change_time_hour_{}", hour);
+            updated |= self.update_pattern_frequency(&time_pattern, 1).await?;
+        }
+
+        Ok(updated)
+    }
+
+    // Update language usage patterns
+    async fn update_language_usage_patterns(
+        &mut self,
+        file_path: &str,
+        language: &str,
+    ) -> ApiResult<bool> {
+        let mut updated = false;
+
+        // Update overall language usage
+        let lang_pattern = format!("language_usage_{}", language);
+        updated |= self.update_pattern_frequency(&lang_pattern, 1).await?;
+
+        // Update directory-language combinations
+        if let Some(parent) = std::path::Path::new(file_path).parent() {
+            if let Some(dir_name) = parent.file_name().and_then(|s| s.to_str()) {
+                let dir_lang_pattern = format!("directory_language_{}_{}", dir_name, language);
+                updated |= self.update_pattern_frequency(&dir_lang_pattern, 1).await?;
+            }
+        }
+
+        Ok(updated)
+    }
+
+    // Analyze new file content
+    async fn analyze_new_file_content(
+        &mut self,
+        file_path: &str,
+        content: &str,
+        language: &str,
+    ) -> ApiResult<bool> {
+        let mut updated = false;
+
+        // Analyze initial file structure patterns
+        let lines = content.lines().count();
+        if lines > 0 {
+            let size_category = if lines < 50 {
+                "small"
+            } else if lines < 200 {
+                "medium"
+            } else {
+                "large"
+            };
+            let pattern_type = format!("new_file_size_{}_{}", size_category, language);
+            updated |= self.update_pattern_frequency(&pattern_type, 1).await?;
+        }
+
+        // Look for common patterns in new files
+        if content.contains("import ") || content.contains("from ") {
+            let pattern_type = format!("new_file_with_imports_{}", language);
+            updated |= self.update_pattern_frequency(&pattern_type, 1).await?;
+        }
+
+        if content.contains("export ") || content.contains("module.exports") {
+            let pattern_type = format!("new_file_with_exports_{}", language);
+            updated |= self.update_pattern_frequency(&pattern_type, 1).await?;
+        }
+
+        // Analyze naming patterns in new content
+        updated |= self
+            .learn_naming_patterns_from_content(file_path, content)
+            .await?;
+
+        Ok(updated)
+    }
+
+    // Analyze content patterns
+    async fn analyze_content_patterns(
+        &mut self,
+        _file_path: &str,
+        content: &str,
+        language: Option<&str>,
+    ) -> ApiResult<bool> {
+        let mut updated = false;
+
+        // Count different types of constructs
+        let function_count = content.matches("function ").count() + content.matches(" => ").count();
+        let class_count = content.matches("class ").count();
+        let import_count = content.matches("import ").count();
+
+        if let Some(lang) = language {
+            if function_count > 0 {
+                let pattern_type = format!("file_with_functions_{}", lang);
+                updated |= self
+                    .update_pattern_frequency(&pattern_type, function_count as u32)
+                    .await?;
+            }
+
+            if class_count > 0 {
+                let pattern_type = format!("file_with_classes_{}", lang);
+                updated |= self
+                    .update_pattern_frequency(&pattern_type, class_count as u32)
+                    .await?;
+            }
+
+            if import_count > 0 {
+                let pattern_type = format!("file_with_imports_{}", lang);
+                updated |= self
+                    .update_pattern_frequency(&pattern_type, import_count as u32)
+                    .await?;
+            }
+        }
+
+        Ok(updated)
+    }
+
+    // Learn naming patterns from content
+    async fn learn_naming_patterns_from_content(
+        &mut self,
+        _file_path: &str,
+        content: &str,
+    ) -> ApiResult<bool> {
+        let mut updated = false;
+
+        // Extract and classify identifiers
+        let lines: Vec<&str> = content.lines().collect();
+        for line in lines {
+            // Extract function names
+            if let Some(function_names) = self.extract_function_names(line) {
+                for name in function_names {
+                    let pattern_type = format!(
+                        "naming_function_{}",
+                        self.classify_naming_pattern(&name, "function")
+                    );
+                    updated |= self.update_pattern_frequency(&pattern_type, 1).await?;
+                }
+            }
+
+            // Extract class names
+            if let Some(class_names) = self.extract_class_names(line) {
+                for name in class_names {
+                    let pattern_type = format!(
+                        "naming_class_{}",
+                        self.classify_naming_pattern(&name, "class")
+                    );
+                    updated |= self.update_pattern_frequency(&pattern_type, 1).await?;
+                }
+            }
+
+            // Extract variable names
+            if let Some(variable_names) = self.extract_variable_names(line) {
+                for name in variable_names {
+                    let pattern_type = format!(
+                        "naming_variable_{}",
+                        self.classify_naming_pattern(&name, "variable")
+                    );
+                    updated |= self.update_pattern_frequency(&pattern_type, 1).await?;
+                }
+            }
+        }
+
+        Ok(updated)
+    }
+
+    // Adjust patterns for deleted files
+    async fn adjust_patterns_for_deleted_file(&mut self, file_path: &str) -> ApiResult<bool> {
+        let mut updated = false;
+
+        // Slightly decrease confidence for patterns that might be related to the deleted file
+        if let Some(extension) = std::path::Path::new(file_path)
+            .extension()
+            .and_then(|s| s.to_str())
+        {
+            // Find patterns related to this file type and decrease their confidence slightly
+            for pattern in self.patterns.values_mut() {
+                if (pattern.pattern_type.contains(extension) || pattern.contexts.contains(&extension.to_string())) && pattern.confidence > 0.1 {
+                    pattern.confidence = (pattern.confidence - 0.02).max(0.1);
+                    updated = true;
+                }
+            }
+        }
+
+        Ok(updated)
     }
 
     async fn learn_naming_patterns(&mut self, path: &str) -> ApiResult<Vec<Pattern>> {
@@ -1240,5 +1947,173 @@ mod tests {
         assert_eq!(result.violations.len(), 1);
         assert_eq!(result.recommendations.len(), 1);
         assert!(result.learned.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_extract_patterns_internal() {
+        let learner = PatternLearner::new();
+        let result = learner.extract_patterns_internal("/test/path".to_string()).await;
+        
+        assert!(result.is_ok());
+        let patterns = result.unwrap();
+        assert_eq!(patterns.len(), 1);
+        assert_eq!(patterns[0].pattern_type, "naming_convention");
+        assert_eq!(patterns[0].description, "Consistent camelCase usage for functions");
+    }
+
+    #[tokio::test]
+    async fn test_analyze_file_change_internal() {
+        let learner = PatternLearner::new();
+        let change_data = r#"{
+            "type": "modify",
+            "file": "test.ts",
+            "oldPath": "test.ts",
+            "newPath": "test.ts"
+        }"#.to_string();
+        
+        let result = learner.analyze_file_change_internal(change_data).await;
+        
+        assert!(result.is_ok());
+        let analysis = result.unwrap();
+        assert!(analysis.detected.len() >= 1);
+        assert!(analysis.recommendations.len() >= 1);
+    }
+
+    #[tokio::test]
+    async fn test_find_relevant_patterns_internal() {
+        let mut learner = PatternLearner::new();
+        
+        // Add a test pattern
+        let pattern = Pattern {
+            id: "test_function".to_string(),
+            pattern_type: "function".to_string(),
+            description: "Function pattern for testing".to_string(),
+            frequency: 10,
+            confidence: 0.9,
+            examples: vec![PatternExample {
+                code: "function test() {}".to_string(),
+                file_path: "test.ts".to_string(),
+                line_range: LineRange { start: 1, end: 1 },
+            }],
+            contexts: vec!["typescript".to_string()],
+        };
+        learner.patterns.insert("test_function".to_string(), pattern);
+        
+        let result = learner.find_relevant_patterns_internal(
+            "I need to create a function".to_string(),
+            Some("test.ts".to_string()),
+            None,
+        ).await;
+        
+        assert!(result.is_ok());
+        let patterns = result.unwrap();
+        assert!(patterns.len() > 0);
+        assert_eq!(patterns[0].pattern_type, "function");
+    }
+
+    #[tokio::test]
+    async fn test_predict_approach_internal() {
+        let mut learner = PatternLearner::new();
+        
+        // Add test patterns
+        let pattern = Pattern {
+            id: "api_pattern".to_string(),
+            pattern_type: "api".to_string(),
+            description: "REST API pattern".to_string(),
+            frequency: 15,
+            confidence: 0.85,
+            examples: vec![PatternExample {
+                code: "app.get('/api', handler)".to_string(),
+                file_path: "server.js".to_string(),
+                line_range: LineRange { start: 10, end: 10 },
+            }],
+            contexts: vec!["express".to_string()],
+        };
+        learner.patterns.insert("api_pattern".to_string(), pattern);
+        
+        let mut context = std::collections::HashMap::new();
+        context.insert("framework".to_string(), "express".to_string());
+        context.insert("language".to_string(), "javascript".to_string());
+        
+        let result = learner.predict_approach_internal(
+            "Build a REST API endpoint".to_string(),
+            context,
+        ).await;
+        
+        assert!(result.is_ok());
+        let prediction = result.unwrap();
+        assert!(prediction.confidence > 0.0);
+        assert!(prediction.patterns.len() > 0);
+        assert!(!prediction.approach.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_learn_from_analysis() {
+        let mut learner = PatternLearner::new();
+        let analysis_data = r#"{
+            "patterns": {
+                "detected": ["service_pattern", "dependency_injection"],
+                "learned": []
+            },
+            "concepts": [
+                {
+                    "name": "UserService",
+                    "type": "class",
+                    "patterns": ["service", "dependency_injection"]
+                }
+            ]
+        }"#.to_string();
+        
+        let result = unsafe { learner.learn_from_analysis(analysis_data).await };
+        assert!(result.is_ok());
+        let updated = result.unwrap();
+        assert!(updated); // Should return true since patterns were updated
+        
+        // Check that patterns were learned - they should be created with generated IDs
+        assert!(learner.patterns.len() >= 2);
+    }
+
+    #[tokio::test]
+    async fn test_update_from_change() {
+        let mut learner = PatternLearner::new();
+        
+        // Add initial pattern
+        let pattern = Pattern {
+            id: "test_pattern".to_string(),
+            pattern_type: "function".to_string(),
+            description: "Test function pattern".to_string(),
+            frequency: 5,
+            confidence: 0.8,
+            examples: vec![],
+            contexts: vec!["typescript".to_string()],
+        };
+        learner.patterns.insert("test_pattern".to_string(), pattern);
+        
+        let change_data = r#"{
+            "type": "modify",
+            "file": "test.ts",
+            "oldContent": "function oldName() {}",
+            "newContent": "function newName() {}"
+        }"#.to_string();
+        
+        let result = unsafe { learner.update_from_change(change_data).await };
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_update_pattern_frequency() {
+        let mut learner = PatternLearner::new();
+        
+        let result = learner.update_pattern_frequency("test_pattern", 3).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap()); // Should return true since pattern was updated
+        
+        // Verify the pattern was created (since it didn't exist before)
+        let pattern_key = learner.patterns.keys().find(|k| k.contains("test_pattern"));
+        assert!(pattern_key.is_some());
+        let pattern = &learner.patterns[pattern_key.unwrap()];
+        assert_eq!(pattern.frequency, 3);
+        assert_eq!(pattern.pattern_type, "test_pattern");
     }
 }
