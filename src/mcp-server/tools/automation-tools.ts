@@ -120,10 +120,31 @@ export class AutomationTools {
       tracker.updateProgress('discovery', files.total, 'Discovered project files');
       tracker.complete('discovery');
 
-      // Phase 2: Semantic Analysis
+      // Phase 2: Semantic Analysis (with timeout warning)
       tracker.startPhase('semantic_analysis');
-      const concepts = await this.semanticEngine.learnFromCodebase(projectPath);
-      tracker.complete('semantic_analysis');
+      const analysisStart = Date.now();
+      let concepts: any[] = [];
+      
+      try {
+        concepts = await Promise.race([
+          this.semanticEngine.learnFromCodebase(projectPath),
+          new Promise<never>((_, reject) => {
+            setTimeout(() => {
+              reject(new Error('Semantic analysis timed out after 5 minutes. This often happens with large projects.'));
+            }, 300000); // 5 minutes
+          })
+        ]);
+        
+        tracker.complete('semantic_analysis');
+        const analysisTime = Date.now() - analysisStart;
+        
+        if (analysisTime > 120000) { // More than 2 minutes
+          console.error(`⚠️  Semantic analysis took ${Math.round(analysisTime/1000)}s. Consider excluding large generated files.`);
+        }
+      } catch (error) {
+        tracker.complete('semantic_analysis');
+        throw error;
+      }
 
       // Phase 3: Pattern Learning  
       tracker.startPhase('pattern_learning');
@@ -314,19 +335,85 @@ export class AutomationTools {
       const allFiles = await glob('**/*', {
         cwd: path,
         ignore: [
+          // Package managers and dependencies
           '**/node_modules/**',
+          '**/bower_components/**',
+          '**/jspm_packages/**',
+          '**/vendor/**',
+          
+          // Version control
           '**/.git/**',
+          '**/.svn/**',
+          '**/.hg/**',
+          
+          // Build outputs and artifacts
           '**/dist/**',
           '**/build/**',
+          '**/out/**',
+          '**/output/**',
           '**/target/**',
+          '**/bin/**',
+          '**/obj/**',
+          '**/Debug/**',
+          '**/Release/**',
+          
+          // Framework-specific build directories
           '**/.next/**',
-          '**/coverage/**'
+          '**/.nuxt/**',
+          '**/.svelte-kit/**',
+          '**/.vitepress/**',
+          '**/_site/**',
+          
+          // Static assets and public files
+          '**/public/**',
+          '**/static/**',
+          '**/assets/**',
+          
+          // Testing and coverage
+          '**/coverage/**',
+          '**/.coverage/**',
+          '**/htmlcov/**',
+          '**/.pytest_cache/**',
+          '**/.nyc_output/**',
+          '**/nyc_output/**',
+          '**/lib-cov/**',
+          
+          // Python environments and cache
+          '**/__pycache__/**',
+          '**/.venv/**',
+          '**/venv/**',
+          '**/env/**',
+          '**/.env/**',
+          
+          // Temporary and cache directories
+          '**/tmp/**',
+          '**/temp/**',
+          '**/.tmp/**',
+          '**/cache/**',
+          '**/.cache/**',
+          '**/logs/**',
+          '**/.logs/**',
+          
+          // Generated/minified files
+          '**/*.min.js',
+          '**/*.min.css',
+          '**/*.bundle.js',
+          '**/*.chunk.js',
+          '**/*.map',
+          
+          // Lock files
+          '**/package-lock.json',
+          '**/yarn.lock',
+          '**/Cargo.lock',
+          '**/Gemfile.lock',
+          '**/Pipfile.lock',
+          '**/poetry.lock'
         ],
         nodir: true
       });
 
       const codeFiles = allFiles.filter(file =>
-        /\.(ts|tsx|js|jsx|py|rs|go|java|c|cpp|h|hpp)$/.test(file)
+        /\.(ts|tsx|js|jsx|py|rs|go|java|c|cpp|h|hpp|svelte|vue)$/.test(file)
       );
 
       return {

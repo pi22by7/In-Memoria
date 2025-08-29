@@ -11,6 +11,13 @@ export declare class AstParser {
 
 export declare class PatternLearner {
   constructor()
+  /**
+   * Learns patterns from an entire codebase
+   *
+   * # Safety
+   * This function uses unsafe because it needs to interact with the Node.js runtime
+   * through N-API bindings. The caller must ensure the path exists and is readable.
+   */
   learnFromCodebase(path: string): Promise<ApiResult<Array<Pattern>>>
 }
 

@@ -171,10 +171,22 @@ export class SemanticEngine {
     relationships: Record<string, any>;
   }>> {
     try {
+      console.error(`🧠 Starting semantic learning for: ${path}`);
+      
       // Ensure Rust analyzer is initialized
       await this.initializeRustAnalyzer();
       
-      const concepts = await this.rustAnalyzer!.learnFromCodebase(path);
+      // Add timeout protection for the entire learning process
+      const concepts = await Promise.race([
+        this.rustAnalyzer!.learnFromCodebase(path),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error('Learning process timed out after 5 minutes. This can happen with very large Svelte/Vue codebases.'));
+          }, 300000); // 5 minutes
+        })
+      ]);
+      
+      console.error(`✅ Learned ${concepts.length} concepts from codebase`);
       
       // Store in vector database for semantic search
       await this.vectorDB.initialize();
@@ -192,44 +204,61 @@ export class SemanticEngine {
         relationships: c.relationships
       }));
 
-      // Store concepts for persistence
+      // Store concepts for persistence (with error handling)
       for (const concept of result) {
-        this.database.insertSemanticConcept({
-          id: concept.id,
-          conceptName: concept.name,
-          conceptType: concept.type,
-          confidenceScore: concept.confidence,
-          relationships: concept.relationships,
-          evolutionHistory: {},
-          filePath: concept.filePath,
-          lineRange: concept.lineRange
-        });
+        try {
+          this.database.insertSemanticConcept({
+            id: concept.id,
+            conceptName: concept.name,
+            conceptType: concept.type,
+            confidenceScore: concept.confidence,
+            relationships: concept.relationships,
+            evolutionHistory: {},
+            filePath: concept.filePath,
+            lineRange: concept.lineRange
+          });
 
-        // Store in vector DB if it's a significant concept
-        if (concept.confidence > 0.5) {
-          try {
-            await this.vectorDB.storeCodeEmbedding(
-              concept.name,
-              {
-                id: concept.id,
-                filePath: concept.filePath,
-                functionName: concept.type === 'function' ? concept.name : undefined,
-                className: concept.type === 'class' ? concept.name : undefined,
-                language: this.detectLanguageFromPath(concept.filePath),
-                complexity: Math.floor(concept.confidence * 10),
-                lineCount: concept.lineRange.end - concept.lineRange.start + 1,
-                lastModified: new Date()
-              }
-            );
-          } catch (vectorError) {
-            console.warn('Failed to store vector embedding:', vectorError);
+          // Store in vector DB if it's a significant concept
+          if (concept.confidence > 0.5) {
+            try {
+              await this.vectorDB.storeCodeEmbedding(
+                concept.name,
+                {
+                  id: concept.id,
+                  filePath: concept.filePath,
+                  functionName: concept.type === 'function' ? concept.name : undefined,
+                  className: concept.type === 'class' ? concept.name : undefined,
+                  language: this.detectLanguageFromPath(concept.filePath),
+                  complexity: Math.floor(concept.confidence * 10),
+                  lineCount: concept.lineRange.end - concept.lineRange.start + 1,
+                  lastModified: new Date()
+                }
+              );
+            } catch (vectorError) {
+              console.warn('Failed to store vector embedding:', vectorError);
+            }
           }
+        } catch (conceptError) {
+          console.warn(`Failed to store concept ${concept.name}:`, conceptError);
+          // Continue processing other concepts
         }
       }
 
       return result;
     } catch (error) {
       console.error('Learning error:', error);
+      
+      // Provide more specific error messages for common issues
+      if (error.message.includes('timeout') || error.message.includes('timed out')) {
+        throw new Error('Learning process timed out. This commonly happens with:\n' +
+          '  • Large projects with many files\n' +
+          '  • Projects with very large files (>1MB)\n' +
+          '  • Complex nested directory structures\n' +
+          '  • Malformed or corrupted source files\n\n' +
+          'Try running on a smaller subset of your codebase first.'
+        );
+      }
+      
       return [];
     }
   }

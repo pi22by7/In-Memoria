@@ -5,7 +5,41 @@ All notable changes to In Memoria will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] - 2025-08-25
+## [0.4.2] - 2025-08-29
+
+### 🚀 Performance & Language Support Improvements
+
+### ✨ Added
+
+#### 🎯 Comprehensive Language Support
+- **Native AST parsing for 12 programming languages** - TypeScript, JavaScript, Python, Rust, Go, Java, C/C++, C#, Svelte, Vue, and SQL
+- **Tree-sitter parser integration** for all supported file types
+- **Enhanced semantic analysis** with proper AST-based parsing instead of text fallbacks
+
+### ✅ Fixed
+
+#### 🐛 Critical Bug Fixes
+- **Learning timeout protection** - Prevents indefinite hangs on large projects
+- **File processing reliability** - Graceful handling of complex or malformed files
+- **Memory usage optimization** - Better handling of large codebases
+
+#### 🏗️ Performance Improvements  
+- **Enhanced file filtering** - Excludes build artifacts and dependencies automatically
+- **Optimized analysis pipeline** - Faster processing through improved file selection
+- **Size and count limits** - Prevents resource exhaustion on very large projects
+
+### 🧪 Quality Improvements
+- **Enhanced error handling** - Better error messages and recovery
+- **Performance monitoring** - Warnings for slow operations
+- **Code quality** - Resolved all Rust clippy warnings
+
+### 🔧 Internal Changes
+- Enhanced `should_analyze_file()` with comprehensive filtering logic
+- Added per-file and overall timeout protection in Rust semantic analyzer
+- Improved error handling and graceful degradation for failed file processing
+- Better progress reporting and performance warnings
+
+## [0.4.1] - 2025-08-25
 
 ### 🔧 Technical Debt Resolution & Testing Infrastructure
 

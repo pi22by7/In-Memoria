@@ -51,6 +51,10 @@ claude mcp add in-memoria -- npx in-memoria server
 
 # Learn from your codebase
 npx in-memoria learn ./my-project
+
+# Native AST parsing for 12 programming languages
+# Supports: TypeScript, JavaScript, Python, Rust, Go, Java, C/C++, C#, Svelte, Vue, SQL
+# Intelligent filtering excludes build artifacts and dependencies
 ```
 
 ## How It Works
@@ -74,9 +78,9 @@ In Memoria runs as an MCP server that AI tools connect to. It provides 17 tools 
 
 **Core engines:**
 
-- **AST Parser** (Rust): Tree-sitter parsing across TypeScript, JavaScript, Python, and Rust
+- **AST Parser** (Rust): Tree-sitter parsing for TypeScript, JavaScript, Python, Rust, Go, Java, C/C++, C#, Svelte, Vue, and SQL
 - **Pattern Learner** (Rust): Statistical analysis of naming conventions, function signatures, and architectural choices
-- **Semantic Engine** (Rust): Code relationship mapping and concept extraction
+- **Semantic Engine** (Rust): Code relationship mapping and concept extraction with timeout protection
 - **TypeScript Layer**: MCP server, SQLite/SurrealDB operations, file watching
 - **Storage**: SQLite for structured patterns, SurrealDB for vector search and semantic queries
 
@@ -172,12 +176,15 @@ In Memoria provides 17 tools that AI assistants can use to understand your codeb
 
 **Performance:**
 
-- Incremental analysis (only processes changed files)
-- SQLite for structured data, SurrealDB embedded for semantic search and vectors
-- Cross-platform Rust binaries (Windows, macOS, Linux)
-- Designed for scalability across different project sizes
-- Built-in performance profiling and memory leak detection
-- Optimized for real-time file watching without blocking development workflow
+- **Smart file filtering** - Automatically excludes build artifacts, dependencies, and generated files  
+- **Timeout protection** - Prevents analysis from hanging on complex files
+- **Fast analysis** - Optimized processing that skips `node_modules/`, `dist/`, `.next/`, and other non-source files
+- **File size limits** - Skips very large files to prevent memory issues
+- **Incremental analysis** - Only processes changed files in subsequent runs
+- **SQLite for structured data, SurrealDB embedded for semantic search and vectors**
+- **Cross-platform Rust binaries** (Windows, macOS, Linux)
+- **Built-in performance profiling** and memory leak detection
+- **Optimized for real-time file watching** without blocking development workflow
 
 ## Team Usage
 
@@ -247,10 +254,11 @@ npm run build:rust  # Build Rust components
 
 This is infrastructure for the AI development ecosystem. Contributions welcome:
 
-- Language support (add tree-sitter parsers)
-- Pattern learning improvements
-- MCP tool additions
-- Performance optimizations
+- **Language support** - Add tree-sitter parsers or extend file filtering
+- **Pattern learning improvements** - Enhance statistical analysis and concept extraction  
+- **MCP tool additions** - New tools for AI assistant integration
+- **Performance optimizations** - Further speed improvements and memory usage reduction
+- **Timeout and reliability** - Additional safeguards for edge cases
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
@@ -266,7 +274,13 @@ A: Everything stays local. No data is sent to external services.
 A: Pattern recognition accuracy improves with codebase size and consistency. Projects with established patterns and consistent style will see better pattern detection than smaller or inconsistent codebases. The system learns from frequency and repetition in your actual code.
 
 **Q: Performance impact?**
-A: Minimal. Runs in background, incremental updates only.
+A: Minimal. Runs in background with smart filtering that skips build artifacts and dependencies. Modern analysis engine with built-in safeguards for reliable operation.
+
+**Q: What file types are supported?**
+A: TypeScript, JavaScript, Python, Rust, Go, Java, C/C++, C#, Svelte, Vue, and SQL with native AST parsing. Build artifacts and dependencies are automatically excluded.
+
+**Q: What if analysis encounters issues?**
+A: Built-in reliability features handle edge cases gracefully. Large files and complex directories are processed efficiently with automatic fallbacks. Progress is shown during analysis.
 
 ## License
 

@@ -37,6 +37,14 @@ extern "C" {
     fn tree_sitter_javascript() -> Language;
     fn tree_sitter_rust() -> Language;
     fn tree_sitter_python() -> Language;
+    fn tree_sitter_sequel() -> Language;
+    fn tree_sitter_go() -> Language;
+    fn tree_sitter_java() -> Language;
+    fn tree_sitter_c() -> Language;
+    fn tree_sitter_cpp() -> Language;
+    fn tree_sitter_c_sharp() -> Language;
+    fn tree_sitter_svelte() -> Language;
+    fn tree_sitter_vue() -> Language;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -263,6 +271,62 @@ impl AstParser {
                     ParseError::from_reason(format!("Failed to set Python language: {}", e))
                 })?;
             self.parsers.insert("python".to_string(), python_parser);
+
+            // SQL parser
+            let mut sql_parser = Parser::new();
+            sql_parser.set_language(&tree_sitter_sequel()).map_err(|e| {
+                ParseError::from_reason(format!("Failed to set SQL language: {}", e))
+            })?;
+            self.parsers.insert("sql".to_string(), sql_parser);
+
+            // Go parser
+            let mut go_parser = Parser::new();
+            go_parser.set_language(&tree_sitter_go()).map_err(|e| {
+                ParseError::from_reason(format!("Failed to set Go language: {}", e))
+            })?;
+            self.parsers.insert("go".to_string(), go_parser);
+
+            // Java parser
+            let mut java_parser = Parser::new();
+            java_parser.set_language(&tree_sitter_java()).map_err(|e| {
+                ParseError::from_reason(format!("Failed to set Java language: {}", e))
+            })?;
+            self.parsers.insert("java".to_string(), java_parser);
+
+            // C parser
+            let mut c_parser = Parser::new();
+            c_parser.set_language(&tree_sitter_c()).map_err(|e| {
+                ParseError::from_reason(format!("Failed to set C language: {}", e))
+            })?;
+            self.parsers.insert("c".to_string(), c_parser);
+
+            // C++ parser
+            let mut cpp_parser = Parser::new();
+            cpp_parser.set_language(&tree_sitter_cpp()).map_err(|e| {
+                ParseError::from_reason(format!("Failed to set C++ language: {}", e))
+            })?;
+            self.parsers.insert("cpp".to_string(), cpp_parser);
+
+            // C# parser
+            let mut csharp_parser = Parser::new();
+            csharp_parser.set_language(&tree_sitter_c_sharp()).map_err(|e| {
+                ParseError::from_reason(format!("Failed to set C# language: {}", e))
+            })?;
+            self.parsers.insert("csharp".to_string(), csharp_parser);
+
+            // Svelte parser
+            let mut svelte_parser = Parser::new();
+            svelte_parser.set_language(&tree_sitter_svelte()).map_err(|e| {
+                ParseError::from_reason(format!("Failed to set Svelte language: {}", e))
+            })?;
+            self.parsers.insert("svelte".to_string(), svelte_parser);
+
+            // Vue parser
+            let mut vue_parser = Parser::new();
+            vue_parser.set_language(&tree_sitter_vue()).map_err(|e| {
+                ParseError::from_reason(format!("Failed to set Vue language: {}", e))
+            })?;
+            self.parsers.insert("vue".to_string(), vue_parser);
         }
 
         Ok(())
@@ -270,7 +334,7 @@ impl AstParser {
 
     fn initialize_queries(&mut self) -> Result<(), ParseError> {
         // Initialize common queries for different languages
-        let languages = ["typescript", "javascript", "rust", "python"];
+        let languages = ["typescript", "javascript", "rust", "python", "sql", "go", "java", "c", "cpp", "csharp", "svelte", "vue"];
 
         for lang in &languages {
             let lang_obj = self.get_tree_sitter_language(lang)?;

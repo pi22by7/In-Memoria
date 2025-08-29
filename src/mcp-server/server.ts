@@ -32,7 +32,7 @@ export class CodeCartographerMCP {
     this.server = new Server(
       {
         name: 'in-memoria',
-        version: '0.4.1',
+        version: '0.4.2',
       },
       {
         capabilities: {

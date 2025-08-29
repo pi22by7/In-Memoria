@@ -88,7 +88,7 @@ body:
     attributes:
       label: In-Memoria Version
       description: Run `in-memoria --version` to get the version
-      placeholder: "0.4.1"
+      placeholder: "0.4.2"
     validations:
       required: true
 

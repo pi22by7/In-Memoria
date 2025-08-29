@@ -125,6 +125,11 @@ impl PatternLearner {
     }
 
     // napi-exported methods for JavaScript integration
+    /// Learns patterns from an entire codebase
+    ///
+    /// # Safety
+    /// This function uses unsafe because it needs to interact with the Node.js runtime
+    /// through N-API bindings. The caller must ensure the path exists and is readable.
     #[cfg_attr(feature = "napi-bindings", napi)]
     pub async unsafe fn learn_from_codebase(&mut self, path: String) -> ApiResult<Vec<Pattern>> {
         self.learn_from_codebase_internal(path).await

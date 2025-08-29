@@ -163,17 +163,29 @@ impl SemanticAnalyzer {
         &mut self,
         path: String,
     ) -> Result<Vec<SemanticConcept>, ParseError> {
-        let concepts = self.extract_concepts(&path).await?;
+        // Add overall timeout for the entire learning process (5 minutes)
+        let learning_result = match tokio::time::timeout(
+            tokio::time::Duration::from_secs(300),
+            self.extract_concepts(&path)
+        ).await {
+            Ok(concepts_result) => concepts_result?,
+            Err(_timeout) => {
+                eprintln!("Learning process timed out after 5 minutes");
+                return Err(ParseError::from_reason(
+                    "Learning process timed out. This can happen with very large codebases or complex file structures."
+                ));
+            }
+        };
 
         // Learn relationships between concepts
-        self.learn_concept_relationships(&concepts);
+        self.learn_concept_relationships(&learning_result);
 
         // Update internal knowledge
-        for concept in &concepts {
+        for concept in &learning_result {
             self.concepts.insert(concept.id.clone(), concept.clone());
         }
 
-        Ok(concepts)
+        Ok(learning_result)
     }
 
     /// Updates the analyzer's internal state from analysis data
@@ -245,11 +257,14 @@ impl SemanticAnalyzer {
                         "js" | "jsx" => Some("javascript"),
                         "rs" => Some("rust"),
                         "py" => Some("python"),
+                        "sql" => Some("sql"),
                         "go" => Some("go"),
                         "java" => Some("java"),
-                        "cpp" | "cc" | "cxx" => Some("cpp"),
                         "c" => Some("c"),
+                        "cpp" | "cc" | "cxx" => Some("cpp"),
                         "cs" => Some("csharp"),
+                        "svelte" => Some("svelte"),
+                        "vue" => Some("vue"),
                         _ => None,
                     };
 
@@ -331,6 +346,8 @@ impl SemanticAnalyzer {
 
     async fn extract_concepts(&mut self, path: &str) -> Result<Vec<SemanticConcept>, ParseError> {
         let mut all_concepts = Vec::new();
+        let mut processed_count = 0;
+        let max_files = 1000; // Limit maximum files to process
 
         for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
             if entry.file_type().is_file() {
@@ -338,31 +355,45 @@ impl SemanticAnalyzer {
 
                 // Skip non-source files and common directories
                 if self.should_analyze_file(file_path) {
+                    processed_count += 1;
+                    
+                    // Prevent processing too many files
+                    if processed_count > max_files {
+                        eprintln!("Warning: Reached maximum file limit ({}), stopping analysis", max_files);
+                        break;
+                    }
+
                     match fs::read_to_string(file_path) {
                         Ok(content) => {
                             let language =
                                 self.detect_language_from_path(file_path.to_str().unwrap_or(""));
 
-                            match self
-                                .parse_file_content(
+                            // Add per-file timeout protection
+                            match tokio::time::timeout(
+                                tokio::time::Duration::from_secs(30), // 30 second timeout per file
+                                self.parse_file_with_timeout(
                                     file_path.to_str().unwrap_or(""),
                                     &content,
                                     &language,
                                 )
-                                .await
-                            {
-                                Ok(mut concepts) => {
+                            ).await {
+                                Ok(Ok(mut concepts)) => {
                                     all_concepts.append(&mut concepts);
                                 }
-                                Err(_e) => {
+                                Ok(Err(_e)) => {
                                     // Fallback to regex-based extraction if tree-sitter fails
+                                    eprintln!("Tree-sitter parsing failed for {}, using fallback", file_path.display());
                                     let fallback_concepts = self.fallback_extract_concepts(
                                         file_path.to_str().unwrap_or(""),
                                         &content,
                                     );
                                     all_concepts.extend(fallback_concepts);
                                 }
-                            }
+                                Err(_timeout) => {
+                                    eprintln!("Timeout parsing {}, skipping", file_path.display());
+                                    continue;
+                                }
+                            };
                         }
                         Err(_) => {
                             // Skip files that can't be read
@@ -373,28 +404,100 @@ impl SemanticAnalyzer {
             }
         }
 
+        eprintln!("Processed {} source files and found {} concepts", processed_count, all_concepts.len());
         Ok(all_concepts)
     }
 
+    async fn parse_file_with_timeout(
+        &mut self,
+        file_path: &str,
+        content: &str,
+        language: &str,
+    ) -> Result<Vec<SemanticConcept>, ParseError> {
+        self.parse_file_content(file_path, content, language).await
+    }
+
     fn should_analyze_file(&self, file_path: &Path) -> bool {
-        // Skip common non-source directories
+        // Skip common non-source directories and build artifacts
         let path_str = file_path.to_string_lossy();
         if path_str.contains("node_modules")
             || path_str.contains(".git")
             || path_str.contains("target")
             || path_str.contains("dist")
             || path_str.contains("build")
+            || path_str.contains("out")
+            || path_str.contains("output")
             || path_str.contains(".next")
+            || path_str.contains(".nuxt")
+            || path_str.contains(".svelte-kit")
+            || path_str.contains(".vitepress")
+            || path_str.contains("_site")
+            || path_str.contains("public")
+            || path_str.contains("static")
+            || path_str.contains("assets")
             || path_str.contains("__pycache__")
+            || path_str.contains(".pytest_cache")
+            || path_str.contains("coverage")
+            || path_str.contains(".coverage")
+            || path_str.contains("htmlcov")
+            || path_str.contains("vendor")
+            || path_str.contains("bin")
+            || path_str.contains("obj")
+            || path_str.contains("Debug")
+            || path_str.contains("Release")
+            || path_str.contains(".venv")
+            || path_str.contains("venv")
+            || path_str.contains("env")
+            || path_str.contains(".env")
+            || path_str.contains("tmp")
+            || path_str.contains("temp")
+            || path_str.contains(".tmp")
+            || path_str.contains("cache")
+            || path_str.contains(".cache")
+            || path_str.contains("logs")
+            || path_str.contains(".logs")
+            || path_str.contains("lib-cov")
+            || path_str.contains("nyc_output")
+            || path_str.contains(".nyc_output")
+            || path_str.contains("bower_components")
+            || path_str.contains("jspm_packages")
         {
             return false;
+        }
+
+        // Skip common generated/minified file patterns
+        let file_name = file_path.file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("");
+        
+        if file_name.ends_with(".min.js")
+            || file_name.ends_with(".min.css")
+            || file_name.ends_with(".bundle.js")
+            || file_name.ends_with(".chunk.js")
+            || file_name.ends_with(".map")
+            || file_name.starts_with(".")
+            || file_name == "package-lock.json"
+            || file_name == "yarn.lock"
+            || file_name == "Cargo.lock"
+            || file_name == "Gemfile.lock"
+            || file_name == "Pipfile.lock"
+            || file_name == "poetry.lock"
+        {
+            return false;
+        }
+
+        // Check file size - skip very large files (>1MB) to prevent hanging
+        if let Ok(metadata) = file_path.metadata() {
+            if metadata.len() > 1_048_576 {
+                return false;
+            }
         }
 
         // Check if file extension is supported
         if let Some(extension) = file_path.extension().and_then(|s| s.to_str()) {
             matches!(
                 extension.to_lowercase().as_str(),
-                "ts" | "tsx" | "js" | "jsx" | "rs" | "py" | "go" | "java" | "cpp" | "c" | "cs"
+                "ts" | "tsx" | "js" | "jsx" | "rs" | "py" | "go" | "java" | "cpp" | "c" | "cs" | "svelte" | "vue" | "sql"
             )
         } else {
             false
@@ -903,6 +1006,14 @@ impl SemanticAnalyzer {
                 "js" | "jsx" => "javascript".to_string(),
                 "rs" => "rust".to_string(),
                 "py" => "python".to_string(),
+                "sql" => "sql".to_string(),
+                "go" => "go".to_string(),
+                "java" => "java".to_string(),
+                "c" => "c".to_string(),
+                "cpp" | "cc" | "cxx" => "cpp".to_string(),
+                "cs" => "csharp".to_string(),
+                "svelte" => "svelte".to_string(),
+                "vue" => "vue".to_string(),
                 _ => "generic".to_string(),
             }
         } else {
