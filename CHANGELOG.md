@@ -5,11 +5,11 @@ All notable changes to In Memoria will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.3] - 2025-08-29
+## [0.4.3] - 2025-08-30
 
 ### 🔧 Code Quality & Reliability Improvements
 
-Major code audit and technical debt resolution focused on TypeScript strict compliance, error handling, and system reliability.
+Major code audit and technical debt resolution focused on TypeScript strict compliance, error handling, system reliability, and comprehensive language support implementation.
 
 ### ✅ Fixed
 
@@ -33,6 +33,16 @@ Major code audit and technical debt resolution focused on TypeScript strict comp
 - **Centralized configuration system** - New `src/config/config.ts` with proper database path management
 - **Project-specific database placement** - Database correctly stored within analyzed project directory
 - **Environment-aware configuration** - Proper defaults with override capabilities
+
+#### 🌍 Language Support Implementation
+- **7 new languages properly implemented** - SQL, Go, Java, C, C++, C#, and Svelte now have language-specific semantic extractors instead of generic fallbacks
+  - Added proper AST node parsing for each language's syntax patterns
+  - Implemented language-specific concept extraction (classes, functions, variables, etc.)
+  - Enhanced code analysis accuracy for multi-language projects
+- **Rust code safety improvements** - Fixed problematic `.unwrap()` patterns that could cause panics
+  - Replaced unsafe string operations with safe `is_some_and()` patterns
+  - Enhanced HashMap access safety with proper pattern matching
+  - Maintained performance while eliminating crash-prone code paths
 
 #### 🔧 Input Validation & Reliability
 - **Comprehensive MCP tool validation** - Added missing input validation across all 17 MCP tools

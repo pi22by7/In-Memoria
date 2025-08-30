@@ -805,10 +805,26 @@ impl SemanticAnalyzer {
             "python" => {
                 concepts.extend(self.extract_python_concepts(&tree, file_path, content)?);
             }
-            "sql" | "go" | "java" | "c" | "cpp" | "csharp" | "svelte" => {
-                // Use generic extraction for new languages
-                // TODO: Add specific extractors for each language
-                concepts.extend(self.extract_generic_concepts(&tree, file_path, content)?);
+            "sql" => {
+                concepts.extend(self.extract_sql_concepts(&tree, file_path, content)?);
+            }
+            "go" => {
+                concepts.extend(self.extract_go_concepts(&tree, file_path, content)?);
+            }
+            "java" => {
+                concepts.extend(self.extract_java_concepts(&tree, file_path, content)?);
+            }
+            "c" => {
+                concepts.extend(self.extract_c_concepts(&tree, file_path, content)?);
+            }
+            "cpp" => {
+                concepts.extend(self.extract_cpp_concepts(&tree, file_path, content)?);
+            }
+            "csharp" => {
+                concepts.extend(self.extract_csharp_concepts(&tree, file_path, content)?);
+            }
+            "svelte" => {
+                concepts.extend(self.extract_svelte_concepts(&tree, file_path, content)?);
             }
             _ => {
                 // Generic extraction for truly unsupported languages
@@ -855,6 +871,97 @@ impl SemanticAnalyzer {
         let root_node = tree.root_node();
 
         self.walk_node(root_node, file_path, content, &mut concepts, "python")?;
+        Ok(concepts)
+    }
+
+    fn extract_sql_concepts(
+        &self,
+        tree: &Tree,
+        file_path: &str,
+        content: &str,
+    ) -> Result<Vec<SemanticConcept>, ParseError> {
+        let mut concepts = Vec::new();
+        let root_node = tree.root_node();
+
+        self.walk_node(root_node, file_path, content, &mut concepts, "sql")?;
+        Ok(concepts)
+    }
+
+    fn extract_go_concepts(
+        &self,
+        tree: &Tree,
+        file_path: &str,
+        content: &str,
+    ) -> Result<Vec<SemanticConcept>, ParseError> {
+        let mut concepts = Vec::new();
+        let root_node = tree.root_node();
+
+        self.walk_node(root_node, file_path, content, &mut concepts, "go")?;
+        Ok(concepts)
+    }
+
+    fn extract_java_concepts(
+        &self,
+        tree: &Tree,
+        file_path: &str,
+        content: &str,
+    ) -> Result<Vec<SemanticConcept>, ParseError> {
+        let mut concepts = Vec::new();
+        let root_node = tree.root_node();
+
+        self.walk_node(root_node, file_path, content, &mut concepts, "java")?;
+        Ok(concepts)
+    }
+
+    fn extract_c_concepts(
+        &self,
+        tree: &Tree,
+        file_path: &str,
+        content: &str,
+    ) -> Result<Vec<SemanticConcept>, ParseError> {
+        let mut concepts = Vec::new();
+        let root_node = tree.root_node();
+
+        self.walk_node(root_node, file_path, content, &mut concepts, "c")?;
+        Ok(concepts)
+    }
+
+    fn extract_cpp_concepts(
+        &self,
+        tree: &Tree,
+        file_path: &str,
+        content: &str,
+    ) -> Result<Vec<SemanticConcept>, ParseError> {
+        let mut concepts = Vec::new();
+        let root_node = tree.root_node();
+
+        self.walk_node(root_node, file_path, content, &mut concepts, "cpp")?;
+        Ok(concepts)
+    }
+
+    fn extract_csharp_concepts(
+        &self,
+        tree: &Tree,
+        file_path: &str,
+        content: &str,
+    ) -> Result<Vec<SemanticConcept>, ParseError> {
+        let mut concepts = Vec::new();
+        let root_node = tree.root_node();
+
+        self.walk_node(root_node, file_path, content, &mut concepts, "csharp")?;
+        Ok(concepts)
+    }
+
+    fn extract_svelte_concepts(
+        &self,
+        tree: &Tree,
+        file_path: &str,
+        content: &str,
+    ) -> Result<Vec<SemanticConcept>, ParseError> {
+        let mut concepts = Vec::new();
+        let root_node = tree.root_node();
+
+        self.walk_node(root_node, file_path, content, &mut concepts, "svelte")?;
         Ok(concepts)
     }
 
@@ -951,6 +1058,160 @@ impl SemanticAnalyzer {
                 "let_declaration" => {
                     if let Some(concept) = self
                         .extract_concept_from_node(node, file_path, content, "variable", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                _ => {}
+            },
+            "go" => match node.kind() {
+                "type_declaration" | "struct_type" | "interface_type" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "struct", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                "function_declaration" | "method_declaration" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "function", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                "var_declaration" | "const_declaration" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "variable", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                _ => {}
+            },
+            "java" => match node.kind() {
+                "class_declaration" | "interface_declaration" | "enum_declaration" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "class", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                "method_declaration" | "constructor_declaration" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "function", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                "field_declaration" | "variable_declarator" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "variable", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                _ => {}
+            },
+            "c" => match node.kind() {
+                "struct_specifier" | "union_specifier" | "enum_specifier" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "struct", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                "function_definition" | "function_declarator" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "function", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                "declaration" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "variable", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                _ => {}
+            },
+            "cpp" => match node.kind() {
+                "struct_specifier" | "class_specifier" | "union_specifier" | "enum_specifier" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "class", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                "function_definition" | "function_declarator" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "function", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                "declaration" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "variable", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                _ => {}
+            },
+            "csharp" => match node.kind() {
+                "class_declaration" | "interface_declaration" | "struct_declaration" | "enum_declaration" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "class", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                "method_declaration" | "constructor_declaration" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "function", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                "field_declaration" | "variable_declaration" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "variable", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                _ => {}
+            },
+            "sql" => match node.kind() {
+                "create_table_statement" | "create_view_statement" | "create_procedure_statement" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "table", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                "create_function_statement" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "function", language)?
+                    {
+                        concepts.push(concept);
+                    }
+                }
+                _ => {}
+            },
+            "svelte" => match node.kind() {
+                "script_element" => {
+                    // Parse as JavaScript/TypeScript content within Svelte
+                    let mut cursor = node.walk();
+                    for child in node.children(&mut cursor) {
+                        self.walk_node(child, file_path, content, concepts, "typescript")?;
+                    }
+                }
+                "element" => {
+                    if let Some(concept) = self
+                        .extract_concept_from_node(node, file_path, content, "component", language)?
                     {
                         concepts.push(concept);
                     }

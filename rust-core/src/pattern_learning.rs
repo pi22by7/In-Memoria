@@ -1230,7 +1230,7 @@ impl PatternLearner {
 
     fn is_valid_identifier(&self, name: &str) -> bool {
         !name.is_empty()
-            && name.chars().next().unwrap().is_alphabetic()
+            && name.chars().next().is_some_and(|c| c.is_alphabetic())
             && name.chars().all(|c| c.is_alphanumeric() || c == '_')
     }
 
@@ -1251,14 +1251,14 @@ impl PatternLearner {
     }
 
     fn is_camel_case(&self, name: &str) -> bool {
-        name.chars().next().unwrap().is_lowercase()
+        name.chars().next().is_some_and(|c| c.is_lowercase())
             && name.contains(char::is_uppercase)
             && !name.contains('_')
             && !name.contains('-')
     }
 
     fn is_pascal_case(&self, name: &str) -> bool {
-        name.chars().next().unwrap().is_uppercase() && !name.contains('_') && !name.contains('-')
+        name.chars().next().is_some_and(|c| c.is_uppercase()) && !name.contains('_') && !name.contains('-')
     }
 
     fn is_snake_case(&self, name: &str) -> bool {
@@ -1412,19 +1412,21 @@ impl PatternLearner {
 
         // Detect co-location patterns
         for (ext, locations) in file_types {
-            if locations.len() == 1 && locations.values().next().unwrap() > &3 {
-                patterns.push(Pattern {
-                    id: format!("org_colocation_{}_{}", ext, self.generate_pattern_id()),
-                    pattern_type: format!("organization_colocation_{}", ext),
-                    description: format!(
-                        "{} files are consistently co-located in specific directories",
-                        ext
-                    ),
-                    frequency: *locations.values().next().unwrap(),
-                    confidence: 0.7,
-                    examples: vec![],
-                    contexts: vec!["organization".to_string(), ext],
-                });
+            if let Some(&frequency) = locations.values().next() {
+                if locations.len() == 1 && frequency > 3 {
+                    patterns.push(Pattern {
+                        id: format!("org_colocation_{}_{}", ext, self.generate_pattern_id()),
+                        pattern_type: format!("organization_colocation_{}", ext),
+                        description: format!(
+                            "{} files are consistently co-located in specific directories",
+                            ext
+                        ),
+                        frequency,
+                        confidence: 0.7,
+                        examples: vec![],
+                        contexts: vec!["organization".to_string(), ext],
+                    });
+                }
             }
         }
 
