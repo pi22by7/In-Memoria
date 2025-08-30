@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { CircuitBreaker, CircuitBreakerError } from './dist/utils/circuit-breaker.js';
+import { CircuitBreaker, CircuitBreakerError } from '../dist/utils/circuit-breaker.js';
 
 console.log('🧪 Testing Circuit Breaker Error Transparency...\n');
 
@@ -81,7 +81,7 @@ async function testCircuitBreakerErrorHandling() {
     // Test 5: Reset circuit breaker and test recovery
     console.log('\n🔧 Test 5: Circuit breaker reset and recovery');
     circuitBreaker.reset();
-    
+
     try {
         const result = await circuitBreaker.execute(async () => {
             return 'Service recovered successfully!';
