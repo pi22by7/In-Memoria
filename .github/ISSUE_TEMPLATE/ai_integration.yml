@@ -1,131 +1,29 @@
 name: 🤖 AI Integration Issue
-description: Issues with AI assistant integration or MCP functionality
-title: "[AI Integration]: "
-labels: ["ai-integration", "mcp", "needs-triage"]
+description: Issues with AI assistant integration
+title: "[AI]: "
+labels: ["ai-integration"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Report issues with AI assistant integration, MCP server functionality, or intelligence quality problems.
-
-  - type: dropdown
-    id: integration-type
-    attributes:
-      label: AI Integration Type
-      description: Which AI integration are you using?
-      options:
-        - Claude Desktop (MCP)
-        - Claude Code CLI
-        - Other MCP client
-        - Custom MCP integration
-        - Direct API usage
-    validations:
-      required: true
-
-  - type: dropdown
-    id: issue-category
-    attributes:
-      label: Issue Category
-      description: What type of AI integration issue?
-      options:
-        - MCP server won't start/connect
-        - Tools not appearing in AI assistant
-        - Tool calls failing or erroring
-        - Poor intelligence quality
-        - Pattern learning not working
-        - Semantic insights inaccurate
-        - Performance issues with AI responses
-        - Configuration problems
-    validations:
-      required: true
-
   - type: textarea
-    id: problem-description
+    id: problem
     attributes:
-      label: Problem Description
-      description: Detailed description of the AI integration issue
+      label: What's the issue?
       placeholder: "When I ask Claude to analyze my code using In-Memoria tools..."
     validations:
       required: true
 
   - type: textarea
-    id: mcp-config
+    id: setup
     attributes:
-      label: MCP Configuration
-      description: Your MCP client configuration (remove any sensitive info)
-      render: json
+      label: Your setup
       placeholder: |
-        {
-          "mcpServers": {
-            "in-memoria": {
-              "command": "npx",
-              "args": ["in-memoria", "server"]
-            }
-          }
-        }
+        - Using: Claude Desktop/Code/Other
+        - Has project been learned? Yes/No
+        - Error logs (if any)
+    validations:
+      required: true
 
   - type: textarea
-    id: intelligence-context
+    id: expected
     attributes:
-      label: Intelligence Context
-      description: Information about your learned codebase intelligence
-      placeholder: |
-        - Has the project been learned? (`in-memoria learn` completed)
-        - Number of concepts/patterns stored
-        - Project languages and frameworks analyzed
-
-  - type: textarea
-    id: tool-interaction
-    attributes:
-      label: Tool Interaction Details
-      description: Specific details about the AI tool interaction that failed
-      placeholder: |
-        1. Asked AI: "Analyze this TypeScript function for patterns"
-        2. AI called: analyze_codebase tool
-        3. Error occurred: ...
-        4. Expected: AI should have provided pattern insights
-
-  - type: textarea
-    id: error-logs
-    attributes:
-      label: MCP Server Logs
-      description: Logs from the MCP server (check terminal where `in-memoria server` is running)
-      render: text
-      placeholder: Paste MCP server error messages or logs...
-
-  - type: textarea
-    id: ai-assistant-behavior
-    attributes:
-      label: AI Assistant Behavior
-      description: What did the AI assistant do/say when the issue occurred?
-      placeholder: "Claude said: 'I apologize, but I encountered an error...' or showed tool call errors"
-
-  - type: textarea
-    id: expected-ai-behavior
-    attributes:
-      label: Expected AI Behavior
-      description: What should the AI assistant have been able to do?
-      placeholder: "Claude should have used In-Memoria's pattern insights to suggest code improvements..."
-
-  - type: dropdown
-    id: frequency
-    attributes:
-      label: Issue Frequency
-      options:
-        - Always happens
-        - Happens most of the time
-        - Happens sometimes
-        - Rare occurrence
-        - Happened once
-
-  - type: textarea
-    id: workarounds
-    attributes:
-      label: Workarounds
-      description: Any workarounds you've found for this AI integration issue?
-
-  - type: textarea
-    id: additional
-    attributes:
-      label: Additional Context
-      description: Any other details about your AI workflow or setup?
+      label: What should happen instead?
+      placeholder: "Claude should have used In-Memoria's insights to..."

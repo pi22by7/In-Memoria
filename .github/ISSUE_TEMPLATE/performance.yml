@@ -1,113 +1,29 @@
 name: 🚀 Performance Issue
-description: Report performance problems or suggest optimizations
+description: Report performance problems
 title: "[Performance]: "
-labels: ["performance", "needs-investigation"]
+labels: ["performance"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thanks for reporting a performance issue! In-Memoria aims to handle codebases efficiently while providing intelligent analysis.
-
-  - type: dropdown
-    id: operation
-    attributes:
-      label: Affected Operation
-      description: Which operation is slow or resource-intensive?
-      options:
-        - Initial learning (`in-memoria learn`)
-        - Code analysis (`in-memoria analyze`)
-        - File watching/change detection
-        - MCP tool responses
-        - Database operations
-        - Pattern matching/detection
-        - Vector search/embeddings
-        - AST parsing
-        - Memory usage
-    validations:
-      required: true
-
   - type: textarea
     id: performance-issue
     attributes:
-      label: Performance Problem
-      description: Describe the performance issue you're experiencing
-      placeholder: "The `learn` command takes 10+ minutes on my 5k file codebase..."
+      label: What's slow?
+      placeholder: "The `learn` command takes 10+ minutes on my codebase..."
     validations:
       required: true
 
   - type: textarea
-    id: project-scale
+    id: project-info
     attributes:
-      label: Project Scale
-      description: Details about your codebase size and complexity
+      label: Project details
       placeholder: |
-        - Total files: ~5,000
-        - Lines of code: ~500k
-        - Languages: TypeScript, Python, Rust
-        - Special characteristics: Monorepo, generated files, etc.
+        - ~5,000 files, 500k lines
+        - Languages: TypeScript, Python
+        - Takes: 15 minutes
     validations:
       required: true
 
   - type: textarea
-    id: timing-data
+    id: system-info
     attributes:
-      label: Timing/Resource Data
-      description: Specific performance measurements if available
-      placeholder: |
-        - Operation takes: 15 minutes
-        - Memory usage peaks at: 4GB
-        - CPU usage: 100% on all cores
-        - Time comparison: other tools complete in 2 minutes
-
-  - type: dropdown
-    id: system-spec
-    attributes:
-      label: System Specifications
-      description: Your hardware specifications
-      options:
-        - High-end (16+ cores, 32+ GB RAM, SSD)
-        - Mid-range (8-16 cores, 16-32 GB RAM, SSD)
-        - Lower-end (4-8 cores, 8-16 GB RAM)
-        - Resource constrained (<4 cores, <8 GB RAM)
-        - Cloud/container environment
-    validations:
-      required: true
-
-  - type: textarea
-    id: expected-performance
-    attributes:
-      label: Expected Performance
-      description: What performance would you expect for your use case?
-      placeholder: "For a 5k file project, I'd expect learning to complete within 2-3 minutes..."
-
-  - type: textarea
-    id: workarounds
-    attributes:
-      label: Current Workarounds
-      description: Any workarounds or optimizations you've tried?
-      placeholder: |
-        - Excluding certain directories
-        - Running with specific flags
-        - Breaking up the operation
-
-  - type: textarea
-    id: comparison
-    attributes:
-      label: Performance Comparison
-      description: How does this compare to similar tools or operations?
-      placeholder: "VS Code indexing completes in 30 seconds for the same project..."
-
-  - type: checkboxes
-    id: profiling
-    attributes:
-      label: Profiling Assistance
-      options:
-        - label: I can provide additional profiling data if needed
-        - label: I can test performance improvements
-        - label: I can help with benchmarking on my system
-
-  - type: textarea
-    id: additional
-    attributes:
-      label: Additional Context
-      description: Any other performance-related observations or system details?
+      label: System specs
+      placeholder: "16 cores, 32GB RAM, SSD"
