@@ -16,6 +16,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed ANSI escape codes from MCP server output to prevent JSON parsing conflicts
   - Progress information now cleanly visible in MCP logs without parsing errors
 
+#### 🔧 Database Infrastructure Improvements
+- **Improved MCP server database handling** - Enhanced database management for learning operations
+  - MCP server now creates project-specific database instances for learning operations
+  - Better resource cleanup for database connections
+  - Improved database path resolution consistency
+
+#### 📢 Embedding Output Cleanup
+- **Fixed embedding progress spam** - CLI learning no longer outputs hundreds of individual embedding messages
+  - Changed from per-concept logging to single initialization message
+  - Prevents terminal spam when processing large codebases with many concepts
+  - Added debug logging for SQL file processing to help diagnose parsing issues
+
+#### 🐛 SQL Concept Extraction Fixed
+- **Fixed SQL files reporting 0 concepts learned** - Resolved issue where SQL Server Database Projects weren't being analyzed
+  - Fixed SQL node type matching in tree-sitter parser (was expecting `"create_table_statement"` but parser generates `"create_table"`)
+  - SQL files now properly extract table, view, and procedure concepts
+  - Verified working with SQL Server bracket notation syntax `[dbo].[TableName]`
+  - Added comprehensive SQL concept extraction support
+
+
 ## [0.4.3] - 2025-08-30
 
 ### 🔧 Code Quality & Reliability Improvements

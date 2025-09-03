@@ -13,6 +13,7 @@ import { SemanticEngine } from '../../engines/semantic-engine.js';
 import { PatternEngine } from '../../engines/pattern-engine.js';
 import { SQLiteDatabase } from '../../storage/sqlite-db.js';
 import { SemanticVectorDB } from '../../storage/vector-db.js';
+import { config } from '../../config/config.js';
 
 export class IntelligenceTools {
   constructor(
@@ -166,11 +167,24 @@ export class IntelligenceTools {
     timeElapsed: number;
   }> {
     const startTime = Date.now();
+    let projectDatabase: SQLiteDatabase | null = null;
+    let projectVectorDB: SemanticVectorDB | null = null;
+    let projectSemanticEngine: SemanticEngine | null = null;
+    let projectPatternEngine: PatternEngine | null = null;
     
     try {
+      // Create project-specific database and engines for learning
+      const projectDbPath = config.getDatabasePath(args.path);
+      projectDatabase = new SQLiteDatabase(projectDbPath);
+      projectVectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
+      projectSemanticEngine = new SemanticEngine(projectDatabase, projectVectorDB);
+      projectPatternEngine = new PatternEngine(projectDatabase);
+      
+      console.error(`🗄️ Using project database: ${projectDbPath}`);
+      
       // Check if already learned and not forcing re-learn
       if (!args.force) {
-        const existingIntelligence = await this.checkExistingIntelligence(args.path);
+        const existingIntelligence = await this.checkExistingIntelligenceInDatabase(projectDatabase, args.path);
         if (existingIntelligence && existingIntelligence.concepts > 0) {
           return {
             success: true,
@@ -186,14 +200,14 @@ export class IntelligenceTools {
       
       // Phase 1: Comprehensive codebase analysis
       insights.push('🔍 Phase 1: Analyzing codebase structure...');
-      const codebaseAnalysis = await this.semanticEngine.analyzeCodebase(args.path);
+      const codebaseAnalysis = await projectSemanticEngine.analyzeCodebase(args.path);
       insights.push(`   ✅ Detected languages: ${codebaseAnalysis.languages.join(', ')}`);
       insights.push(`   ✅ Found frameworks: ${codebaseAnalysis.frameworks.join(', ') || 'none detected'}`);
       insights.push(`   ✅ Complexity: ${codebaseAnalysis.complexity.cyclomatic.toFixed(1)} cyclomatic, ${codebaseAnalysis.complexity.cognitive.toFixed(1)} cognitive`);
 
       // Phase 2: Deep semantic learning
       insights.push('🧠 Phase 2: Learning semantic concepts...');
-      const concepts = await this.semanticEngine.learnFromCodebase(args.path);
+      const concepts = await projectSemanticEngine.learnFromCodebase(args.path);
       
       // Analyze concept distribution
       const conceptTypes = concepts.reduce((acc, concept) => {
@@ -209,7 +223,7 @@ export class IntelligenceTools {
 
       // Phase 3: Pattern discovery and learning
       insights.push('🔄 Phase 3: Discovering coding patterns...');
-      const patterns = await this.patternEngine.learnFromCodebase(args.path);
+      const patterns = await projectPatternEngine.learnFromCodebase(args.path);
       
       // Analyze pattern distribution
       const patternTypes = patterns.reduce((acc, pattern) => {
@@ -262,6 +276,21 @@ export class IntelligenceTools {
         insights: [`❌ Learning failed: ${error instanceof Error ? error.message : error}`],
         timeElapsed: Date.now() - startTime
       };
+    } finally {
+      // Clean up project-specific resources
+      if (projectSemanticEngine) {
+        projectSemanticEngine.cleanup();
+      }
+      if (projectVectorDB) {
+        try {
+          await projectVectorDB.close();
+        } catch (error) {
+          console.warn('Warning: Failed to close project vector database:', error);
+        }
+      }
+      if (projectDatabase) {
+        projectDatabase.close();
+      }
     }
   }
 
@@ -423,6 +452,18 @@ export class IntelligenceTools {
     
     console.warn('⚠️  No existing intelligence found - starting fresh analysis');
     return null; // Null is honest here - we genuinely found no existing data
+  }
+
+  private async checkExistingIntelligenceInDatabase(database: SQLiteDatabase, path: string): Promise<{ concepts: number; patterns: number } | null> {
+    const concepts = database.getSemanticConcepts().length;
+    const patterns = database.getDeveloperPatterns().length;
+    
+    if (concepts > 0 || patterns > 0) {
+      return { concepts, patterns };
+    }
+    
+    console.warn('⚠️  No existing intelligence found in project database - starting fresh analysis');
+    return null;
   }
 
   private async storeIntelligence(

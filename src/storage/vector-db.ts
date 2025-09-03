@@ -46,6 +46,9 @@ export class SemanticVectorDB {
   private readonly EMBEDDING_CACHE_SIZE = 1000;
   private readonly EMBEDDING_DIMENSION = 1536; // OpenAI ada-002 dimension
   private readonly LOCAL_EMBEDDING_DIMENSION = 384; // All-MiniLM-L6-v2 dimension
+  
+  // Embedding progress tracking
+  private hasLoggedEmbeddingStart = false;
 
   constructor(apiKey?: string) {
     this.db = new Surreal({
@@ -306,11 +309,20 @@ export class SemanticVectorDB {
 
     let embedding: number[];
 
+    // Log once at start of embedding process
+    if (!this.hasLoggedEmbeddingStart) {
+      if (this.openaiClient && this.apiKey && this.apiKey.length > 0) {
+        console.log('🔧 Initializing OpenAI embedding pipeline...');
+      } else {
+        console.log('🔧 Initializing local embedding pipeline...');
+      }
+      this.hasLoggedEmbeddingStart = true;
+    }
+
     // Try OpenAI embeddings first if API key is available
     if (this.openaiClient && this.apiKey && this.apiKey.length > 0) {
       try {
         embedding = await this.getOpenAIEmbedding(code);
-        console.log(`✅ Generated OpenAI embedding (${embedding.length} dimensions)`);
       } catch (error: unknown) {
         console.warn('⚠️  OpenAI embedding failed, using local embedding:', error instanceof Error ? error.message : String(error));
         embedding = await this.getLocalEmbedding(code);
@@ -318,7 +330,6 @@ export class SemanticVectorDB {
     } else {
       // Use local embedding
       embedding = await this.getLocalEmbedding(code);
-      console.log(`✅ Generated local semantic embedding (${embedding.length} dimensions)`);
     }
 
     // Cache the result
