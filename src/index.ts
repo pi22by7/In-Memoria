@@ -12,6 +12,7 @@ import { SQLiteDatabase } from './storage/sqlite-db.js';
 import { SemanticVectorDB } from './storage/vector-db.js';
 import { InteractiveSetup } from './cli/interactive-setup.js';
 import { DebugTools } from './cli/debug-tools.js';
+import { config } from './config/config.js';
 
 function getVersion(): string {
   try {
@@ -106,7 +107,7 @@ async function startWatcher(path: string): Promise<void> {
   console.log(`Starting file watcher for: ${path}`);
 
   // Initialize components
-  const database = new SQLiteDatabase('./in-memoria.db');
+  const database = new SQLiteDatabase(config.getDatabasePath(path));
   const vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
   const semanticEngine = new SemanticEngine(database, vectorDB);
   const patternEngine = new PatternEngine(database);
@@ -158,7 +159,7 @@ async function startWatcher(path: string): Promise<void> {
 async function learnCodebase(path: string): Promise<void> {
   console.log(`Learning from codebase: ${path}`);
 
-  const database = new SQLiteDatabase('./in-memoria.db');
+  const database = new SQLiteDatabase(config.getDatabasePath(path));
   const vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
   const semanticEngine = new SemanticEngine(database, vectorDB);
   const patternEngine = new PatternEngine(database);
@@ -197,7 +198,7 @@ async function learnCodebase(path: string): Promise<void> {
 async function analyzeCodebase(path: string): Promise<void> {
   console.log(`Analyzing codebase: ${path}`);
 
-  const database = new SQLiteDatabase('./in-memoria.db');
+  const database = new SQLiteDatabase(config.getDatabasePath(path));
   const vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
   const semanticEngine = new SemanticEngine(database, vectorDB);
   const patternEngine = new PatternEngine(database);

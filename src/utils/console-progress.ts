@@ -48,30 +48,52 @@ export class ConsoleProgressRenderer {
   private render(): void {
     if (!this.isActive) return;
 
-    // Clear previous lines
-    if (this.currentLines > 0) {
-      process.stdout.write(`\x1b[${this.currentLines}A`); // Move cursor up
-      process.stdout.write('\x1b[J'); // Clear from cursor down
-    }
+    const isMCPMode = process.env.MCP_SERVER === 'true';
+    
+    if (isMCPMode) {
+      // In MCP mode, send simple ASCII progress to stdout
+      const lines = this.tracker.getConsoleStatus();
+      for (const line of lines) {
+        console.log(line);
+      }
+    } else {
+      // Normal mode with ANSI codes for terminal
+      // Clear previous lines
+      if (this.currentLines > 0) {
+        process.stdout.write(`\x1b[${this.currentLines}A`); // Move cursor up
+        process.stdout.write('\x1b[J'); // Clear from cursor down
+      }
 
-    const lines = this.tracker.getConsoleStatus();
-    this.currentLines = lines.length;
+      const lines = this.tracker.getConsoleStatus();
+      this.currentLines = lines.length;
 
-    for (const line of lines) {
-      console.log(line);
+      for (const line of lines) {
+        console.log(line);
+      }
     }
   }
 
   private renderFinal(): void {
-    // Clear previous lines
-    if (this.currentLines > 0) {
-      process.stdout.write(`\x1b[${this.currentLines}A`);
-      process.stdout.write('\x1b[J');
-    }
+    const isMCPMode = process.env.MCP_SERVER === 'true';
+    
+    if (isMCPMode) {
+      // In MCP mode, send final message to stdout
+      const overall = this.tracker.getProgress();
+      if (overall) {
+        console.log(`✅ All operations completed in ${this.formatElapsed(overall.elapsed)}`);
+      }
+    } else {
+      // Normal mode with ANSI codes
+      // Clear previous lines
+      if (this.currentLines > 0) {
+        process.stdout.write(`\x1b[${this.currentLines}A`);
+        process.stdout.write('\x1b[J');
+      }
 
-    const overall = this.tracker.getProgress();
-    if (overall) {
-      console.log(`✅ All operations completed in ${this.formatElapsed(overall.elapsed)}`);
+      const overall = this.tracker.getProgress();
+      if (overall) {
+        console.log(`✅ All operations completed in ${this.formatElapsed(overall.elapsed)}`);
+      }
     }
   }
 
@@ -92,7 +114,12 @@ export class ConsoleProgressRenderer {
     const filled = Math.floor(percentage * width);
     const empty = width - filled;
     
-    const bar = '█'.repeat(filled) + '░'.repeat(empty);
+    // Use ASCII characters in MCP mode, Unicode in terminal mode
+    const isMCPMode = process.env.MCP_SERVER === 'true';
+    const bar = isMCPMode 
+      ? '='.repeat(filled) + '-'.repeat(empty)  // ASCII: [====----] 
+      : '█'.repeat(filled) + '░'.repeat(empty); // Unicode: [████░░░░]
+    
     const percent = (percentage * 100).toFixed(1);
     const baseText = `[${bar}] ${percent}% (${current}/${total})`;
     

@@ -128,3 +128,5 @@ docs/GENERATED_*.md
 
 # Claude configuration
 .claude/
+
+wiki/

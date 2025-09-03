@@ -214,6 +214,9 @@ export class CodeCartographerMCP {
   }
 
   async start(): Promise<void> {
+    // Set environment variable to indicate MCP server mode
+    process.env.MCP_SERVER = 'true';
+    
     await this.initializeComponents();
 
     const transport = new StdioServerTransport();

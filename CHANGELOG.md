@@ -5,6 +5,17 @@ All notable changes to In Memoria will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### ✅ Fixed
+
+#### 🗄️ Database Location & MCP Progress Output
+- **Database path fixed in CLI commands** - Learning, analysis, and watch commands now correctly place database files in the analyzed project directory instead of current working directory
+- **MCP server progress output improved** - Fixed "Failed to parse message" warnings when using progress bars
+  - ASCII progress bars `[====----] 42.0%` in MCP mode instead of Unicode blocks
+  - Removed ANSI escape codes from MCP server output to prevent JSON parsing conflicts
+  - Progress information now cleanly visible in MCP logs without parsing errors
+
 ## [0.4.3] - 2025-08-30
 
 ### 🔧 Code Quality & Reliability Improvements
