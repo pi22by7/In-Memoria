@@ -28,12 +28,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Prevents terminal spam when processing large codebases with many concepts
   - Added debug logging for SQL file processing to help diagnose parsing issues
 
-#### 🐛 SQL Concept Extraction Fixed
+#### 🐛 SQL Concept Extraction Enhanced
 - **Fixed SQL files reporting 0 concepts learned** - Resolved issue where SQL Server Database Projects weren't being analyzed
   - Fixed SQL node type matching in tree-sitter parser (was expecting `"create_table_statement"` but parser generates `"create_table"`)
   - SQL files now properly extract table, view, and procedure concepts
   - Verified working with SQL Server bracket notation syntax `[dbo].[TableName]`
-  - Added comprehensive SQL concept extraction support
+- **Enhanced SQL concept extraction** - Improved extraction accuracy and coverage
+  - Added specialized table name extraction from `object_reference` nodes
+  - Added column concept extraction from `column_definition` nodes  
+  - Enhanced identifier extraction to handle complex SQL Server syntax
+  - Improved from 2 to 11 concepts extracted from the test SQL file
 
 
 ## [0.4.3] - 2025-08-30
