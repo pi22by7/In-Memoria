@@ -5,6 +5,105 @@ All notable changes to In Memoria will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6] - 2025-09-06
+
+### 🐛 **Fixed**
+
+#### 🔧 **Pattern Learning Performance & Stability**
+- **Fixed CPU consumption issue** in pattern learning that caused "Learning coding patterns..." to hang
+- **Added timeout protection** (60 second limit) to prevent infinite processing on large codebases
+- **Reduced file processing limit** from 1000 to 100 files for initial learning to improve performance
+- **Added depth limits** (`max_depth(5)` for concept extraction, `max_depth(3)` for directory analysis)
+- **Restored proper file filtering** from backup implementation using `should_analyze_file()`
+- **Added pattern quality thresholds** (minimum frequency: 3 for naming patterns, 2 for others)
+- **Restored directory structure analysis** that properly uses `is_ignored_directory()` method
+- **Enhanced directory filtering** to skip `node_modules`, `.git`, `target`, `dist`, `build`, `.next`, `__pycache__`, `coverage`, `.vscode`, `.idea`
+
+### 🔧 **Changed**
+
+#### ⚡ **Performance Optimizations**
+- **Bounded file processing** with proper timeout and limits to prevent resource exhaustion
+- **Smarter pattern consolidation** with quality filtering to reduce noise and improve accuracy
+- **Efficient directory traversal** with depth limiting to avoid deep recursion
+
+## [0.4.5] - 2025-09-05
+
+### 🏗️ **Major Architecture Refactor - Modular Code Structure**
+
+Complete transformation from monolithic codebase to a clean, modular architecture focusing on maintainability, code quality, and developer experience.
+
+### ✨ **Added**
+
+#### 🔧 **Modular Architecture Implementation**
+- **Complete modular restructuring** - Transformed monolithic 4,869-line codebase into organized 33-file modular architecture
+  - `analysis/` - Semantic analysis, complexity metrics, relationship learning, framework detection
+  - `extractors/` - Language-specific concept extraction (SQL, general fallback)  
+  - `parsing/` - AST parsing, tree walking, parser management
+  - `patterns/` - Pattern learning, naming analysis, structural analysis, implementation detection, approach prediction
+  - `types/` - Core type definitions and shared interfaces
+- **Backwards compatibility maintained** - All existing public APIs preserved via re-exports
+- **Enhanced functionality** - Each module now includes comprehensive implementations previously marked as TODOs
+
+#### 🎯 **Enhanced Pattern Learning & Analysis**
+- **Historical approach learning** - Uses `problem_description`, `complexity`, and `success_rating` for intelligent template scoring
+- **Context-aware recommendations** - Domain-specific architectural advice (enterprise, prototype, real-time systems)
+- **Timeline-sensitive selection** - Different approaches for urgent vs long-term projects  
+- **Maintainability-driven scoring** - Adjusts recommendations based on maintenance requirements
+- **Session-based analytics** - Tracks `session_id` and `files_analyzed` for learning metrics
+
+#### 📊 **Improved Code Quality & Analysis**
+- **Comprehensive structural analysis** - Enhanced file metrics using `max_concepts_per_file` and `total_files`
+- **Depth-aware pattern detection** - Directory depth influences architectural pattern confidence scoring
+- **Optional method pattern matching** - Boosts confidence scores when optional design pattern methods are found
+- **Complexity-aware template selection** - Historical complexity data influences approach recommendations
+
+### 🔧 **Changed**
+
+#### 📁 **File Organization**
+- **Migrated from monolithic files**:
+  - `ast_parser.rs` (698 lines) → `parsing/` module with clean separation
+  - `pattern_learning.rs` (2,121 lines) → `patterns/` module with specialized analyzers  
+  - `semantic.rs` (2,001 lines) → `analysis/` module with focused responsibilities
+- **Modular exports** - Clean module boundaries with well-defined public interfaces
+- **Type organization** - Core types centralized in `types/` module
+
+#### 🧹 **Code Quality Improvements**
+- **Zero clippy warnings** - Passes `cargo clippy -- -D warnings` (treats warnings as errors)
+- **Enhanced functionality over suppression** - All dead code warnings resolved through complete feature implementation
+- **Idiomatic Rust patterns** - Uses `clamp()` instead of manual min/max chains
+- **Proper borrowing patterns** - Resolved HashMap iteration conflicts with clean ownership
+
+### ✅ **Fixed**
+
+#### 🚨 **Compilation & Linting**
+- **Complete clippy compliance** - Eliminated all warnings through functional completion rather than suppression
+- **Missing struct fields** - Added and implemented `ApproachTemplate.confidence` and `ApproachTemplate.patterns`
+- **Duplicate method definitions** - Resolved conflicts in `StructuralPatternAnalyzer`
+- **Import organization** - Cleaned up unused imports while maintaining necessary dependencies
+- **Numeric type ambiguity** - Fixed floating-point type inference with explicit annotations
+
+#### 🏗️ **Architecture Issues**  
+- **Backwards compatibility** - `AstParser` alias maintains API compatibility during transition
+- **Missing method implementations** - All placeholder methods now fully functional
+- **Dead code elimination** - Every struct field now actively used in business logic
+- **Borrowing conflicts** - Clean separation of mutable and immutable references
+
+### 📈 **Performance & Reliability**
+
+#### ⚡ **Enhanced Algorithms**
+- **Improved similarity calculation** - Problem-description matching with approach alignment scoring
+- **Smarter template confidence** - Multi-factor scoring including complexity, domain, timeline, and maintainability
+- **Better pattern consolidation** - Enhanced validation and deduplication of discovered patterns
+- **Optimized file analysis** - Efficient tracking of unique files and concepts during learning sessions
+
+#### 🔍 **Better Analysis Quality**
+- **Domain-specific multipliers** - Architecture recommendations tailored to enterprise, prototype, real-time domains
+- **Complexity-driven adjustments** - Historical success patterns influence future template confidence
+- **Timeline-aware suggestions** - Urgent projects favor simpler patterns, long-term projects favor maintainable architectures
+- **Enhanced structural metrics** - File organization recommendations using comprehensive metrics
+
+---
+
 ## [0.4.4] - 2025-09-03
 
 ### ✅ Fixed

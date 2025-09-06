@@ -508,7 +508,15 @@ if (!nativeBinding) {
 }
 
 module.exports = nativeBinding
-module.exports.AstParser = nativeBinding.AstParser
+module.exports.ApproachPredictor = nativeBinding.ApproachPredictor
+module.exports.ComplexityAnalyzer = nativeBinding.ComplexityAnalyzer
+module.exports.FrameworkDetector = nativeBinding.FrameworkDetector
+module.exports.ImplementationPatternAnalyzer = nativeBinding.ImplementationPatternAnalyzer
+module.exports.NamingPatternAnalyzer = nativeBinding.NamingPatternAnalyzer
+module.exports.ParserManager = nativeBinding.ParserManager
 module.exports.PatternLearner = nativeBinding.PatternLearner
+module.exports.PatternLearningEngine = nativeBinding.PatternLearningEngine
+module.exports.RelationshipLearner = nativeBinding.RelationshipLearner
 module.exports.SemanticAnalyzer = nativeBinding.SemanticAnalyzer
+module.exports.StructuralPatternAnalyzer = nativeBinding.StructuralPatternAnalyzer
 module.exports.initCore = nativeBinding.initCore
