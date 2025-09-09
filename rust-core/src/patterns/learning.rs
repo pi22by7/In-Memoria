@@ -3,16 +3,18 @@
 #[cfg(feature = "napi-bindings")]
 use napi_derive::napi;
 
-use crate::patterns::types::{Pattern, PatternLearner as PatternLearnerTrait, PatternAnalysisResult};
-use crate::patterns::naming::NamingPatternAnalyzer;
-use crate::patterns::structural::StructuralPatternAnalyzer;
 use crate::patterns::implementation::ImplementationPatternAnalyzer;
+use crate::patterns::naming::NamingPatternAnalyzer;
 use crate::patterns::prediction::ApproachPredictor;
+use crate::patterns::structural::StructuralPatternAnalyzer;
+use crate::patterns::types::{
+    Pattern, PatternAnalysisResult, PatternLearner as PatternLearnerTrait,
+};
 use crate::types::{ParseError, SemanticConcept};
+use serde_json::{from_str, Value};
 use std::collections::{HashMap, HashSet};
-use serde_json::{Value, from_str};
-use walkdir::WalkDir;
 use std::fs;
+use walkdir::WalkDir;
 
 /// Core learning engine that orchestrates pattern discovery across all domains
 #[cfg_attr(feature = "napi-bindings", napi)]
@@ -48,17 +50,17 @@ struct LearningSession {
 pub struct PatternEvolution {
     pub pattern_id: String,
     pub confidence_history: Vec<(String, f64)>, // timestamp, confidence
-    pub frequency_history: Vec<(String, u32)>,   // timestamp, frequency
+    pub frequency_history: Vec<(String, u32)>,  // timestamp, frequency
     pub evolution_trend: EvolutionTrend,
 }
 
 #[derive(Debug, Clone)]
 pub enum EvolutionTrend {
-    Improving,    // Confidence/frequency increasing
-    Stable,       // Confidence/frequency stable
-    Declining,    // Confidence/frequency decreasing
-    Emerging,     // New pattern
-    Deprecated,   // Pattern no longer seen
+    Improving,  // Confidence/frequency increasing
+    Stable,     // Confidence/frequency stable
+    Declining,  // Confidence/frequency decreasing
+    Emerging,   // New pattern
+    Deprecated, // Pattern no longer seen
 }
 
 #[cfg_attr(feature = "napi-bindings", napi)]
@@ -83,15 +85,24 @@ impl PatternLearningEngine {
     }
 
     /// Learn patterns from an entire codebase
-    /// 
+    ///
     /// # Safety
     /// This function is marked unsafe for NAPI compatibility. It performs file system operations
     /// and pattern analysis that are inherently safe but marked unsafe for JavaScript interop.
     #[cfg_attr(feature = "napi-bindings", napi)]
-    pub async unsafe fn learn_from_codebase(&mut self, path: String) -> Result<Vec<Pattern>, ParseError> {
+    pub async unsafe fn learn_from_codebase(
+        &mut self,
+        path: String,
+    ) -> Result<Vec<Pattern>, ParseError> {
         let session_start = std::time::Instant::now();
         let mut session = LearningSession {
-            session_id: format!("session_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()),
+            session_id: format!(
+                "session_{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+            ),
             patterns_discovered: Vec::new(),
             analysis_duration_ms: 0,
             files_analyzed: 0,
@@ -101,11 +112,10 @@ impl PatternLearningEngine {
         // Phase 1: Collect semantic concepts from the codebase
         let concepts = self.extract_semantic_concepts(&path).await?;
         session.concepts_analyzed = concepts.len();
-        
+
         // Count unique files analyzed
-        let unique_files: std::collections::HashSet<_> = concepts.iter()
-            .map(|c| &c.file_path)
-            .collect();
+        let unique_files: std::collections::HashSet<_> =
+            concepts.iter().map(|c| &c.file_path).collect();
         session.files_analyzed = unique_files.len();
 
         // Phase 2: Learn naming patterns
@@ -121,7 +131,8 @@ impl PatternLearningEngine {
         session.patterns_discovered.extend(implementation_patterns);
 
         // Phase 5: Update approach predictor with new patterns
-        self.approach_predictor.update_patterns(session.patterns_discovered.clone());
+        self.approach_predictor
+            .update_patterns(session.patterns_discovered.clone());
 
         // Phase 6: Consolidate and validate patterns
         let patterns_for_validation = session.patterns_discovered.clone();
@@ -133,34 +144,46 @@ impl PatternLearningEngine {
 
         // Store learned patterns
         for pattern in &validated_patterns {
-            self.learned_patterns.insert(pattern.id.clone(), pattern.clone());
+            self.learned_patterns
+                .insert(pattern.id.clone(), pattern.clone());
         }
 
         Ok(validated_patterns)
     }
 
     /// Learn from file changes (incremental learning)
-    /// 
+    ///
     /// # Safety
     /// This function is marked unsafe for NAPI compatibility. It performs pattern analysis
     /// operations that are inherently safe but marked unsafe for JavaScript interop.
     #[cfg_attr(feature = "napi-bindings", napi)]
-    pub async unsafe fn learn_from_changes(&mut self, old_content: String, new_content: String, file_path: String, language: String) -> Result<Vec<Pattern>, ParseError> {
+    pub async unsafe fn learn_from_changes(
+        &mut self,
+        old_content: String,
+        new_content: String,
+        file_path: String,
+        language: String,
+    ) -> Result<Vec<Pattern>, ParseError> {
         let mut new_patterns = Vec::new();
 
         // Learn naming pattern changes
-        let naming_changes = self.naming_analyzer.learn_from_changes(&old_content, &new_content, &language)?;
+        let naming_changes =
+            self.naming_analyzer
+                .learn_from_changes(&old_content, &new_content, &language)?;
         new_patterns.extend(naming_changes);
 
         // Learn structural changes (simplified - would need AST diff in practice)
         if self.has_structural_changes(&old_content, &new_content) {
-            let structural_changes = self.learn_structural_changes(&old_content, &new_content, &file_path).await?;
+            let structural_changes = self
+                .learn_structural_changes(&old_content, &new_content, &file_path)
+                .await?;
             new_patterns.extend(structural_changes);
         }
 
         // Update internal state
         for pattern in &new_patterns {
-            self.learned_patterns.insert(pattern.id.clone(), pattern.clone());
+            self.learned_patterns
+                .insert(pattern.id.clone(), pattern.clone());
         }
 
         // Use helper methods for additional learning
@@ -171,7 +194,8 @@ impl PatternLearningEngine {
         // Boost confidence for related patterns when we find successful patterns
         if !new_patterns.is_empty() {
             let primary_concept = self.extract_primary_concept(&new_patterns);
-            self.boost_related_pattern_confidence(&primary_concept, 0.05).await?;
+            self.boost_related_pattern_confidence(&primary_concept, 0.05)
+                .await?;
         }
 
         // Update learning metrics
@@ -181,18 +205,22 @@ impl PatternLearningEngine {
     }
 
     /// Learn from analysis data (JSON format)
-    /// 
+    ///
     /// # Safety
     /// This function is marked unsafe for NAPI compatibility. It performs data parsing and
     /// learning operations that are inherently safe but marked unsafe for JavaScript interop.
     #[cfg_attr(feature = "napi-bindings", napi)]
-    pub async unsafe fn learn_from_analysis(&mut self, analysis_data: String) -> Result<bool, ParseError> {
-        let data: Value = from_str(&analysis_data)
-            .map_err(|e| ParseError::from_reason(format!("Failed to parse analysis data: {}", e)))?;
+    pub async unsafe fn learn_from_analysis(
+        &mut self,
+        analysis_data: String,
+    ) -> Result<bool, ParseError> {
+        let data: Value = from_str(&analysis_data).map_err(|e| {
+            ParseError::from_reason(format!("Failed to parse analysis data: {}", e))
+        })?;
 
         // Extract concepts from analysis data
         let concepts = self.parse_concepts_from_analysis(&data)?;
-        
+
         // Also try to parse any existing patterns in the data
         if let Some(patterns_array) = data.get("patterns").and_then(|p| p.as_array()) {
             for pattern_json in patterns_array {
@@ -201,12 +229,21 @@ impl PatternLearningEngine {
                 }
             }
         }
-        
+
         if !concepts.is_empty() {
             // Learn patterns from the concepts
-            let naming_patterns = self.naming_analyzer.analyze_concepts(&concepts, "mixed").unwrap_or_default();
-            let mut implementation_patterns = self.implementation_analyzer.analyze_concepts(&concepts).unwrap_or_default();
-            let structural_patterns = self.structural_analyzer.analyze_concept_structures(&concepts).unwrap_or_default();
+            let naming_patterns = self
+                .naming_analyzer
+                .analyze_concepts(&concepts, "mixed")
+                .unwrap_or_default();
+            let mut implementation_patterns = self
+                .implementation_analyzer
+                .analyze_concepts(&concepts)
+                .unwrap_or_default();
+            let structural_patterns = self
+                .structural_analyzer
+                .analyze_concept_structures(&concepts)
+                .unwrap_or_default();
 
             // Combine all patterns
             let mut all_patterns = naming_patterns;
@@ -225,13 +262,15 @@ impl PatternLearningEngine {
             // Update predictor with historical approach data if available
             if let Some(approaches) = data.get("approaches") {
                 if let Ok(approach_data) = serde_json::to_string(approaches) {
-                    let _ = self.approach_predictor.learn_from_approaches(&approach_data);
+                    let _ = self
+                        .approach_predictor
+                        .learn_from_approaches(&approach_data);
                 }
             }
 
             // Update metrics
             self.learning_metrics.total_patterns_learned += learned_count;
-            
+
             Ok(learned_count > 0)
         } else {
             Ok(false)
@@ -240,40 +279,49 @@ impl PatternLearningEngine {
 
     /// Get comprehensive analysis of learned patterns
     #[cfg_attr(feature = "napi-bindings", napi)]
-    pub fn analyze_patterns(&self, concepts: Vec<SemanticConcept>) -> Result<PatternAnalysisResult, ParseError> {
+    pub fn analyze_patterns(
+        &self,
+        concepts: Vec<SemanticConcept>,
+    ) -> Result<PatternAnalysisResult, ParseError> {
         let mut detected = Vec::new();
         let mut violations = Vec::new();
         let mut recommendations = Vec::new();
 
         // Analyze with each specialized analyzer
-        
+
         // Naming analysis
         let naming_violations = self.naming_analyzer.detect_violations(&concepts, "mixed");
         violations.extend(naming_violations);
-        
+
         let naming_recommendations = self.naming_analyzer.generate_recommendations("mixed");
         recommendations.extend(naming_recommendations);
 
         // Structural analysis
-        let structural_violations = self.structural_analyzer.detect_structural_violations(&concepts);
+        let structural_violations = self
+            .structural_analyzer
+            .detect_structural_violations(&concepts);
         violations.extend(structural_violations);
 
-        let structural_recommendations = self.structural_analyzer.generate_structural_recommendations(&concepts);
+        let structural_recommendations = self
+            .structural_analyzer
+            .generate_structural_recommendations(&concepts);
         recommendations.extend(structural_recommendations);
 
         // Implementation analysis
         let implementation_violations = self.implementation_analyzer.detect_antipatterns(&concepts);
         violations.extend(implementation_violations);
 
-        let implementation_recommendations = self.implementation_analyzer.generate_recommendations(&concepts);
+        let implementation_recommendations = self
+            .implementation_analyzer
+            .generate_recommendations(&concepts);
         recommendations.extend(implementation_recommendations);
 
         // Detected patterns
         for pattern in self.learned_patterns.values() {
-            detected.push(format!("{}: {} (confidence: {:.2})", 
-                pattern.pattern_type, 
-                pattern.description, 
-                pattern.confidence));
+            detected.push(format!(
+                "{}: {} (confidence: {:.2})",
+                pattern.pattern_type, pattern.description, pattern.confidence
+            ));
         }
 
         Ok(PatternAnalysisResult {
@@ -286,8 +334,13 @@ impl PatternLearningEngine {
 
     /// Predict best approach for a problem
     #[cfg_attr(feature = "napi-bindings", napi)]
-    pub fn predict_approach(&self, problem_description: String, context: Option<String>) -> Result<crate::patterns::types::ApproachPrediction, ParseError> {
-        self.approach_predictor.predict_approach(problem_description, context)
+    pub fn predict_approach(
+        &self,
+        problem_description: String,
+        context: Option<String>,
+    ) -> Result<crate::patterns::types::ApproachPrediction, ParseError> {
+        self.approach_predictor
+            .predict_approach(problem_description, context)
     }
 
     /// Get learning metrics and statistics
@@ -336,19 +389,24 @@ impl PatternLearningEngine {
         self.learned_patterns.contains_key(id)
     }
 
-
     /// Updates patterns based on file changes (from original implementation)
     ///
     /// # Safety
     /// This function uses unsafe because it needs to interact with the Node.js runtime
     /// through N-API bindings. The caller must ensure the change data is valid JSON.
     #[cfg_attr(feature = "napi-bindings", napi)]
-    pub async unsafe fn update_from_change(&mut self, change_data: String) -> Result<bool, ParseError> {
+    pub async unsafe fn update_from_change(
+        &mut self,
+        change_data: String,
+    ) -> Result<bool, ParseError> {
         self.update_from_change_internal(change_data).await
     }
 
     /// Internal implementation for updating patterns from file changes (from original implementation)
-    pub async fn update_from_change_internal(&mut self, change_data: String) -> Result<bool, ParseError> {
+    pub async fn update_from_change_internal(
+        &mut self,
+        change_data: String,
+    ) -> Result<bool, ParseError> {
         // Parse the change data JSON
         let change: Value = match from_str(&change_data) {
             Ok(data) => data,
@@ -430,7 +488,8 @@ impl PatternLearningEngine {
                 examples: vec![],
                 contexts: vec!["learned".to_string()],
             };
-            self.learned_patterns.insert(new_pattern.id.clone(), new_pattern);
+            self.learned_patterns
+                .insert(new_pattern.id.clone(), new_pattern);
             Ok(true)
         }
     }
@@ -497,10 +556,7 @@ impl PatternLearningEngine {
     }
 
     /// Helper method to parse pattern from JSON (from original implementation)
-    fn parse_pattern_from_json(
-        &self,
-        json: &Value,
-    ) -> Result<Pattern, serde_json::Error> {
+    fn parse_pattern_from_json(&self, json: &Value) -> Result<Pattern, serde_json::Error> {
         // Extract pattern fields from JSON
         let id = json
             .get("id")
@@ -561,7 +617,10 @@ impl PatternLearningEngine {
     }
 
     /// Helper method to parse example from JSON (from original implementation)
-    fn parse_example_from_json(&self, json: &Value) -> Option<crate::patterns::types::PatternExample> {
+    fn parse_example_from_json(
+        &self,
+        json: &Value,
+    ) -> Option<crate::patterns::types::PatternExample> {
         let code = json.get("code")?.as_str()?.to_string();
         let file_path = json
             .get("filePath")
@@ -614,7 +673,10 @@ impl PatternLearningEngine {
     }
 
     /// Private helper methods
-    async fn extract_semantic_concepts(&self, path: &str) -> Result<Vec<SemanticConcept>, ParseError> {
+    async fn extract_semantic_concepts(
+        &self,
+        path: &str,
+    ) -> Result<Vec<SemanticConcept>, ParseError> {
         let mut concepts = Vec::new();
         let mut file_count = 0;
         let start_time = std::time::Instant::now();
@@ -623,26 +685,34 @@ impl PatternLearningEngine {
         for entry in WalkDir::new(path)
             .max_depth(5) // Limit directory traversal depth
             .into_iter()
-            .filter_map(|e| e.ok()) 
+            .filter_map(|e| e.ok())
         {
             // Check timeout
             if start_time.elapsed() > timeout {
-                eprintln!("Timeout reached during concept extraction after {} files", file_count);
+                eprintln!(
+                    "Timeout reached during concept extraction after {} files",
+                    file_count
+                );
                 break;
             }
 
-            if entry.file_type().is_file() && file_count < 100 { // Reduced limit for performance
+            if entry.file_type().is_file() && file_count < 100 {
+                // Reduced limit for performance
                 let file_path = entry.path();
-                
+
                 // Add proper file filtering
                 if !self.should_analyze_file(file_path) {
                     continue;
                 }
-                
+
                 if let Some(extension) = file_path.extension().and_then(|s| s.to_str()) {
                     if self.is_supported_extension(extension) {
                         if let Ok(content) = fs::read_to_string(file_path) {
-                            let file_concepts = self.extract_concepts_from_file(&content, file_path.to_string_lossy().as_ref(), extension)?;
+                            let file_concepts = self.extract_concepts_from_file(
+                                &content,
+                                file_path.to_string_lossy().as_ref(),
+                                extension,
+                            )?;
                             concepts.extend(file_concepts);
                             file_count += 1;
                         }
@@ -654,7 +724,12 @@ impl PatternLearningEngine {
         Ok(concepts)
     }
 
-    fn extract_concepts_from_file(&self, content: &str, file_path: &str, extension: &str) -> Result<Vec<SemanticConcept>, ParseError> {
+    fn extract_concepts_from_file(
+        &self,
+        content: &str,
+        file_path: &str,
+        extension: &str,
+    ) -> Result<Vec<SemanticConcept>, ParseError> {
         // This would use the semantic analyzer from the main codebase
         // For now, return a simplified extraction
         let mut concepts = Vec::new();
@@ -671,7 +746,9 @@ impl PatternLearningEngine {
         // Simple regex-based concept extraction (in practice, would use tree-sitter)
         let lines: Vec<&str> = content.lines().collect();
         for (line_num, line) in lines.iter().enumerate() {
-            if let Some(concept) = self.extract_concept_from_line(line, file_path, line_num as u32 + 1, language) {
+            if let Some(concept) =
+                self.extract_concept_from_line(line, file_path, line_num as u32 + 1, language)
+            {
                 concepts.push(concept);
             }
         }
@@ -679,12 +756,22 @@ impl PatternLearningEngine {
         Ok(concepts)
     }
 
-    fn extract_concept_from_line(&self, line: &str, file_path: &str, line_num: u32, language: &str) -> Option<SemanticConcept> {
+    fn extract_concept_from_line(
+        &self,
+        line: &str,
+        file_path: &str,
+        line_num: u32,
+        language: &str,
+    ) -> Option<SemanticConcept> {
         let trimmed = line.trim();
-        
+
         // Function detection patterns
         let function_patterns = match language {
-            "javascript" | "typescript" => vec![r"function\s+(\w+)", r"const\s+(\w+)\s*=.*=>", r"(\w+)\s*:\s*\([^)]*\)\s*=>"],
+            "javascript" | "typescript" => vec![
+                r"function\s+(\w+)",
+                r"const\s+(\w+)\s*=.*=>",
+                r"(\w+)\s*:\s*\([^)]*\)\s*=>",
+            ],
             "rust" => vec![r"fn\s+(\w+)", r"pub\s+fn\s+(\w+)"],
             "python" => vec![r"def\s+(\w+)"],
             "java" => vec![r"public\s+.*\s+(\w+)\s*\(", r"private\s+.*\s+(\w+)\s*\("],
@@ -711,7 +798,10 @@ impl PatternLearningEngine {
                             concept_type: "function".to_string(),
                             confidence: 0.8,
                             file_path: file_path.to_string(),
-                            line_range: crate::types::LineRange { start: line_num, end: line_num },
+                            line_range: crate::types::LineRange {
+                                start: line_num,
+                                end: line_num,
+                            },
                             relationships: HashMap::new(),
                             metadata: HashMap::new(),
                         });
@@ -731,7 +821,10 @@ impl PatternLearningEngine {
                             concept_type: "class".to_string(),
                             confidence: 0.9,
                             file_path: file_path.to_string(),
-                            line_range: crate::types::LineRange { start: line_num, end: line_num },
+                            line_range: crate::types::LineRange {
+                                start: line_num,
+                                end: line_num,
+                            },
                             relationships: HashMap::new(),
                             metadata: HashMap::new(),
                         });
@@ -744,8 +837,21 @@ impl PatternLearningEngine {
     }
 
     fn is_supported_extension(&self, extension: &str) -> bool {
-        matches!(extension.to_lowercase().as_str(), 
-            "js" | "jsx" | "ts" | "tsx" | "rs" | "py" | "java" | "cpp" | "c" | "cs" | "go" | "rb" | "php")
+        matches!(
+            extension.to_lowercase().as_str(),
+            "js" | "jsx"
+                | "ts"
+                | "tsx"
+                | "rs"
+                | "py"
+                | "java"
+                | "cpp"
+                | "c"
+                | "cs"
+                | "go"
+                | "rb"
+                | "php"
+        )
     }
 
     fn should_analyze_file(&self, file_path: &std::path::Path) -> bool {
@@ -776,14 +882,27 @@ impl PatternLearningEngine {
     fn is_ignored_directory(&self, dir_name: &str) -> bool {
         matches!(
             dir_name,
-            "node_modules" | ".git" | "target" | "dist" | "build" | ".next" | "__pycache__" | "coverage" | ".vscode" | ".idea"
+            "node_modules"
+                | ".git"
+                | "target"
+                | "dist"
+                | "build"
+                | ".next"
+                | "__pycache__"
+                | "coverage"
+                | ".vscode"
+                | ".idea"
         )
     }
 
-    async fn learn_naming_patterns(&mut self, concepts: &[SemanticConcept], _path: &str) -> Result<Vec<Pattern>, ParseError> {
+    async fn learn_naming_patterns(
+        &mut self,
+        concepts: &[SemanticConcept],
+        _path: &str,
+    ) -> Result<Vec<Pattern>, ParseError> {
         // Group concepts by language for better analysis
         let mut language_groups: HashMap<String, Vec<&SemanticConcept>> = HashMap::new();
-        
+
         for concept in concepts {
             let language = self.detect_language_from_path(&concept.file_path);
             language_groups.entry(language).or_default().push(concept);
@@ -792,26 +911,34 @@ impl PatternLearningEngine {
         let mut all_patterns = Vec::new();
         for (language, group_concepts) in language_groups {
             let concept_refs: Vec<_> = group_concepts.into_iter().cloned().collect();
-            let patterns = self.naming_analyzer.analyze_concepts(&concept_refs, &language)?;
+            let patterns = self
+                .naming_analyzer
+                .analyze_concepts(&concept_refs, &language)?;
             all_patterns.extend(patterns);
         }
 
         Ok(all_patterns)
     }
 
-    async fn learn_structural_patterns(&mut self, concepts: &[SemanticConcept], path: &str) -> Result<Vec<Pattern>, ParseError> {
+    async fn learn_structural_patterns(
+        &mut self,
+        concepts: &[SemanticConcept],
+        path: &str,
+    ) -> Result<Vec<Pattern>, ParseError> {
         let mut patterns = Vec::new();
-        
+
         // Analyze directory structure (from backup implementation)
         let directory_structure = self.analyze_directory_structure(path)?;
         patterns.extend(directory_structure);
-        
+
         // Learn from codebase structure
         let structure_patterns = self.structural_analyzer.analyze_codebase_structure(path)?;
         patterns.extend(structure_patterns);
 
         // Learn from concept relationships
-        let concept_patterns = self.structural_analyzer.analyze_concept_structures(concepts)?;
+        let concept_patterns = self
+            .structural_analyzer
+            .analyze_concept_structures(concepts)?;
         patterns.extend(concept_patterns);
 
         Ok(patterns)
@@ -837,7 +964,14 @@ impl PatternLearningEngine {
 
         // Common patterns from backup
         let common_dirs = vec![
-            "src", "lib", "components", "utils", "services", "types", "models", "controllers",
+            "src",
+            "lib",
+            "components",
+            "utils",
+            "services",
+            "types",
+            "models",
+            "controllers",
         ];
         let mut found_patterns = Vec::new();
 
@@ -865,7 +999,11 @@ impl PatternLearningEngine {
         Ok(patterns)
     }
 
-    async fn learn_implementation_patterns(&mut self, concepts: &[SemanticConcept], path: &str) -> Result<Vec<Pattern>, ParseError> {
+    async fn learn_implementation_patterns(
+        &mut self,
+        concepts: &[SemanticConcept],
+        path: &str,
+    ) -> Result<Vec<Pattern>, ParseError> {
         let mut patterns = Vec::new();
 
         // Learn from concepts
@@ -879,17 +1017,29 @@ impl PatternLearningEngine {
         Ok(patterns)
     }
 
-    fn validate_and_consolidate_patterns(&self, patterns: Vec<Pattern>) -> Result<Vec<Pattern>, ParseError> {
+    fn validate_and_consolidate_patterns(
+        &self,
+        patterns: Vec<Pattern>,
+    ) -> Result<Vec<Pattern>, ParseError> {
         let mut consolidated: HashMap<String, Pattern> = HashMap::new();
         let mut pattern_groups: HashMap<String, Vec<Pattern>> = HashMap::new();
 
         // Group similar patterns with quality thresholds
         for pattern in patterns {
             // Apply quality thresholds from old implementation
-            let min_frequency = if pattern.pattern_type.contains("naming") { 3 } else { 2 };
-            
-            if pattern.confidence >= self.confidence_threshold && pattern.frequency >= min_frequency {
-                let group_key = format!("{}_{}", pattern.pattern_type, self.normalize_description(&pattern.description));
+            let min_frequency = if pattern.pattern_type.contains("naming") {
+                3
+            } else {
+                2
+            };
+
+            if pattern.confidence >= self.confidence_threshold && pattern.frequency >= min_frequency
+            {
+                let group_key = format!(
+                    "{}_{}",
+                    pattern.pattern_type,
+                    self.normalize_description(&pattern.description)
+                );
                 pattern_groups.entry(group_key).or_default().push(pattern);
             }
         }
@@ -909,7 +1059,8 @@ impl PatternLearningEngine {
     }
 
     fn normalize_description(&self, description: &str) -> String {
-        description.to_lowercase()
+        description
+            .to_lowercase()
             .chars()
             .filter(|c| c.is_alphanumeric() || c.is_whitespace())
             .collect::<String>()
@@ -926,7 +1077,8 @@ impl PatternLearningEngine {
 
         let first = &patterns[0];
         let total_frequency: u32 = patterns.iter().map(|p| p.frequency).sum();
-        let avg_confidence: f64 = patterns.iter().map(|p| p.confidence).sum::<f64>() / patterns.len() as f64;
+        let avg_confidence: f64 =
+            patterns.iter().map(|p| p.confidence).sum::<f64>() / patterns.len() as f64;
         let mut all_examples = Vec::new();
         let mut all_contexts = HashSet::new();
 
@@ -941,7 +1093,11 @@ impl PatternLearningEngine {
         Pattern {
             id: first.id.clone(),
             pattern_type: first.pattern_type.clone(),
-            description: format!("{} (consolidated from {} instances)", first.description, patterns.len()),
+            description: format!(
+                "{} (consolidated from {} instances)",
+                first.description,
+                patterns.len()
+            ),
             frequency: total_frequency,
             confidence: avg_confidence,
             examples: all_examples,
@@ -951,29 +1107,39 @@ impl PatternLearningEngine {
 
     fn update_learning_metrics(&mut self, patterns: &[Pattern], session: &LearningSession) {
         self.learning_metrics.total_patterns_learned += patterns.len();
-        
+
         // Log session information for debugging and analytics
-        eprintln!("Learning session {} completed: analyzed {} files, found {} patterns in {} concepts", 
-                 session.session_id, 
-                 session.files_analyzed,
-                 patterns.len(), 
-                 session.concepts_analyzed);
+        eprintln!(
+            "Learning session {} completed: analyzed {} files, found {} patterns in {} concepts",
+            session.session_id,
+            session.files_analyzed,
+            patterns.len(),
+            session.concepts_analyzed
+        );
 
         // Update confidence distribution
         for pattern in patterns {
             let confidence_range = match pattern.confidence {
                 c if c >= 0.9 => "high",
-                c if c >= 0.7 => "medium-high", 
+                c if c >= 0.7 => "medium-high",
                 c if c >= 0.5 => "medium",
                 c if c >= 0.3 => "low-medium",
                 _ => "low",
             };
-            *self.learning_metrics.confidence_distribution.entry(confidence_range.to_string()).or_insert(0) += 1;
+            *self
+                .learning_metrics
+                .confidence_distribution
+                .entry(confidence_range.to_string())
+                .or_insert(0) += 1;
         }
 
         // Update pattern type counts
         for pattern in patterns {
-            *self.learning_metrics.pattern_type_counts.entry(pattern.pattern_type.clone()).or_insert(0) += 1;
+            *self
+                .learning_metrics
+                .pattern_type_counts
+                .entry(pattern.pattern_type.clone())
+                .or_insert(0) += 1;
         }
 
         // Update timestamp
@@ -992,12 +1158,19 @@ impl PatternLearningEngine {
         // Update metrics for incremental learning
         self.learning_metrics.total_patterns_learned += patterns.len();
         for pattern in patterns {
-            *self.learning_metrics.pattern_type_counts.entry(pattern.pattern_type.clone()).or_insert(0) += 1;
+            *self
+                .learning_metrics
+                .pattern_type_counts
+                .entry(pattern.pattern_type.clone())
+                .or_insert(0) += 1;
         }
     }
 
     fn detect_language_from_path(&self, path: &str) -> String {
-        if let Some(extension) = std::path::Path::new(path).extension().and_then(|s| s.to_str()) {
+        if let Some(extension) = std::path::Path::new(path)
+            .extension()
+            .and_then(|s| s.to_str())
+        {
             match extension.to_lowercase().as_str() {
                 "js" | "jsx" => "javascript",
                 "ts" | "tsx" => "typescript",
@@ -1009,7 +1182,8 @@ impl PatternLearningEngine {
                 "cs" => "csharp",
                 "go" => "go",
                 _ => "unknown",
-            }.to_string()
+            }
+            .to_string()
         } else {
             "unknown".to_string()
         }
@@ -1019,22 +1193,31 @@ impl PatternLearningEngine {
         // Simple check for structural changes
         let old_lines = old_content.lines().count();
         let new_lines = new_content.lines().count();
-        
+
         // Consider it a structural change if lines changed significantly
-        let line_change_ratio = (old_lines as f64 - new_lines as f64).abs() / old_lines.max(1) as f64;
-        line_change_ratio > 0.2 || 
-        new_content.contains("class ") != old_content.contains("class ") ||
-        new_content.contains("function ") != old_content.contains("function ")
+        let line_change_ratio =
+            (old_lines as f64 - new_lines as f64).abs() / old_lines.max(1) as f64;
+        line_change_ratio > 0.2
+            || new_content.contains("class ") != old_content.contains("class ")
+            || new_content.contains("function ") != old_content.contains("function ")
     }
 
-    async fn learn_structural_changes(&self, _old_content: &str, _new_content: &str, _file_path: &str) -> Result<Vec<Pattern>, ParseError> {
+    async fn learn_structural_changes(
+        &self,
+        _old_content: &str,
+        _new_content: &str,
+        _file_path: &str,
+    ) -> Result<Vec<Pattern>, ParseError> {
         // Simplified implementation - would need proper AST diffing
         Ok(Vec::new())
     }
 
-    fn parse_concepts_from_analysis(&self, data: &Value) -> Result<Vec<SemanticConcept>, ParseError> {
+    fn parse_concepts_from_analysis(
+        &self,
+        data: &Value,
+    ) -> Result<Vec<SemanticConcept>, ParseError> {
         let mut concepts = Vec::new();
-        
+
         if let Some(concepts_array) = data.get("concepts").and_then(|v| v.as_array()) {
             for concept_value in concepts_array {
                 if let Ok(concept) = self.parse_concept_from_value(concept_value) {
@@ -1042,15 +1225,30 @@ impl PatternLearningEngine {
                 }
             }
         }
-        
+
         Ok(concepts)
     }
 
     fn parse_concept_from_value(&self, value: &Value) -> Result<SemanticConcept, ParseError> {
-        let name = value.get("name").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
-        let concept_type = value.get("type").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
-        let file_path = value.get("file").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
-        let confidence = value.get("confidence").and_then(|v| v.as_f64()).unwrap_or(0.5);
+        let name = value
+            .get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown")
+            .to_string();
+        let concept_type = value
+            .get("type")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown")
+            .to_string();
+        let file_path = value
+            .get("file")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown")
+            .to_string();
+        let confidence = value
+            .get("confidence")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.5);
 
         Ok(SemanticConcept {
             id: format!("{}_{}", file_path, name),
@@ -1209,7 +1407,7 @@ impl PatternLearningEngine {
     async fn learn_from_change_pattern(
         &mut self,
         change_type: &str,
-        #[allow(unused_variables)] file_path: Option<&str>,
+        _file_path: Option<&str>,
         language: Option<&str>,
     ) -> Result<bool, ParseError> {
         let mut updated = false;
@@ -1389,7 +1587,10 @@ impl PatternLearningEngine {
     }
 
     /// Adjust patterns for deleted files (from original implementation)
-    async fn adjust_patterns_for_deleted_file(&mut self, file_path: &str) -> Result<bool, ParseError> {
+    async fn adjust_patterns_for_deleted_file(
+        &mut self,
+        file_path: &str,
+    ) -> Result<bool, ParseError> {
         let mut updated = false;
 
         // Slightly decrease confidence for patterns that might be related to the deleted file
@@ -1399,7 +1600,10 @@ impl PatternLearningEngine {
         {
             // Find patterns related to this file type and decrease their confidence slightly
             for pattern in self.learned_patterns.values_mut() {
-                if (pattern.pattern_type.contains(extension) || pattern.contexts.contains(&extension.to_string())) && pattern.confidence > 0.1 {
+                if (pattern.pattern_type.contains(extension)
+                    || pattern.contexts.contains(&extension.to_string()))
+                    && pattern.confidence > 0.1
+                {
                     pattern.confidence = (pattern.confidence - 0.02).max(0.1);
                     updated = true;
                 }
@@ -1541,7 +1745,9 @@ impl PatternLearningEngine {
     }
 
     fn is_pascal_case(&self, name: &str) -> bool {
-        name.chars().next().is_some_and(|c| c.is_uppercase()) && !name.contains('_') && !name.contains('-')
+        name.chars().next().is_some_and(|c| c.is_uppercase())
+            && !name.contains('_')
+            && !name.contains('-')
     }
 
     fn is_snake_case(&self, name: &str) -> bool {
@@ -1562,9 +1768,9 @@ impl PatternLearnerTrait for PatternLearningEngine {
         // Synchronous version of learning from data
         let runtime = tokio::runtime::Runtime::new()
             .map_err(|e| ParseError::from_reason(format!("Failed to create runtime: {}", e)))?;
-            
+
         runtime.block_on(async { unsafe { self.learn_from_analysis(data.to_string()).await } })?;
-        
+
         Ok(self.learned_patterns.values().cloned().collect())
     }
 }
@@ -1578,8 +1784,8 @@ impl Default for PatternLearningEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
     use std::fs;
+    use tempfile::TempDir;
 
     fn create_test_concept(name: &str, concept_type: &str, file_path: &str) -> SemanticConcept {
         SemanticConcept {
@@ -1604,11 +1810,11 @@ mod tests {
     #[tokio::test]
     async fn test_concept_extraction_from_line() {
         let engine = PatternLearningEngine::new();
-        
+
         let js_function = "function getUserName() {";
         let concept = engine.extract_concept_from_line(js_function, "test.js", 1, "javascript");
         assert!(concept.is_some());
-        
+
         if let Some(c) = concept {
             assert_eq!(c.name, "getUserName");
             assert_eq!(c.concept_type, "function");
@@ -1617,7 +1823,7 @@ mod tests {
         let rust_struct = "pub struct User {";
         let concept = engine.extract_concept_from_line(rust_struct, "test.rs", 1, "rust");
         assert!(concept.is_some());
-        
+
         if let Some(c) = concept {
             assert_eq!(c.name, "User");
             assert_eq!(c.concept_type, "class");
@@ -1627,7 +1833,7 @@ mod tests {
     #[tokio::test]
     async fn test_language_detection() {
         let engine = PatternLearningEngine::new();
-        
+
         assert_eq!(engine.detect_language_from_path("test.js"), "javascript");
         assert_eq!(engine.detect_language_from_path("test.ts"), "typescript");
         assert_eq!(engine.detect_language_from_path("test.rs"), "rust");
@@ -1639,7 +1845,7 @@ mod tests {
     #[tokio::test]
     async fn test_supported_extensions() {
         let engine = PatternLearningEngine::new();
-        
+
         assert!(engine.is_supported_extension("js"));
         assert!(engine.is_supported_extension("ts"));
         assert!(engine.is_supported_extension("rs"));
@@ -1652,11 +1858,11 @@ mod tests {
     #[tokio::test]
     async fn test_structural_change_detection() {
         let engine = PatternLearningEngine::new();
-        
+
         let old_code = "function test() {\n  return 42;\n}";
         let new_code_minor = "function test() {\n  return 43;\n}";
         let new_code_major = "class Test {\n  method() {\n    return 42;\n  }\n}";
-        
+
         assert!(!engine.has_structural_changes(old_code, new_code_minor));
         assert!(engine.has_structural_changes(old_code, new_code_major));
     }
@@ -1664,7 +1870,7 @@ mod tests {
     #[tokio::test]
     async fn test_pattern_consolidation() {
         let engine = PatternLearningEngine::new();
-        
+
         let patterns = vec![
             Pattern {
                 id: "pattern1".to_string(),
@@ -1685,7 +1891,7 @@ mod tests {
                 contexts: vec!["javascript".to_string()],
             },
         ];
-        
+
         let consolidated = engine.validate_and_consolidate_patterns(patterns).unwrap();
         assert_eq!(consolidated.len(), 1);
         assert_eq!(consolidated[0].frequency, 8); // 5 + 3
@@ -1694,13 +1900,13 @@ mod tests {
     #[tokio::test]
     async fn test_confidence_threshold() {
         let mut engine = PatternLearningEngine::new();
-        
+
         engine.set_confidence_threshold(0.7);
         assert_eq!(engine.confidence_threshold, 0.7);
-        
+
         engine.set_confidence_threshold(1.5); // Should clamp to 1.0
         assert_eq!(engine.confidence_threshold, 1.0);
-        
+
         engine.set_confidence_threshold(-0.1); // Should clamp to 0.0
         assert_eq!(engine.confidence_threshold, 0.0);
     }
@@ -1708,7 +1914,7 @@ mod tests {
     #[tokio::test]
     async fn test_learning_metrics_update() {
         let mut engine = PatternLearningEngine::new();
-        
+
         let patterns = vec![
             Pattern {
                 id: "high_confidence".to_string(),
@@ -1729,7 +1935,7 @@ mod tests {
                 contexts: vec![],
             },
         ];
-        
+
         let session = LearningSession {
             session_id: "test".to_string(),
             patterns_discovered: patterns.clone(),
@@ -1737,35 +1943,48 @@ mod tests {
             files_analyzed: 10,
             concepts_analyzed: 50,
         };
-        
+
         engine.update_learning_metrics(&patterns, &session);
-        
+
         assert_eq!(engine.learning_metrics.total_patterns_learned, 2);
-        assert_eq!(engine.learning_metrics.pattern_type_counts.get("naming"), Some(&1));
-        assert_eq!(engine.learning_metrics.pattern_type_counts.get("structural"), Some(&1));
-        assert!(engine.learning_metrics.confidence_distribution.get("high").is_some());
+        assert_eq!(
+            engine.learning_metrics.pattern_type_counts.get("naming"),
+            Some(&1)
+        );
+        assert_eq!(
+            engine
+                .learning_metrics
+                .pattern_type_counts
+                .get("structural"),
+            Some(&1)
+        );
+        assert!(engine
+            .learning_metrics
+            .confidence_distribution
+            .get("high")
+            .is_some());
     }
 
     #[tokio::test]
     async fn test_pattern_analysis() {
         let engine = PatternLearningEngine::new();
-        
+
         let concepts = vec![
             create_test_concept("getUserName", "function", "test.js"),
             create_test_concept("UserService", "class", "UserService.js"),
         ];
-        
+
         let result = engine.analyze_patterns(concepts).unwrap();
-        
+
         assert!(result.detected.is_empty() || !result.detected.is_empty()); // Either is fine for this test
-        // Violations and recommendations depend on the specific patterns detected
+                                                                            // Violations and recommendations depend on the specific patterns detected
     }
 
     #[tokio::test]
     async fn test_learn_from_codebase() {
         let mut engine = PatternLearningEngine::new();
         let temp_dir = TempDir::new().unwrap();
-        
+
         // Create a simple JavaScript file
         let js_content = r#"
 function getUserName(user) {
@@ -1782,14 +2001,19 @@ class UserService {
     }
 }
 "#;
-        
+
         fs::write(temp_dir.path().join("test.js"), js_content).unwrap();
-        
-        let patterns = unsafe { engine.learn_from_codebase(temp_dir.path().to_str().unwrap().to_string()).await.unwrap() };
-        
+
+        let patterns = unsafe {
+            engine
+                .learn_from_codebase(temp_dir.path().to_str().unwrap().to_string())
+                .await
+                .unwrap()
+        };
+
         // Should have learned some patterns from the code
         assert!(!patterns.is_empty());
-        
+
         // Check that patterns were stored
         assert!(!engine.learned_patterns.is_empty());
     }
@@ -1797,7 +2021,7 @@ class UserService {
     #[tokio::test]
     async fn test_learn_from_analysis_data() {
         let mut engine = PatternLearningEngine::new();
-        
+
         let analysis_data = r#"{
             "concepts": [
                 {
@@ -1814,10 +2038,15 @@ class UserService {
                 }
             ]
         }"#;
-        
-        let result = unsafe { engine.learn_from_analysis(analysis_data.to_string()).await.unwrap() };
+
+        let result = unsafe {
+            engine
+                .learn_from_analysis(analysis_data.to_string())
+                .await
+                .unwrap()
+        };
         assert!(result); // Should have learned something
-        
+
         // Check that patterns were learned
         assert!(!engine.learned_patterns.is_empty());
     }
@@ -1825,13 +2054,13 @@ class UserService {
     #[test]
     fn test_description_normalization() {
         let engine = PatternLearningEngine::new();
-        
+
         let desc1 = "CamelCase naming pattern for functions";
         let desc2 = "camelCase naming pattern in JavaScript";
-        
+
         let norm1 = engine.normalize_description(desc1);
         let norm2 = engine.normalize_description(desc2);
-        
+
         // Should normalize to similar keys for grouping
         assert_eq!(norm1, "camelcase_naming_pattern");
         assert_eq!(norm2, "camelcase_naming_pattern");
@@ -1840,7 +2069,7 @@ class UserService {
     #[test]
     fn test_pattern_merge() {
         let engine = PatternLearningEngine::new();
-        
+
         let patterns = vec![
             Pattern {
                 id: "pattern1".to_string(),
@@ -1861,9 +2090,9 @@ class UserService {
                 contexts: vec!["ts".to_string()],
             },
         ];
-        
+
         let merged = engine.merge_similar_patterns(patterns);
-        
+
         assert_eq!(merged.frequency, 8); // 5 + 3
         assert_eq!(merged.confidence, 0.7); // (0.8 + 0.6) / 2
         assert_eq!(merged.contexts.len(), 2);

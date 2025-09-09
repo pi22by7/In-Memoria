@@ -1,7 +1,7 @@
 //! Rust concept extraction
 
-use crate::types::{SemanticConcept, LineRange, ParseError};
 use crate::parsing::NameExtractor;
+use crate::types::{LineRange, ParseError, SemanticConcept};
 use std::collections::HashMap;
 use tree_sitter::Node;
 
@@ -23,22 +23,22 @@ impl RustExtractor {
     ) -> Result<(), ParseError> {
         match node.kind() {
             "struct_item" | "enum_item" | "trait_item" | "impl_item" => {
-                if let Some(concept) = self
-                    .extract_concept_from_node(node, file_path, content, "struct")?
+                if let Some(concept) =
+                    self.extract_concept_from_node(node, file_path, content, "struct")?
                 {
                     concepts.push(concept);
                 }
             }
             "function_item" => {
-                if let Some(concept) = self
-                    .extract_concept_from_node(node, file_path, content, "function")?
+                if let Some(concept) =
+                    self.extract_concept_from_node(node, file_path, content, "function")?
                 {
                     concepts.push(concept);
                 }
             }
             "let_declaration" => {
-                if let Some(concept) = self
-                    .extract_concept_from_node(node, file_path, content, "variable")?
+                if let Some(concept) =
+                    self.extract_concept_from_node(node, file_path, content, "variable")?
                 {
                     concepts.push(concept);
                 }
@@ -109,9 +109,14 @@ mod tests {
         manager.parse(code, "rust").unwrap()
     }
 
-    fn extract_all_concepts(extractor: &RustExtractor, tree: &tree_sitter::Tree, file_path: &str, content: &str) -> Vec<SemanticConcept> {
+    fn extract_all_concepts(
+        extractor: &RustExtractor,
+        tree: &tree_sitter::Tree,
+        file_path: &str,
+        content: &str,
+    ) -> Vec<SemanticConcept> {
         let mut concepts = Vec::new();
-        
+
         fn walk_and_extract(
             extractor: &RustExtractor,
             node: tree_sitter::Node<'_>,
@@ -120,14 +125,20 @@ mod tests {
             concepts: &mut Vec<SemanticConcept>,
         ) {
             let _ = extractor.extract_concepts(node, file_path, content, concepts);
-            
+
             let mut cursor = node.walk();
             for child in node.children(&mut cursor) {
                 walk_and_extract(extractor, child, file_path, content, concepts);
             }
         }
-        
-        walk_and_extract(extractor, tree.root_node(), file_path, content, &mut concepts);
+
+        walk_and_extract(
+            extractor,
+            tree.root_node(),
+            file_path,
+            content,
+            &mut concepts,
+        );
         concepts
     }
 
@@ -136,14 +147,15 @@ mod tests {
         let extractor = RustExtractor::new();
         let code = "pub struct User { name: String, age: u32 }";
         let tree = create_rust_tree(code);
-        
+
         let concepts = extract_all_concepts(&extractor, &tree, "user.rs", code);
-        
-        let struct_concepts: Vec<_> = concepts.iter()
+
+        let struct_concepts: Vec<_> = concepts
+            .iter()
             .filter(|c| c.concept_type == "struct")
             .collect();
         assert!(struct_concepts.len() > 0);
-        
+
         let struct_concept = &struct_concepts[0];
         assert_eq!(struct_concept.name, "User");
         assert_eq!(struct_concept.concept_type, "struct");
@@ -155,14 +167,15 @@ mod tests {
         let extractor = RustExtractor::new();
         let code = "enum Color { Red, Green, Blue }";
         let tree = create_rust_tree(code);
-        
+
         let concepts = extract_all_concepts(&extractor, &tree, "color.rs", code);
-        
-        let enum_concepts: Vec<_> = concepts.iter()
+
+        let enum_concepts: Vec<_> = concepts
+            .iter()
             .filter(|c| c.concept_type == "struct") // Enums mapped as structs
             .collect();
         assert!(enum_concepts.len() > 0);
-        
+
         let enum_concept = &enum_concepts[0];
         assert_eq!(enum_concept.name, "Color");
     }
@@ -172,14 +185,15 @@ mod tests {
         let extractor = RustExtractor::new();
         let code = "pub fn calculate_total(price: f64, tax: f64) -> f64 { price + tax }";
         let tree = create_rust_tree(code);
-        
+
         let concepts = extract_all_concepts(&extractor, &tree, "calc.rs", code);
-        
-        let function_concepts: Vec<_> = concepts.iter()
+
+        let function_concepts: Vec<_> = concepts
+            .iter()
             .filter(|c| c.concept_type == "function")
             .collect();
         assert!(function_concepts.len() > 0);
-        
+
         let function_concept = &function_concepts[0];
         assert_eq!(function_concept.name, "calculate_total");
         assert_eq!(function_concept.concept_type, "function");
@@ -190,14 +204,15 @@ mod tests {
         let extractor = RustExtractor::new();
         let code = "trait Display { fn fmt(&self) -> String; }";
         let tree = create_rust_tree(code);
-        
+
         let concepts = extract_all_concepts(&extractor, &tree, "display.rs", code);
-        
-        let trait_concepts: Vec<_> = concepts.iter()
+
+        let trait_concepts: Vec<_> = concepts
+            .iter()
             .filter(|c| c.concept_type == "struct") // Traits mapped as structs
             .collect();
         assert!(trait_concepts.len() > 0);
-        
+
         let trait_concept = &trait_concepts[0];
         assert_eq!(trait_concept.name, "Display");
     }
@@ -219,18 +234,20 @@ mod tests {
             }
         "#;
         let tree = create_rust_tree(code);
-        
+
         let concepts = extract_all_concepts(&extractor, &tree, "user_impl.rs", code);
-        
+
         // Should find struct, impl, and functions
-        let struct_concepts: Vec<_> = concepts.iter()
+        let struct_concepts: Vec<_> = concepts
+            .iter()
             .filter(|c| c.concept_type == "struct")
             .collect();
-        
-        let function_concepts: Vec<_> = concepts.iter()
+
+        let function_concepts: Vec<_> = concepts
+            .iter()
             .filter(|c| c.concept_type == "function")
             .collect();
-        
+
         assert!(struct_concepts.len() >= 2); // struct + impl
         assert!(function_concepts.len() >= 2); // new + get_name
     }
@@ -240,15 +257,16 @@ mod tests {
         let extractor = RustExtractor::new();
         let code = "let user_name = String::from(\"John\");";
         let tree = create_rust_tree(code);
-        
+
         let concepts = extract_all_concepts(&extractor, &tree, "var.rs", code);
-        
-        let variable_concepts: Vec<_> = concepts.iter()
+
+        let _variable_concepts: Vec<_> = concepts
+            .iter()
             .filter(|c| c.concept_type == "variable")
             .collect();
-        
+
         // May or may not find variables depending on tree structure
-        assert!(variable_concepts.len() >= 0);
+        // Length is always >= 0 for Vec
     }
 
     #[test]
@@ -293,23 +311,25 @@ mod tests {
             }
         "#;
         let tree = create_rust_tree(code);
-        
+
         let concepts = extract_all_concepts(&extractor, &tree, "complex.rs", code);
-        
+
         // Should find multiple concepts
         assert!(concepts.len() > 0);
-        
-        let struct_concepts: Vec<_> = concepts.iter()
+
+        let struct_concepts: Vec<_> = concepts
+            .iter()
             .filter(|c| c.concept_type == "struct")
             .collect();
-        
-        let function_concepts: Vec<_> = concepts.iter()
+
+        let function_concepts: Vec<_> = concepts
+            .iter()
             .filter(|c| c.concept_type == "function")
             .collect();
-        
+
         assert!(struct_concepts.len() > 0);
         assert!(function_concepts.len() > 0);
-        
+
         // Check for specific names
         let concept_names: Vec<&String> = concepts.iter().map(|c| &c.name).collect();
         assert!(concept_names.contains(&&"User".to_string()));
@@ -322,7 +342,7 @@ mod tests {
         let extractor = RustExtractor::new();
         let code = "";
         let tree = create_rust_tree(code);
-        
+
         let concepts = extract_all_concepts(&extractor, &tree, "empty.rs", code);
         assert_eq!(concepts.len(), 0);
     }
@@ -332,11 +352,11 @@ mod tests {
         let extractor = RustExtractor::new();
         let code = "struct {{{ invalid syntax";
         let tree = create_rust_tree(code);
-        
-        let concepts = extract_all_concepts(&extractor, &tree, "invalid.rs", code);
-        
+
+        let _concepts = extract_all_concepts(&extractor, &tree, "invalid.rs", code);
+
         // Should not crash on invalid syntax
-        assert!(concepts.len() >= 0);
+        // Length is always >= 0 for Vec
     }
 
     #[test]
@@ -344,7 +364,7 @@ mod tests {
         let extractor = RustExtractor::default();
         let code = "struct Test;";
         let tree = create_rust_tree(code);
-        
+
         let mut concepts = Vec::new();
         let result = extractor.extract_concepts(tree.root_node(), "test.rs", code, &mut concepts);
         assert!(result.is_ok());

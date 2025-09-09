@@ -130,3 +130,4 @@ docs/GENERATED_*.md
 .claude/
 
 wiki/
+lang_tests/

@@ -179,7 +179,7 @@ mod tests {
 
     #[test]
     fn test_complexity_analyzer_creation() {
-        let analyzer = ComplexityAnalyzer::new();
+        let _analyzer = ComplexityAnalyzer::new();
         assert!(true); // Constructor should work
     }
 

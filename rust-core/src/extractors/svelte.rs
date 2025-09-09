@@ -58,6 +58,6 @@ mod tests {
         let tree = manager.parse(code, "svelte").unwrap();
         let mut concepts = Vec::new();
         let _ = extractor.extract_concepts(tree.root_node(), "App.svelte", code, &mut concepts);
-        assert!(concepts.len() >= 0);
+        // Length is always >= 0 for Vec
     }
 }

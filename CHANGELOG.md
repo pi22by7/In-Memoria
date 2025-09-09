@@ -5,7 +5,48 @@ All notable changes to In Memoria will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.6] - 2025-09-06
+## [Unreleased]
+
+### ✨ **Added**
+
+#### 🔍 **Enhanced TypeScript/JavaScript Language Support**
+- **Comprehensive TypeScript/JavaScript extractor** - Major enhancement from basic extraction to rich semantic analysis
+  - **Enhanced class extraction** with decorators, inheritance, accessibility modifiers
+  - **Advanced interface analysis** with extends clause extraction
+  - **Type alias extraction** with full type definition capture
+  - **Enum extraction** with const enum detection
+  - **Rich function analysis** with async/static modifiers, parameter extraction
+  - **Variable extraction** with type annotation capture
+- **Module and import/export analysis** - Full module system support
+  - **Import statement extraction** with source path analysis
+  - **Export statement extraction** with declaration type detection
+  - **Module/namespace declarations** with type distinction
+- **Comprehensive metadata collection**
+  - **Decorator extraction** for classes and methods
+  - **Accessibility modifier detection** (public/private/protected)
+  - **Function parameter analysis** with type information
+  - **Inheritance relationships** for classes and interfaces
+  - **Type definitions** for aliases and complex types
+
+### 🛠️ **Changed**
+
+#### 🏗️ **Code Quality & Performance**
+- **Zero clippy warnings** - All linting issues resolved through proper implementation
+- **Enhanced helper methods** - Robust AST node traversal and text extraction
+- **Optimized iterator patterns** - Uses efficient `next_back()` instead of `last()` for better performance
+- **Proper error handling** - No suppression warnings, all issues addressed functionally
+
+### ✅ **Fixed**
+
+#### 🐛 **TypeScript Extractor Issues**
+- **Missing method implementations** - All extract methods now properly integrated
+- **Borrowing conflicts** - Resolved lifetime issues with proper collection patterns
+- **Dead code warnings** - Eliminated through complete feature implementation
+- **Manual iterator patterns** - Fixed clippy suggestions with safe borrowing patterns
+
+---
+
+## [0.4.4] - 2025-09-06
 
 ### 🐛 **Fixed**
 

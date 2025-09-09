@@ -61,6 +61,6 @@ mod tests {
         let tree = manager.parse(code, "csharp").unwrap();
         let mut concepts = Vec::new();
         let _ = extractor.extract_concepts(tree.root_node(), "Program.cs", code, &mut concepts);
-        assert!(concepts.len() >= 0);
+        // Length is always >= 0 for Vec
     }
 }
