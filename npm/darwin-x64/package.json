@@ -1,6 +1,6 @@
 {
   "name": "@in-memoria/darwin-x64",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "macOS x64 native bindings for In Memoria",
   "main": "in-memoria-core.darwin-x64.node",
   "files": [

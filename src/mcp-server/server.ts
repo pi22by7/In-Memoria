@@ -33,7 +33,7 @@ export class CodeCartographerMCP {
     this.server = new Server(
       {
         name: 'in-memoria',
-        version: '0.4.4',
+        version: '0.4.5',
       },
       {
         capabilities: {
@@ -216,7 +216,7 @@ export class CodeCartographerMCP {
   async start(): Promise<void> {
     // Set environment variable to indicate MCP server mode
     process.env.MCP_SERVER = 'true';
-    
+
     await this.initializeComponents();
 
     const transport = new StdioServerTransport();
