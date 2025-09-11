@@ -83,6 +83,7 @@ async function main() {
       break;
 
     case 'debug':
+    case 'check':
       const debugPath = args.find(arg => !arg.startsWith('--')) || process.cwd();
       const debugOptions = {
         verbose: args.includes('--verbose'),
@@ -218,7 +219,9 @@ async function analyzeCodebase(path: string): Promise<void> {
     console.log(`Stored concepts available: ${storedConcepts.length}`);
     console.log(`Fresh patterns found: ${patterns.length}`);
     console.log(`Stored patterns available: ${storedPatterns.length}`);
-    console.log(`Complexity: Cyclomatic=${analysis.complexity.cyclomatic.toFixed(1)}, Cognitive=${analysis.complexity.cognitive.toFixed(1)}`);
+    const cyclomaticComplexity = analysis.complexity?.cyclomatic ?? 0;
+    const cognitiveComplexity = analysis.complexity?.cognitive ?? 0;
+    console.log(`Complexity: Cyclomatic=${cyclomaticComplexity.toFixed(1)}, Cognitive=${cognitiveComplexity.toFixed(1)}`);
 
     // Show fresh concepts from current analysis
     if (analysis.concepts.length > 0) {
@@ -345,14 +348,14 @@ Usage: in-memoria <command> [options]
 Commands:
   server                    Start the MCP server for AI agent integration
   setup --interactive       Interactive setup wizard (recommended for first time)
-  debug [path] [options]    Run diagnostics and troubleshooting
+  check [path] [options]    Run diagnostics and troubleshooting
   watch [path]             Start file watcher for real-time intelligence updates
   learn [path]             Learn from codebase and build intelligence
   analyze [path]           Analyze codebase and show insights
   init [path]              Initialize In Memoria for a project (basic)
   version, --version, -v    Show version information
 
-Debug Options:
+Diagnostic Options (for 'check' command):
   --verbose                Show detailed diagnostic information
   --validate               Validate intelligence data consistency
   --performance            Analyze performance characteristics
@@ -363,8 +366,8 @@ Debug Options:
 Examples:
   in-memoria setup --interactive    # Recommended for first-time setup
   in-memoria server
-  in-memoria debug --verbose       # Full diagnostics with details
-  in-memoria debug --validate      # Check data integrity
+  in-memoria check --verbose       # Full diagnostics with details
+  in-memoria check --validate      # Check data integrity
   in-memoria watch ./src
   in-memoria learn ./my-project
   in-memoria analyze ./src
@@ -372,10 +375,9 @@ Examples:
 
 Environment Variables:
   OPENAI_API_KEY           OpenAI API key for enhanced vector embeddings (optional)
-  CHROMA_HOST             ChromaDB host (default: http://localhost:8000)
 
 For more information, visit: https://github.com/pi22by7/in-memoria
-`);
+`);}
 }
 
 // Handle unhandled errors
