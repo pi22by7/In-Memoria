@@ -379,7 +379,6 @@ Environment Variables:
 For more information, visit: https://github.com/pi22by7/in-memoria
 `);
 }
-}
 
 // Handle unhandled errors
 process.on('unhandledRejection', (reason, promise) => {
