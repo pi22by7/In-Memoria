@@ -286,7 +286,7 @@ async function initializeProject(path: string): Promise<void> {
 
   // Create default configuration
   const defaultConfig = {
-    version: "0.4.5",
+    version: "0.4.6",
     intelligence: {
       enableRealTimeAnalysis: true,
       enablePatternLearning: true,
@@ -377,7 +377,8 @@ Environment Variables:
   OPENAI_API_KEY           OpenAI API key for enhanced vector embeddings (optional)
 
 For more information, visit: https://github.com/pi22by7/in-memoria
-`);}
+`);
+}
 }
 
 // Handle unhandled errors
