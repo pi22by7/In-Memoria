@@ -40,8 +40,8 @@ impl FrameworkDetector {
         // Check package files for dependencies
         Self::check_package_files(path, &mut evidence_map)?;
         
-        // Check source code for framework usage patterns
-        Self::check_source_code(path, &mut evidence_map)?;
+        // Infer frameworks from file extensions and project structure
+        Self::infer_from_project_structure(path, &mut evidence_map)?;
 
         // Check configuration files
         Self::check_config_files(path, &mut evidence_map)?;
@@ -123,14 +123,14 @@ impl FrameworkDetector {
         let framework_patterns = [
             ("React", vec!["\"react\":", "\"@types/react\":"]),
             ("Vue.js", vec!["\"vue\":", "\"@vue/"]),
-            ("Angular", vec!["\"@angular/", "\"angular\""]),
+            ("Angular", vec!["\"@angular/"]),
             ("Express", vec!["\"express\":", "\"@types/express\":"]),
             ("Next.js", vec!["\"next\":", "\"@next/"]),
             ("Svelte", vec!["\"svelte\":", "\"@svelte/"]),
-            ("Webpack", vec!["\"webpack\":", "\"webpack-"]),
+            ("Webpack", vec!["\"webpack\":"]),
             ("Vite", vec!["\"vite\":", "\"@vitejs/"]),
             ("Jest", vec!["\"jest\":", "\"@jest/"]),
-            ("TypeScript", vec!["\"typescript\":", "\"@types/"]),
+            ("TypeScript", vec!["\"typescript\":"]),
             ("Tailwind CSS", vec!["\"tailwindcss\":", "\"@tailwindcss/"]),
             ("Material-UI", vec!["\"@mui/", "\"@material-ui/"]),
             ("Lodash", vec!["\"lodash\":", "\"@types/lodash\":"]),
@@ -249,29 +249,63 @@ impl FrameworkDetector {
     }
 
     /// Check source code for framework usage patterns
-    fn check_source_code(
+    fn infer_from_project_structure(
         path: &str,
         evidence_map: &mut HashMap<String, (HashSet<String>, Option<String>)>,
     ) -> Result<(), ParseError> {
+        let mut extension_counts = std::collections::HashMap::new();
+        
         for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
             if entry.file_type().is_file() {
                 let file_path = entry.path();
+                
+                // Skip files in dot folders and common build/dependency directories
+                if file_path.components().any(|component| {
+                    let comp_str = component.as_os_str().to_str().unwrap_or("");
+                    (comp_str.starts_with('.') && comp_str != ".") 
+                        || comp_str == "node_modules"
+                        || comp_str == "target"
+                        || comp_str == "dist"
+                        || comp_str == "build"
+                }) {
+                    continue;
+                }
+                
                 if let Some(extension) = file_path.extension().and_then(|s| s.to_str()) {
-                    match extension.to_lowercase().as_str() {
-                        "js" | "ts" | "jsx" | "tsx" => {
-                            Self::analyze_javascript_file(file_path, evidence_map)?;
-                        }
-                        "py" => {
-                            Self::analyze_python_file(file_path, evidence_map)?;
-                        }
-                        "rs" => {
-                            Self::analyze_rust_file(file_path, evidence_map)?;
-                        }
-                        "java" => {
-                            Self::analyze_java_file(file_path, evidence_map)?;
-                        }
-                        _ => {}
+                    *extension_counts.entry(extension.to_lowercase()).or_insert(0) += 1;
+                }
+            }
+        }
+        
+        // Infer languages/frameworks based on significant file presence
+        for (ext, count) in extension_counts {
+            if count >= 5 { // Only consider if there are at least 5 files of this type
+                match ext.as_str() {
+                    "rs" => {
+                        let entry = evidence_map.entry("Rust".to_string()).or_insert_with(|| (HashSet::new(), None));
+                        entry.0.insert(format!("Project structure: {} Rust files", count));
                     }
+                    "ts" | "tsx" => {
+                        let entry = evidence_map.entry("TypeScript".to_string()).or_insert_with(|| (HashSet::new(), None));
+                        entry.0.insert(format!("Project structure: {} TypeScript files", count));
+                    }
+                    "js" | "jsx" => {
+                        let entry = evidence_map.entry("JavaScript".to_string()).or_insert_with(|| (HashSet::new(), None));
+                        entry.0.insert(format!("Project structure: {} JavaScript files", count));
+                    }
+                    "py" => {
+                        let entry = evidence_map.entry("Python".to_string()).or_insert_with(|| (HashSet::new(), None));
+                        entry.0.insert(format!("Project structure: {} Python files", count));
+                    }
+                    "java" => {
+                        let entry = evidence_map.entry("Java".to_string()).or_insert_with(|| (HashSet::new(), None));
+                        entry.0.insert(format!("Project structure: {} Java files", count));
+                    }
+                    "go" => {
+                        let entry = evidence_map.entry("Go".to_string()).or_insert_with(|| (HashSet::new(), None));
+                        entry.0.insert(format!("Project structure: {} Go files", count));
+                    }
+                    _ => {}
                 }
             }
         }
@@ -279,110 +313,6 @@ impl FrameworkDetector {
         Ok(())
     }
 
-    /// Analyze JavaScript/TypeScript files for framework usage
-    fn analyze_javascript_file(
-        file_path: &Path,
-        evidence_map: &mut HashMap<String, (HashSet<String>, Option<String>)>,
-    ) -> Result<(), ParseError> {
-        let content = fs::read_to_string(file_path).unwrap_or_default();
-
-        let patterns = [
-            ("React", vec!["import React", "from 'react'", "useState(", "useEffect("]),
-            ("Vue.js", vec!["Vue.component(", "new Vue(", "vue", "@vue/"]),
-            ("Angular", vec!["@Component(", "@Injectable(", "import { Component }"]),
-            ("Express", vec!["app.get(", "app.post(", "express()"]),
-            ("jQuery", vec!["$(", "jQuery("]),
-        ];
-
-        for (framework, framework_patterns) in &patterns {
-            for pattern in framework_patterns {
-                if content.contains(pattern) {
-                    let entry = evidence_map.entry(framework.to_string()).or_insert_with(|| (HashSet::new(), None));
-                    entry.0.insert(format!("Source code usage: {}", pattern));
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Analyze Python files for framework usage
-    fn analyze_python_file(
-        file_path: &Path,
-        evidence_map: &mut HashMap<String, (HashSet<String>, Option<String>)>,
-    ) -> Result<(), ParseError> {
-        let content = fs::read_to_string(file_path).unwrap_or_default();
-
-        let patterns = [
-            ("Django", vec!["from django", "import django", "django.conf"]),
-            ("Flask", vec!["from flask", "Flask(__name__)", "@app.route"]),
-            ("FastAPI", vec!["from fastapi", "FastAPI()", "@app.get", "@app.post"]),
-            ("NumPy", vec!["import numpy", "np.array"]),
-            ("Pandas", vec!["import pandas", "pd.DataFrame"]),
-        ];
-
-        for (framework, framework_patterns) in &patterns {
-            for pattern in framework_patterns {
-                if content.contains(pattern) {
-                    let entry = evidence_map.entry(framework.to_string()).or_insert_with(|| (HashSet::new(), None));
-                    entry.0.insert(format!("Python import: {}", pattern));
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Analyze Rust files for framework usage
-    fn analyze_rust_file(
-        file_path: &Path,
-        evidence_map: &mut HashMap<String, (HashSet<String>, Option<String>)>,
-    ) -> Result<(), ParseError> {
-        let content = fs::read_to_string(file_path).unwrap_or_default();
-
-        let patterns = [
-            ("Tokio", vec!["#[tokio::", "tokio::", "async fn"]),
-            ("Serde", vec!["#[derive(Serialize", "#[derive(Deserialize", "serde::"]),
-            ("Actix Web", vec!["actix_web::", "HttpServer::", "#[actix_web::"]),
-            ("Rocket", vec!["#[rocket::", "rocket::", "#[get(", "#[post("]),
-        ];
-
-        for (framework, framework_patterns) in &patterns {
-            for pattern in framework_patterns {
-                if content.contains(pattern) {
-                    let entry = evidence_map.entry(framework.to_string()).or_insert_with(|| (HashSet::new(), None));
-                    entry.0.insert(format!("Rust usage: {}", pattern));
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Analyze Java files for framework usage
-    fn analyze_java_file(
-        file_path: &Path,
-        evidence_map: &mut HashMap<String, (HashSet<String>, Option<String>)>,
-    ) -> Result<(), ParseError> {
-        let content = fs::read_to_string(file_path).unwrap_or_default();
-
-        let patterns = [
-            ("Spring Framework", vec!["@Controller", "@Service", "@Repository", "@Component"]),
-            ("Spring Boot", vec!["@SpringBootApplication", "@EnableAutoConfiguration"]),
-            ("JUnit", vec!["@Test", "junit.framework", "org.junit"]),
-        ];
-
-        for (framework, framework_patterns) in &patterns {
-            for pattern in framework_patterns {
-                if content.contains(pattern) {
-                    let entry = evidence_map.entry(framework.to_string()).or_insert_with(|| (HashSet::new(), None));
-                    entry.0.insert(format!("Java annotation/import: {}", pattern));
-                }
-            }
-        }
-
-        Ok(())
-    }
 
     /// Check configuration files for framework indicators
     fn check_config_files(
@@ -431,6 +361,8 @@ impl FrameworkDetector {
                 boosted_confidence += 0.3;
             } else if evidence_item.contains("Configuration file") {
                 boosted_confidence += 0.2;
+            } else if evidence_item.contains("Project structure") {
+                boosted_confidence += 0.2; // Boost confidence for project structure evidence
             } else if evidence_item.contains("Source code usage") {
                 boosted_confidence += 0.1;
             }
