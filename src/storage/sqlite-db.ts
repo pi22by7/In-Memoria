@@ -54,6 +54,39 @@ export interface AIInsight {
   createdAt: Date;
 }
 
+// Phase 1: Blueprint interfaces
+export interface FeatureMap {
+  id: string;
+  projectPath: string;
+  featureName: string;
+  primaryFiles: string[];
+  relatedFiles: string[];
+  dependencies: string[];
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface EntryPoint {
+  id: string;
+  projectPath: string;
+  entryType: string;
+  filePath: string;
+  description?: string;
+  framework?: string;
+  createdAt: Date;
+}
+
+export interface KeyDirectory {
+  id: string;
+  projectPath: string;
+  directoryPath: string;
+  directoryType: string;
+  fileCount: number;
+  description?: string;
+  createdAt: Date;
+}
+
 export class SQLiteDatabase {
   private db: Database.Database;
   private migrator: DatabaseMigrator;
@@ -251,6 +284,118 @@ export class SQLiteDatabase {
       sourceAgent: row.source_agent,
       validationStatus: row.validation_status as 'pending' | 'validated' | 'rejected',
       impactPrediction: JSON.parse(row.impact_prediction || '{}'),
+      createdAt: new Date(row.created_at + ' UTC')
+    }));
+  }
+
+  // Feature Map (Phase 1: Blueprint)
+  insertFeatureMap(feature: Omit<FeatureMap, 'createdAt' | 'updatedAt'>): void {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO feature_map (
+        id, project_path, feature_name, primary_files, related_files,
+        dependencies, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      feature.id,
+      feature.projectPath,
+      feature.featureName,
+      JSON.stringify(feature.primaryFiles),
+      JSON.stringify(feature.relatedFiles),
+      JSON.stringify(feature.dependencies),
+      feature.status
+    );
+  }
+
+  getFeatureMaps(projectPath: string): FeatureMap[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM feature_map WHERE project_path = ? AND status = 'active'
+      ORDER BY feature_name
+    `);
+    const rows = stmt.all(projectPath) as any[];
+
+    return rows.map(row => ({
+      id: row.id,
+      projectPath: row.project_path,
+      featureName: row.feature_name,
+      primaryFiles: JSON.parse(row.primary_files || '[]'),
+      relatedFiles: JSON.parse(row.related_files || '[]'),
+      dependencies: JSON.parse(row.dependencies || '[]'),
+      status: row.status,
+      createdAt: new Date(row.created_at + ' UTC'),
+      updatedAt: new Date(row.updated_at + ' UTC')
+    }));
+  }
+
+  // Entry Points (Phase 1: Blueprint)
+  insertEntryPoint(entryPoint: Omit<EntryPoint, 'createdAt'>): void {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO entry_points (
+        id, project_path, entry_type, file_path, description, framework
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      entryPoint.id,
+      entryPoint.projectPath,
+      entryPoint.entryType,
+      entryPoint.filePath,
+      entryPoint.description || null,
+      entryPoint.framework || null
+    );
+  }
+
+  getEntryPoints(projectPath: string): EntryPoint[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM entry_points WHERE project_path = ?
+      ORDER BY entry_type, file_path
+    `);
+    const rows = stmt.all(projectPath) as any[];
+
+    return rows.map(row => ({
+      id: row.id,
+      projectPath: row.project_path,
+      entryType: row.entry_type,
+      filePath: row.file_path,
+      description: row.description,
+      framework: row.framework,
+      createdAt: new Date(row.created_at + ' UTC')
+    }));
+  }
+
+  // Key Directories (Phase 1: Blueprint)
+  insertKeyDirectory(directory: Omit<KeyDirectory, 'createdAt'>): void {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO key_directories (
+        id, project_path, directory_path, directory_type, file_count, description
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      directory.id,
+      directory.projectPath,
+      directory.directoryPath,
+      directory.directoryType,
+      directory.fileCount,
+      directory.description || null
+    );
+  }
+
+  getKeyDirectories(projectPath: string): KeyDirectory[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM key_directories WHERE project_path = ?
+      ORDER BY directory_type, directory_path
+    `);
+    const rows = stmt.all(projectPath) as any[];
+
+    return rows.map(row => ({
+      id: row.id,
+      projectPath: row.project_path,
+      directoryPath: row.directory_path,
+      directoryType: row.directory_type,
+      fileCount: row.file_count,
+      description: row.description,
       createdAt: new Date(row.created_at + ' UTC')
     }));
   }

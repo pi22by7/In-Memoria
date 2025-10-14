@@ -5,6 +5,37 @@ All notable changes to In Memoria will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### ✨ **Added**
+
+#### 🗺️ **Project Blueprint System (Phase 1)**
+
+- **Token-efficient project intelligence** - New blueprint system eliminates cold start exploration by providing instant project context
+  - **Entry point detection** - Automatically identifies web, API, CLI, and worker entry points based on framework patterns (React, Express, FastAPI, Svelte)
+  - **Key directory mapping** - Discovers and categorizes important directories (components, utils, services, auth, models, etc.)
+  - **Architecture inference** - Determines project architecture pattern (Component-Based, REST API, Service-Oriented, MVC, Modular)
+  - **Feature-to-file mapping** - Foundation for mapping features to their implementation files
+- **New database tables** - Added `feature_map`, `entry_points`, and `key_directories` tables with full migration support (Migration v5)
+- **Enhanced `learn_codebase_intelligence` tool** - Now returns blueprint data in response including tech stack, entry points, key directories, and architecture
+- **New `get_project_blueprint` tool** - Fast blueprint access without full learning, provides instant project context (<200 tokens target)
+- **Blueprint detection in SemanticEngine** - `detectEntryPoints()` and `mapKeyDirectories()` methods automatically enrich codebase analysis
+- **Comprehensive database methods** - Full CRUD operations for blueprint tables with proper TypeScript interfaces
+
+#### 🎯 **Token Efficiency Goals**
+
+- **Cold start optimization** - Target <200 tokens for initial project understanding (vs current ~3000+ tokens)
+- **Direct file access** - Agents can jump straight to relevant files without exploration
+- **Session resume** - Target <100 tokens to restore work context
+- **Smart routing** - Target <50 tokens to route vague requests to specific files
+
+### 🛠️ **Changed**
+
+- **Database schema** - Added blueprint-related tables with proper foreign key constraints
+- **Migration system** - Enhanced validation for blueprint tables in Migration v5
+- **CodebaseAnalysisResult interface** - Extended with optional `entryPoints` and `keyDirectories` fields
+- **Tool architecture** - Foundation laid for Phase 2 (work context) and Phase 3 (smart navigation)
+
 ## [0.4.6] - 2025-09-11
 
 ### 🐛 **Fixed**

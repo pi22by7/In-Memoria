@@ -131,3 +131,5 @@ docs/GENERATED_*.md
 
 wiki/
 lang_tests/
+
+IMPLEMENTATION*.md

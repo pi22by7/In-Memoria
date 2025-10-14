@@ -155,6 +155,24 @@ export class IntelligenceTools {
           },
           required: ['type', 'content', 'confidence', 'sourceAgent']
         }
+      },
+      {
+        name: 'get_project_blueprint',
+        description: 'Get instant project blueprint - eliminates cold start exploration by providing tech stack, entry points, key directories, and architecture overview',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            path: {
+              type: 'string',
+              description: 'Path to the project (defaults to current working directory)'
+            },
+            includeFeatureMap: {
+              type: 'boolean',
+              description: 'Include feature-to-file mapping (if available)',
+              default: true
+            }
+          }
+        }
       }
     ];
   }
@@ -165,6 +183,12 @@ export class IntelligenceTools {
     patternsLearned: number;
     insights: string[];
     timeElapsed: number;
+    blueprint?: {
+      techStack: string[];
+      entryPoints: Record<string, string>;
+      keyDirectories: Record<string, string>;
+      architecture: string;
+    };
   }> {
     const startTime = Date.now();
     let projectDatabase: SQLiteDatabase | null = null;
@@ -258,15 +282,34 @@ export class IntelligenceTools {
       const vectorCount = await this.buildSemanticIndex(concepts, patterns);
       insights.push(`   ✅ Created ${vectorCount} vector embeddings for semantic search`);
       
+      // Store blueprint data in database
+      insights.push('🗺️  Storing project blueprint...');
+      await this.storeProjectBlueprint(args.path, codebaseAnalysis, projectDatabase);
+
       const timeElapsed = Date.now() - startTime;
       insights.push(`⚡ Learning completed in ${timeElapsed}ms`);
-      
+
+      // Build blueprint summary for response
+      const blueprint = {
+        techStack: codebaseAnalysis.frameworks || [],
+        entryPoints: (codebaseAnalysis.entryPoints || []).reduce((acc, ep) => {
+          acc[ep.type] = ep.filePath;
+          return acc;
+        }, {} as Record<string, string>),
+        keyDirectories: (codebaseAnalysis.keyDirectories || []).reduce((acc, dir) => {
+          acc[dir.type] = dir.path;
+          return acc;
+        }, {} as Record<string, string>),
+        architecture: this.inferArchitecturePattern(codebaseAnalysis)
+      };
+
       return {
         success: true,
         conceptsLearned: concepts.length,
         patternsLearned: patterns.length,
         insights,
-        timeElapsed
+        timeElapsed,
+        blueprint
       };
     } catch (error) {
       return {
@@ -414,10 +457,10 @@ export class IntelligenceTools {
     message: string;
   }> {
     const validatedInsight = AIInsightsSchema.parse(args);
-    
+
     try {
       const insightId = `insight_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       this.database.insertAIInsight({
         insightId,
         insightType: validatedInsight.type,
@@ -439,6 +482,64 @@ export class IntelligenceTools {
         insightId: '',
         message: `Failed to contribute insight: ${error}`
       };
+    }
+  }
+
+  async getProjectBlueprint(args: { path?: string; includeFeatureMap?: boolean }): Promise<{
+    techStack: string[];
+    entryPoints: Record<string, string>;
+    keyDirectories: Record<string, string>;
+    architecture: string;
+    featureMap?: Record<string, string[]>;
+  }> {
+    const projectPath = args.path || process.cwd();
+    const { config } = await import('../../config/config.js');
+    const projectDbPath = config.getDatabasePath(projectPath);
+    const projectDatabase = new SQLiteDatabase(projectDbPath);
+
+    try {
+      // Get entry points from database
+      const entryPoints = projectDatabase.getEntryPoints(projectPath);
+      const entryPointsMap = entryPoints.reduce((acc, ep) => {
+        acc[ep.entryType] = ep.filePath;
+        return acc;
+      }, {} as Record<string, string>);
+
+      // Get key directories from database
+      const keyDirs = projectDatabase.getKeyDirectories(projectPath);
+      const keyDirsMap = keyDirs.reduce((acc, dir) => {
+        acc[dir.directoryType] = dir.directoryPath;
+        return acc;
+      }, {} as Record<string, string>);
+
+      // Get feature map if requested
+      let featureMap: Record<string, string[]> | undefined;
+      if (args.includeFeatureMap) {
+        const features = projectDatabase.getFeatureMaps(projectPath);
+        featureMap = features.reduce((acc, feature) => {
+          acc[feature.featureName] = feature.primaryFiles;
+          return acc;
+        }, {} as Record<string, string[]>);
+      }
+
+      // Infer tech stack from entry points
+      const techStack = [...new Set(entryPoints.map(ep => ep.framework).filter(Boolean))] as string[];
+
+      // Infer architecture from directory structure
+      const architecture = this.inferArchitectureFromBlueprint({
+        frameworks: techStack,
+        keyDirectories: keyDirs
+      });
+
+      return {
+        techStack,
+        entryPoints: entryPointsMap,
+        keyDirectories: keyDirsMap,
+        architecture,
+        ...(featureMap && Object.keys(featureMap).length > 0 ? { featureMap } : {})
+      };
+    } finally {
+      projectDatabase.close();
     }
   }
 
@@ -622,6 +723,83 @@ export class IntelligenceTools {
     }
     
     return insights;
+  }
+
+  private async storeProjectBlueprint(
+    projectPath: string,
+    codebaseAnalysis: any,
+    database: SQLiteDatabase
+  ): Promise<void> {
+    const { nanoid } = await import('nanoid');
+
+    // Store entry points
+    if (codebaseAnalysis.entryPoints && Array.isArray(codebaseAnalysis.entryPoints)) {
+      for (const entryPoint of codebaseAnalysis.entryPoints) {
+        database.insertEntryPoint({
+          id: nanoid(),
+          projectPath,
+          entryType: entryPoint.type,
+          filePath: entryPoint.filePath,
+          description: entryPoint.description,
+          framework: entryPoint.framework
+        });
+      }
+    }
+
+    // Store key directories
+    if (codebaseAnalysis.keyDirectories && Array.isArray(codebaseAnalysis.keyDirectories)) {
+      for (const directory of codebaseAnalysis.keyDirectories) {
+        database.insertKeyDirectory({
+          id: nanoid(),
+          projectPath,
+          directoryPath: directory.path,
+          directoryType: directory.type,
+          fileCount: directory.fileCount,
+          description: directory.description
+        });
+      }
+    }
+  }
+
+  private inferArchitecturePattern(codebaseAnalysis: any): string {
+    const frameworks = codebaseAnalysis.frameworks || [];
+    const directories = codebaseAnalysis.keyDirectories || [];
+
+    if (frameworks.some((f: string) => f.toLowerCase().includes('react'))) {
+      return 'Component-Based (React)';
+    } else if (frameworks.some((f: string) => f.toLowerCase().includes('express'))) {
+      return 'REST API (Express)';
+    } else if (frameworks.some((f: string) => f.toLowerCase().includes('fastapi'))) {
+      return 'REST API (FastAPI)';
+    } else if (directories.some((d: any) => d.type === 'services')) {
+      return 'Service-Oriented';
+    } else if (directories.some((d: any) => d.type === 'components')) {
+      return 'Component-Based';
+    } else if (directories.some((d: any) => d.type === 'models' && d.type === 'views')) {
+      return 'MVC Pattern';
+    } else {
+      return 'Modular';
+    }
+  }
+
+  private inferArchitectureFromBlueprint(blueprint: { frameworks: string[]; keyDirectories: any[] }): string {
+    const { frameworks, keyDirectories } = blueprint;
+
+    if (frameworks.some(f => f.toLowerCase().includes('react'))) {
+      return 'Component-Based (React)';
+    } else if (frameworks.some(f => f.toLowerCase().includes('express'))) {
+      return 'REST API (Express)';
+    } else if (frameworks.some(f => f.toLowerCase().includes('fastapi'))) {
+      return 'REST API (FastAPI)';
+    } else if (keyDirectories.some(d => d.directoryType === 'services')) {
+      return 'Service-Oriented';
+    } else if (keyDirectories.some(d => d.directoryType === 'components')) {
+      return 'Component-Based';
+    } else if (keyDirectories.some(d => d.directoryType === 'models') && keyDirectories.some(d => d.directoryType === 'views')) {
+      return 'MVC Pattern';
+    } else {
+      return 'Modular';
+    }
   }
 
   private async buildSemanticIndex(concepts: any[], patterns: any[]): Promise<number> {

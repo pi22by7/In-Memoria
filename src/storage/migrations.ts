@@ -252,6 +252,66 @@ export class DatabaseMigrator {
         SELECT 'WARNING: Rolling back timezone fix may cause data issues' as warning;
       `
     });
+
+    // Migration 5: Add project blueprint tables (Phase 1)
+    this.migrations.push({
+      version: 5,
+      name: 'add_project_blueprint_tables',
+      up: `
+        -- Feature to file mapping
+        CREATE TABLE IF NOT EXISTS feature_map (
+          id TEXT PRIMARY KEY,
+          project_path TEXT NOT NULL,
+          feature_name TEXT NOT NULL,
+          primary_files TEXT NOT NULL,
+          related_files TEXT,
+          dependencies TEXT,
+          status TEXT DEFAULT 'active',
+          created_at DATETIME DEFAULT (datetime('now', 'utc')),
+          updated_at DATETIME DEFAULT (datetime('now', 'utc')),
+          FOREIGN KEY (project_path) REFERENCES project_metadata(project_path)
+        );
+
+        -- Entry points mapping
+        CREATE TABLE IF NOT EXISTS entry_points (
+          id TEXT PRIMARY KEY,
+          project_path TEXT NOT NULL,
+          entry_type TEXT NOT NULL,
+          file_path TEXT NOT NULL,
+          description TEXT,
+          framework TEXT,
+          created_at DATETIME DEFAULT (datetime('now', 'utc')),
+          FOREIGN KEY (project_path) REFERENCES project_metadata(project_path)
+        );
+
+        -- Key directories mapping
+        CREATE TABLE IF NOT EXISTS key_directories (
+          id TEXT PRIMARY KEY,
+          project_path TEXT NOT NULL,
+          directory_path TEXT NOT NULL,
+          directory_type TEXT NOT NULL,
+          file_count INTEGER DEFAULT 0,
+          description TEXT,
+          created_at DATETIME DEFAULT (datetime('now', 'utc')),
+          FOREIGN KEY (project_path) REFERENCES project_metadata(project_path)
+        );
+
+        -- Indexes for blueprint tables
+        CREATE INDEX IF NOT EXISTS idx_feature_map_project ON feature_map(project_path);
+        CREATE INDEX IF NOT EXISTS idx_feature_map_name ON feature_map(feature_name);
+        CREATE INDEX IF NOT EXISTS idx_entry_points_project ON entry_points(project_path);
+        CREATE INDEX IF NOT EXISTS idx_key_directories_project ON key_directories(project_path);
+      `,
+      down: `
+        DROP TABLE IF EXISTS feature_map;
+        DROP TABLE IF EXISTS entry_points;
+        DROP TABLE IF EXISTS key_directories;
+        DROP INDEX IF EXISTS idx_feature_map_project;
+        DROP INDEX IF EXISTS idx_feature_map_name;
+        DROP INDEX IF EXISTS idx_entry_points_project;
+        DROP INDEX IF EXISTS idx_key_directories_project;
+      `
+    });
   }
 
   private loadMigrationFile(filename: string): string {
@@ -341,6 +401,10 @@ export class DatabaseMigrator {
         case 4: // Timezone handling
           this.validateTimezoneColumns();
           break;
+        case 5: // Project blueprint tables
+          this.validateTableExists(['feature_map', 'entry_points', 'key_directories']);
+          this.validateIndexExists(['idx_feature_map_project', 'idx_entry_points_project', 'idx_key_directories_project']);
+          break;
         default:
           // Generic validation - check migration was recorded
           break;
@@ -359,7 +423,8 @@ export class DatabaseMigrator {
       const requiredTables = [
         'semantic_concepts', 'developer_patterns', 'file_intelligence',
         'architectural_decisions', 'shared_patterns', 'ai_insights',
-        'project_metadata', 'migrations'
+        'project_metadata', 'migrations',
+        'feature_map', 'entry_points', 'key_directories'
       ];
 
       for (const table of requiredTables) {

@@ -99,3 +99,33 @@ export interface DeveloperProfile {
   expertiseAreas: string[];
   recentFocus: string[];
 }
+
+// Phase 1: Project Blueprint types
+export interface ProjectBlueprint {
+  techStack: string[];
+  entryPoints: Record<string, string>;
+  keyDirectories: Record<string, string>;
+  architecture: string;
+  featureMap?: Record<string, string[]>;
+}
+
+export interface EntryPointDetectionResult {
+  id: string;
+  type: 'web' | 'api' | 'cli' | 'worker';
+  filePath: string;
+  description?: string;
+  framework?: string;
+}
+
+export interface KeyDirectoryInfo {
+  id: string;
+  path: string;
+  type: string;
+  fileCount: number;
+  description?: string;
+}
+
+export const ProjectBlueprintSchema = z.object({
+  path: z.string().optional(),
+  includeFeatureMap: z.boolean().default(true)
+});

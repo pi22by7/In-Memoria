@@ -20,6 +20,17 @@ export interface CodebaseAnalysisResult {
   }>;
   analysisStatus?: 'normal' | 'degraded';
   errors?: string[];
+  // Phase 1: Blueprint data
+  entryPoints?: Array<{
+    type: string;
+    filePath: string;
+    framework?: string;
+  }>;
+  keyDirectories?: Array<{
+    path: string;
+    type: string;
+    fileCount: number;
+  }>;
 }
 
 export interface FileAnalysisResult {
@@ -114,10 +125,20 @@ export class SemanticEngine {
         async () => this.fallbackAnalysis(path)
       );
 
-      // Cache the result
-      this.codebaseAnalysisCache.set(cacheKey, { result, timestamp: Date.now() });
+      // Phase 1: Add blueprint detection
+      const entryPoints = await this.detectEntryPoints(path, result.frameworks);
+      const keyDirectories = await this.mapKeyDirectories(path);
 
-      return result;
+      const enrichedResult = {
+        ...result,
+        entryPoints,
+        keyDirectories
+      };
+
+      // Cache the enriched result
+      this.codebaseAnalysisCache.set(cacheKey, { result: enrichedResult, timestamp: Date.now() });
+
+      return enrichedResult;
     });
   }
 
@@ -465,6 +486,159 @@ export class SemanticEngine {
       'java': 'java'
     };
     return languageMap[ext || ''] || 'unknown';
+  }
+
+  /**
+   * Phase 1: Detect entry points based on framework patterns
+   */
+  async detectEntryPoints(projectPath: string, frameworks: string[]): Promise<Array<{
+    type: string;
+    filePath: string;
+    framework?: string;
+  }>> {
+    const { readdirSync, statSync, existsSync } = await import('fs');
+    const { join } = await import('path');
+    const entryPoints: Array<{ type: string; filePath: string; framework?: string }> = [];
+
+    try {
+      // React/Next.js entry points
+      if (frameworks.some(f => f.toLowerCase().includes('react') || f.toLowerCase().includes('next'))) {
+        const reactEntries = ['src/index.tsx', 'src/index.jsx', 'src/App.tsx', 'src/App.jsx', 'pages/_app.tsx', 'pages/_app.js'];
+        for (const entry of reactEntries) {
+          const fullPath = join(projectPath, entry);
+          if (existsSync(fullPath)) {
+            entryPoints.push({ type: 'web', filePath: entry, framework: 'react' });
+          }
+        }
+      }
+
+      // Express/Node API entry points
+      if (frameworks.some(f => f.toLowerCase().includes('express') || f.toLowerCase().includes('node'))) {
+        const apiEntries = ['server.js', 'app.js', 'index.js', 'src/server.ts', 'src/app.ts', 'src/index.ts'];
+        for (const entry of apiEntries) {
+          const fullPath = join(projectPath, entry);
+          if (existsSync(fullPath)) {
+            entryPoints.push({ type: 'api', filePath: entry, framework: 'express' });
+          }
+        }
+      }
+
+      // FastAPI/Python entry points
+      if (frameworks.some(f => f.toLowerCase().includes('fastapi') || f.toLowerCase().includes('flask'))) {
+        const pythonEntries = ['main.py', 'app.py', 'server.py', 'api/main.py'];
+        for (const entry of pythonEntries) {
+          const fullPath = join(projectPath, entry);
+          if (existsSync(fullPath)) {
+            entryPoints.push({ type: 'api', filePath: entry, framework: 'fastapi' });
+          }
+        }
+      }
+
+      // Svelte entry points
+      if (frameworks.some(f => f.toLowerCase().includes('svelte'))) {
+        const svelteEntries = ['src/routes/+page.svelte', 'src/main.ts', 'src/main.js'];
+        for (const entry of svelteEntries) {
+          const fullPath = join(projectPath, entry);
+          if (existsSync(fullPath)) {
+            entryPoints.push({ type: 'web', filePath: entry, framework: 'svelte' });
+          }
+        }
+      }
+
+      // CLI entry points
+      const cliEntries = ['cli.js', 'bin/cli.js', 'src/cli.ts', 'src/cli.js'];
+      for (const entry of cliEntries) {
+        const fullPath = join(projectPath, entry);
+        if (existsSync(fullPath)) {
+          entryPoints.push({ type: 'cli', filePath: entry });
+        }
+      }
+
+      return entryPoints;
+    } catch (error) {
+      console.warn('Failed to detect entry points:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Phase 1: Map key directories based on common patterns
+   */
+  async mapKeyDirectories(projectPath: string): Promise<Array<{
+    path: string;
+    type: string;
+    fileCount: number;
+  }>> {
+    const { readdirSync, statSync, existsSync } = await import('fs');
+    const { join } = await import('path');
+    const keyDirectories: Array<{ path: string; type: string; fileCount: number }> = [];
+
+    try {
+      const commonDirs = [
+        { pattern: 'src/components', type: 'components' },
+        { pattern: 'src/utils', type: 'utils' },
+        { pattern: 'src/services', type: 'services' },
+        { pattern: 'src/api', type: 'api' },
+        { pattern: 'src/auth', type: 'auth' },
+        { pattern: 'src/models', type: 'models' },
+        { pattern: 'src/views', type: 'views' },
+        { pattern: 'src/pages', type: 'pages' },
+        { pattern: 'src/lib', type: 'library' },
+        { pattern: 'lib', type: 'library' },
+        { pattern: 'utils', type: 'utils' },
+        { pattern: 'middleware', type: 'middleware' },
+        { pattern: 'routes', type: 'routes' }
+      ];
+
+      for (const dir of commonDirs) {
+        const fullPath = join(projectPath, dir.pattern);
+        if (existsSync(fullPath)) {
+          const stats = statSync(fullPath);
+          if (stats.isDirectory()) {
+            // Count files in directory
+            const fileCount = this.countFilesInDirectory(fullPath);
+            keyDirectories.push({
+              path: dir.pattern,
+              type: dir.type,
+              fileCount
+            });
+          }
+        }
+      }
+
+      return keyDirectories;
+    } catch (error) {
+      console.warn('Failed to map key directories:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Count files recursively in a directory
+   */
+  private countFilesInDirectory(dirPath: string): number {
+    const { readdirSync, statSync } = require('fs');
+    const { join } = require('path');
+    let count = 0;
+
+    try {
+      const entries = readdirSync(dirPath, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = join(dirPath, entry.name);
+        if (entry.isDirectory()) {
+          // Skip node_modules and other common ignore patterns
+          if (!['node_modules', '.git', 'dist', 'build', '.next'].includes(entry.name)) {
+            count += this.countFilesInDirectory(fullPath);
+          }
+        } else {
+          count++;
+        }
+      }
+    } catch (error) {
+      // Ignore errors for individual directories
+    }
+
+    return count;
   }
 
   /**
