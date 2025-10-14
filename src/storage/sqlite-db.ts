@@ -343,6 +343,52 @@ export class SQLiteDatabase {
     }));
   }
 
+  searchFeatureMaps(projectPath: string, query: string): FeatureMap[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM feature_map
+      WHERE project_path = ? AND status = 'active'
+        AND (feature_name LIKE ? OR feature_name LIKE ? OR feature_name LIKE ?)
+      ORDER BY feature_name
+    `);
+    const searchPattern = `%${query}%`;
+    const rows = stmt.all(projectPath, searchPattern, searchPattern.toLowerCase(), searchPattern.toUpperCase()) as any[];
+
+    return rows.map(row => ({
+      id: row.id,
+      projectPath: row.project_path,
+      featureName: row.feature_name,
+      primaryFiles: JSON.parse(row.primary_files || '[]'),
+      relatedFiles: JSON.parse(row.related_files || '[]'),
+      dependencies: JSON.parse(row.dependencies || '[]'),
+      status: row.status,
+      createdAt: new Date(row.created_at + ' UTC'),
+      updatedAt: new Date(row.updated_at + ' UTC')
+    }));
+  }
+
+  getFeatureByName(projectPath: string, featureName: string): FeatureMap | null {
+    const stmt = this.db.prepare(`
+      SELECT * FROM feature_map
+      WHERE project_path = ? AND feature_name = ? AND status = 'active'
+      LIMIT 1
+    `);
+    const row = stmt.get(projectPath, featureName) as any;
+
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      projectPath: row.project_path,
+      featureName: row.feature_name,
+      primaryFiles: JSON.parse(row.primary_files || '[]'),
+      relatedFiles: JSON.parse(row.related_files || '[]'),
+      dependencies: JSON.parse(row.dependencies || '[]'),
+      status: row.status,
+      createdAt: new Date(row.created_at + ' UTC'),
+      updatedAt: new Date(row.updated_at + ' UTC')
+    };
+  }
+
   insertEntryPoint(entryPoint: Omit<EntryPoint, 'createdAt'>): void {
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO entry_points (

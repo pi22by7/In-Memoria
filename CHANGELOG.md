@@ -51,13 +51,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `upsertProjectDecision()` - Store or update architectural decisions
   - `getProjectDecisions()` - Fetch recent decisions with reasoning
 
+#### 🧭 **Smart Navigation & Routing (Phase 3)**
+
+- **Feature-to-file mapping engine** - Automatically maps project features to their implementation files
+  - **10 feature categories** - Authentication, API, database, UI components, views, services, utilities, testing, configuration, middleware
+  - **Directory pattern detection** - Intelligent mapping based on common project structures
+  - **File collection and categorization** - Splits files into primary and related categories for targeted navigation
+- **Request routing intelligence** - Routes vague task descriptions to specific files
+  - **Work type detection** - Automatically classifies tasks as feature, bugfix, refactor, or test
+  - **Keyword-based routing** - Matches problem descriptions to relevant features using 20+ common keywords
+  - **Smart file suggestions** - Returns top 5 most relevant files with suggested starting point
+- **Enhanced `predict_coding_approach` tool** - Added optional `includeFileRouting` parameter
+  - Returns intended feature, target files, work type, and suggested starting point
+  - Enables agents to jump directly to relevant code without exploration
+- **Enhanced `get_pattern_recommendations` tool** - Added optional `includeRelatedFiles` parameter
+  - Suggests related files where similar patterns are used
+  - Helps agents discover consistent implementation patterns across the codebase
+- **Feature map database methods** - New methods for searching and accessing feature mappings
+  - `searchFeatureMaps()` - Search features by keyword with case-insensitive matching
+  - `getFeatureByName()` - Retrieve specific feature mapping by exact name
+- **Pattern-based file discovery** - `findFilesUsingPatterns()` method matches patterns to feature categories
+  - Links testing patterns to test files, API patterns to API files, etc.
+  - Returns up to 10 most relevant files for given pattern recommendations
+
 ### 🛠️ **Changed**
 
 - **Database schema** - Added blueprint-related tables (Phase 1) and work context tables (Phase 2) with proper foreign key constraints
 - **Migration system** - Enhanced validation for blueprint tables (Migration v5) and session tracking (Migration v6)
 - **CodebaseAnalysisResult interface** - Extended with optional `entryPoints` and `keyDirectories` fields
 - **DeveloperProfile interface** - Extended with optional `currentWork` field containing session context
-- **Tool architecture** - Phase 1 (blueprint) and Phase 2 (work context) complete; foundation laid for Phase 3 (smart navigation)
+- **Tool architecture** - Phase 1 (blueprint), Phase 2 (work context), and Phase 3 (smart navigation) complete; ready for Phase 4 (tool consolidation)
 
 ## [0.4.6] - 2025-09-11
 

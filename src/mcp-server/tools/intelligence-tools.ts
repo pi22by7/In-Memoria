@@ -68,7 +68,7 @@ export class IntelligenceTools {
       },
       {
         name: 'get_pattern_recommendations',
-        description: 'Get intelligent pattern recommendations based on coding context',
+        description: 'Get intelligent pattern recommendations based on coding context, with optional related file suggestions',
         inputSchema: {
           type: 'object',
           properties: {
@@ -87,6 +87,10 @@ export class IntelligenceTools {
             preferences: {
               type: 'object',
               description: 'Developer preferences and constraints'
+            },
+            includeRelatedFiles: {
+              type: 'boolean',
+              description: 'Include suggestions for related files where similar patterns are used'
             }
           },
           required: ['problemDescription']
@@ -94,7 +98,7 @@ export class IntelligenceTools {
       },
       {
         name: 'predict_coding_approach',
-        description: 'Predict the likely coding approach based on developer patterns and context',
+        description: 'Predict the likely coding approach based on developer patterns and context, with optional file routing for direct navigation',
         inputSchema: {
           type: 'object',
           properties: {
@@ -105,6 +109,10 @@ export class IntelligenceTools {
             context: {
               type: 'object',
               description: 'Additional context about the current codebase and requirements'
+            },
+            includeFileRouting: {
+              type: 'boolean',
+              description: 'Include smart file routing to identify target files for the task'
             }
           },
           required: ['problemDescription']
@@ -403,13 +411,16 @@ export class IntelligenceTools {
     };
   }
 
-  async getPatternRecommendations(args: CodingContext): Promise<{
+  async getPatternRecommendations(args: CodingContext & {
+    includeRelatedFiles?: boolean;
+  }): Promise<{
     recommendations: PatternRecommendation[];
     reasoning: string;
+    relatedFiles?: string[];
   }> {
     const context = CodingContextSchema.parse(args);
     const patterns = this.database.getDeveloperPatterns();
-    
+
     // Get relevant patterns based on context
     const relevantPatterns = await this.patternEngine.findRelevantPatterns(
       context.problemDescription,
@@ -425,28 +436,65 @@ export class IntelligenceTools {
       reasoning: `Based on ${pattern.frequency} similar occurrences in your codebase`
     }));
 
-    return {
+    const result: {
+      recommendations: PatternRecommendation[];
+      reasoning: string;
+      relatedFiles?: string[];
+    } = {
       recommendations,
       reasoning: `Found ${recommendations.length} relevant patterns based on your coding history and current context`
     };
+
+    if (args.includeRelatedFiles) {
+      const projectPath = process.cwd();
+      const files = await this.patternEngine.findFilesUsingPatterns(relevantPatterns, projectPath);
+      result.relatedFiles = files;
+    }
+
+    return result;
   }
 
-  async predictCodingApproach(args: { 
-    problemDescription: string; 
-    context?: Record<string, any> 
-  }): Promise<CodingApproachPrediction> {
+  async predictCodingApproach(args: {
+    problemDescription: string;
+    context?: Record<string, any>;
+    includeFileRouting?: boolean;
+  }): Promise<CodingApproachPrediction & {
+    fileRouting?: {
+      intendedFeature: string;
+      targetFiles: string[];
+      workType: string;
+      suggestedStartPoint: string;
+    }
+  }> {
     const prediction = await this.patternEngine.predictApproach(
       args.problemDescription,
       args.context || {}
     );
 
-    return {
+    const result: CodingApproachPrediction & {
+      fileRouting?: {
+        intendedFeature: string;
+        targetFiles: string[];
+        workType: string;
+        suggestedStartPoint: string;
+      }
+    } = {
       approach: prediction.approach,
       confidence: prediction.confidence,
       reasoning: prediction.reasoning,
       suggestedPatterns: prediction.patterns,
       estimatedComplexity: prediction.complexity
     };
+
+    if (args.includeFileRouting) {
+      const projectPath = process.cwd();
+      const routing = await this.patternEngine.routeRequestToFiles(args.problemDescription, projectPath);
+      if (routing) {
+        result.fileRouting = routing;
+      }
+    }
+
+    return result;
   }
 
   async getDeveloperProfile(args: {

@@ -519,7 +519,7 @@ export class PatternEngine {
   ): boolean {
     // Simple heuristic to check if a pattern is used in content
     if (!pattern.contexts.includes(language)) return false;
-    
+
     // Check for pattern-specific indicators
     switch (pattern.patternType) {
       case 'camelCase_function_naming':
@@ -530,6 +530,230 @@ export class PatternEngine {
         return /describe|it|test|expect/.test(content);
       default:
         return false;
+    }
+  }
+
+  async buildFeatureMap(projectPath: string): Promise<Array<{
+    id: string;
+    featureName: string;
+    primaryFiles: string[];
+    relatedFiles: string[];
+    dependencies: string[];
+  }>> {
+    const { readdirSync, statSync, existsSync } = await import('fs');
+    const { join, relative } = await import('path');
+    const { nanoid } = await import('nanoid');
+
+    const featureMap: Array<{
+      id: string;
+      featureName: string;
+      primaryFiles: string[];
+      relatedFiles: string[];
+      dependencies: string[];
+    }> = [];
+
+    try {
+      const featurePatterns: Record<string, { patterns: string[]; directories: string[] }> = {
+        'authentication': {
+          patterns: ['**/auth/**', '**/authentication/**', '**/login*', '**/signup*', '**/register*'],
+          directories: ['auth', 'authentication']
+        },
+        'api': {
+          patterns: ['**/api/**', '**/routes/**', '**/endpoints/**', '**/controllers/**'],
+          directories: ['api', 'routes', 'endpoints', 'controllers']
+        },
+        'database': {
+          patterns: ['**/db/**', '**/database/**', '**/models/**', '**/schemas/**', '**/migrations/**'],
+          directories: ['db', 'database', 'models', 'schemas', 'migrations', 'storage']
+        },
+        'ui-components': {
+          patterns: ['**/components/**', '**/ui/**'],
+          directories: ['components', 'ui']
+        },
+        'views': {
+          patterns: ['**/views/**', '**/pages/**', '**/screens/**'],
+          directories: ['views', 'pages', 'screens']
+        },
+        'services': {
+          patterns: ['**/services/**', '**/api-clients/**'],
+          directories: ['services', 'api-clients']
+        },
+        'utilities': {
+          patterns: ['**/utils/**', '**/helpers/**', '**/lib/**'],
+          directories: ['utils', 'helpers', 'lib']
+        },
+        'testing': {
+          patterns: ['**/*.test.*', '**/*.spec.*', '**/tests/**', '**/__tests__/**'],
+          directories: ['tests', '__tests__', 'test']
+        },
+        'configuration': {
+          patterns: ['**/config/**', '**/.config/**', '**/settings/**'],
+          directories: ['config', '.config', 'settings']
+        },
+        'middleware': {
+          patterns: ['**/middleware/**', '**/middlewares/**'],
+          directories: ['middleware', 'middlewares']
+        }
+      };
+
+      for (const [featureName, { directories }] of Object.entries(featurePatterns)) {
+        const primaryFiles: string[] = [];
+        const relatedFiles: string[] = [];
+
+        for (const dir of directories) {
+          const fullPath = join(projectPath, 'src', dir);
+          const altPath = join(projectPath, dir);
+
+          for (const checkPath of [fullPath, altPath]) {
+            if (existsSync(checkPath)) {
+              const files = this.collectFilesInDirectory(checkPath, projectPath);
+              if (files.length > 0) {
+                primaryFiles.push(...files.slice(0, Math.ceil(files.length / 2)));
+                relatedFiles.push(...files.slice(Math.ceil(files.length / 2)));
+              }
+            }
+          }
+        }
+
+        if (primaryFiles.length > 0) {
+          featureMap.push({
+            id: nanoid(),
+            featureName,
+            primaryFiles: [...new Set(primaryFiles)],
+            relatedFiles: [...new Set(relatedFiles)],
+            dependencies: []
+          });
+        }
+      }
+
+      return featureMap;
+    } catch (error) {
+      console.error('Feature mapping error:', error);
+      return [];
+    }
+  }
+
+  private collectFilesInDirectory(dirPath: string, projectPath: string): string[] {
+    const { readdirSync, statSync } = require('fs');
+    const { join, relative } = require('path');
+    const files: string[] = [];
+
+    try {
+      const entries = readdirSync(dirPath, { withFileTypes: true });
+
+      for (const entry of entries) {
+        const fullPath = join(dirPath, entry.name);
+
+        if (entry.isDirectory()) {
+          if (!['node_modules', '.git', 'dist', 'build', '.next'].includes(entry.name)) {
+            files.push(...this.collectFilesInDirectory(fullPath, projectPath));
+          }
+        } else if (entry.isFile()) {
+          const ext = entry.name.split('.').pop()?.toLowerCase();
+          if (['ts', 'tsx', 'js', 'jsx', 'py', 'rs', 'go', 'java'].includes(ext || '')) {
+            files.push(relative(projectPath, fullPath));
+          }
+        }
+      }
+    } catch (error) {
+      // Ignore errors for individual directories
+    }
+
+    return files;
+  }
+
+  async routeRequestToFiles(
+    problemDescription: string,
+    projectPath: string
+  ): Promise<{
+    intendedFeature: string;
+    targetFiles: string[];
+    workType: 'feature' | 'bugfix' | 'refactor' | 'test';
+    suggestedStartPoint: string;
+  } | null> {
+    try {
+      const featureMaps = this.database.getFeatureMaps(projectPath);
+      const lowerDesc = problemDescription.toLowerCase();
+
+      let workType: 'feature' | 'bugfix' | 'refactor' | 'test' = 'feature';
+      if (lowerDesc.includes('fix') || lowerDesc.includes('bug') || lowerDesc.includes('error')) {
+        workType = 'bugfix';
+      } else if (lowerDesc.includes('refactor') || lowerDesc.includes('improve') || lowerDesc.includes('optimize')) {
+        workType = 'refactor';
+      } else if (lowerDesc.includes('test') || lowerDesc.includes('spec')) {
+        workType = 'test';
+      }
+
+      const keywords = [
+        'auth', 'authentication', 'login', 'signup', 'register',
+        'api', 'endpoint', 'route', 'controller',
+        'database', 'db', 'model', 'schema', 'migration',
+        'component', 'ui', 'view', 'page', 'screen',
+        'service', 'client', 'util', 'helper',
+        'test', 'spec', 'middleware', 'config'
+      ];
+
+      for (const keyword of keywords) {
+        if (lowerDesc.includes(keyword)) {
+          const matchedFeature = featureMaps.find(f =>
+            f.featureName.includes(keyword) ||
+            keyword.includes(f.featureName.split('-')[0])
+          );
+
+          if (matchedFeature) {
+            const allFiles = [...matchedFeature.primaryFiles, ...matchedFeature.relatedFiles];
+            return {
+              intendedFeature: matchedFeature.featureName,
+              targetFiles: allFiles.slice(0, 5),
+              workType,
+              suggestedStartPoint: matchedFeature.primaryFiles[0] || allFiles[0]
+            };
+          }
+        }
+      }
+
+      if (featureMaps.length > 0) {
+        const firstFeature = featureMaps[0];
+        return {
+          intendedFeature: firstFeature.featureName,
+          targetFiles: [...firstFeature.primaryFiles, ...firstFeature.relatedFiles].slice(0, 5),
+          workType,
+          suggestedStartPoint: firstFeature.primaryFiles[0]
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Request routing error:', error);
+      return null;
+    }
+  }
+
+  async findFilesUsingPatterns(
+    patterns: RelevantPattern[],
+    projectPath: string
+  ): Promise<string[]> {
+    const files: string[] = [];
+
+    try {
+      const allFileIntel = this.database.getFeatureMaps(projectPath);
+
+      for (const feature of allFileIntel) {
+        for (const pattern of patterns) {
+          const patternType = pattern.patternType.toLowerCase();
+
+          if (feature.featureName.includes('test') && patternType.includes('test')) {
+            files.push(...feature.primaryFiles);
+          } else if (feature.featureName.includes('api') && patternType.includes('api')) {
+            files.push(...feature.primaryFiles);
+          }
+        }
+      }
+
+      return [...new Set(files)].slice(0, 10);
+    } catch (error) {
+      console.error('Error finding files using patterns:', error);
+      return [];
     }
   }
 }
