@@ -89,7 +89,6 @@ CREATE TABLE IF NOT EXISTS project_metadata (
   updated_at DATETIME DEFAULT (datetime('now', 'utc'))
 );
 
--- Feature to file mapping (Phase 1: Project Blueprint)
 CREATE TABLE IF NOT EXISTS feature_map (
   id TEXT PRIMARY KEY,
   project_path TEXT NOT NULL,
@@ -103,7 +102,6 @@ CREATE TABLE IF NOT EXISTS feature_map (
   FOREIGN KEY (project_path) REFERENCES project_metadata(project_path)
 );
 
--- Entry points mapping (Phase 1: Project Blueprint)
 CREATE TABLE IF NOT EXISTS entry_points (
   id TEXT PRIMARY KEY,
   project_path TEXT NOT NULL,
@@ -115,7 +113,6 @@ CREATE TABLE IF NOT EXISTS entry_points (
   FOREIGN KEY (project_path) REFERENCES project_metadata(project_path)
 );
 
--- Key directories mapping (Phase 1: Project Blueprint)
 CREATE TABLE IF NOT EXISTS key_directories (
   id TEXT PRIMARY KEY,
   project_path TEXT NOT NULL,
@@ -124,6 +121,32 @@ CREATE TABLE IF NOT EXISTS key_directories (
   file_count INTEGER DEFAULT 0,
   description TEXT,
   created_at DATETIME DEFAULT (datetime('now', 'utc')),
+  FOREIGN KEY (project_path) REFERENCES project_metadata(project_path)
+);
+
+CREATE TABLE IF NOT EXISTS work_sessions (
+  id TEXT PRIMARY KEY,
+  project_path TEXT NOT NULL,
+  session_start DATETIME DEFAULT (datetime('now', 'utc')),
+  session_end DATETIME,
+  last_feature TEXT,
+  current_files TEXT,           -- JSON array
+  completed_tasks TEXT,          -- JSON array
+  pending_tasks TEXT,            -- JSON array
+  blockers TEXT,                 -- JSON array
+  session_notes TEXT,
+  last_updated DATETIME DEFAULT (datetime('now', 'utc')),
+  FOREIGN KEY (project_path) REFERENCES project_metadata(project_path)
+);
+
+CREATE TABLE IF NOT EXISTS project_decisions (
+  id TEXT PRIMARY KEY,
+  project_path TEXT NOT NULL,
+  decision_key TEXT NOT NULL,
+  decision_value TEXT NOT NULL,
+  reasoning TEXT,
+  made_at DATETIME DEFAULT (datetime('now', 'utc')),
+  UNIQUE(project_path, decision_key),
   FOREIGN KEY (project_path) REFERENCES project_metadata(project_path)
 );
 
@@ -139,3 +162,6 @@ CREATE INDEX IF NOT EXISTS idx_feature_map_project ON feature_map(project_path);
 CREATE INDEX IF NOT EXISTS idx_feature_map_name ON feature_map(feature_name);
 CREATE INDEX IF NOT EXISTS idx_entry_points_project ON entry_points(project_path);
 CREATE INDEX IF NOT EXISTS idx_key_directories_project ON key_directories(project_path);
+CREATE INDEX IF NOT EXISTS idx_work_sessions_project ON work_sessions(project_path);
+CREATE INDEX IF NOT EXISTS idx_work_sessions_updated ON work_sessions(last_updated DESC);
+CREATE INDEX IF NOT EXISTS idx_project_decisions_key ON project_decisions(project_path, decision_key);

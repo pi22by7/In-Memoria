@@ -98,9 +98,14 @@ export interface DeveloperProfile {
   };
   expertiseAreas: string[];
   recentFocus: string[];
+  currentWork?: {
+    lastFeature?: string;
+    currentFiles: string[];
+    pendingTasks: string[];
+    recentDecisions: Array<{ key: string; value: string; reasoning?: string }>;
+  };
 }
 
-// Phase 1: Project Blueprint types
 export interface ProjectBlueprint {
   techStack: string[];
   entryPoints: Record<string, string>;

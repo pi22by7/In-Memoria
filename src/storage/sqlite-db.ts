@@ -1,11 +1,5 @@
 import Database from 'better-sqlite3';
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { DatabaseMigrator } from './migrations.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 export interface SemanticConcept {
   id: string;
@@ -54,7 +48,6 @@ export interface AIInsight {
   createdAt: Date;
 }
 
-// Phase 1: Blueprint interfaces
 export interface FeatureMap {
   id: string;
   projectPath: string;
@@ -85,6 +78,29 @@ export interface KeyDirectory {
   fileCount: number;
   description?: string;
   createdAt: Date;
+}
+
+export interface WorkSession {
+  id: string;
+  projectPath: string;
+  sessionStart: Date;
+  sessionEnd?: Date;
+  lastFeature?: string;
+  currentFiles: string[];
+  completedTasks: string[];
+  pendingTasks: string[];
+  blockers: string[];
+  sessionNotes?: string;
+  lastUpdated: Date;
+}
+
+export interface ProjectDecision {
+  id: string;
+  projectPath: string;
+  decisionKey: string;
+  decisionValue: string;
+  reasoning?: string;
+  madeAt: Date;
 }
 
 export class SQLiteDatabase {
@@ -288,7 +304,6 @@ export class SQLiteDatabase {
     }));
   }
 
-  // Feature Map (Phase 1: Blueprint)
   insertFeatureMap(feature: Omit<FeatureMap, 'createdAt' | 'updatedAt'>): void {
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO feature_map (
@@ -328,7 +343,6 @@ export class SQLiteDatabase {
     }));
   }
 
-  // Entry Points (Phase 1: Blueprint)
   insertEntryPoint(entryPoint: Omit<EntryPoint, 'createdAt'>): void {
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO entry_points (
@@ -364,7 +378,6 @@ export class SQLiteDatabase {
     }));
   }
 
-  // Key Directories (Phase 1: Blueprint)
   insertKeyDirectory(directory: Omit<KeyDirectory, 'createdAt'>): void {
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO key_directories (
@@ -398,6 +411,176 @@ export class SQLiteDatabase {
       description: row.description,
       createdAt: new Date(row.created_at + ' UTC')
     }));
+  }
+
+  createWorkSession(session: Omit<WorkSession, 'sessionStart' | 'lastUpdated'>): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO work_sessions (
+        id, project_path, session_end, last_feature, current_files,
+        completed_tasks, pending_tasks, blockers, session_notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      session.id,
+      session.projectPath,
+      session.sessionEnd ? session.sessionEnd.toISOString() : null,
+      session.lastFeature || null,
+      JSON.stringify(session.currentFiles),
+      JSON.stringify(session.completedTasks),
+      JSON.stringify(session.pendingTasks),
+      JSON.stringify(session.blockers),
+      session.sessionNotes || null
+    );
+  }
+
+  updateWorkSession(sessionId: string, updates: Partial<Omit<WorkSession, 'id' | 'projectPath' | 'sessionStart' | 'lastUpdated'>>): void {
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (updates.sessionEnd !== undefined) {
+      fields.push('session_end = ?');
+      values.push(updates.sessionEnd ? updates.sessionEnd.toISOString() : null);
+    }
+    if (updates.lastFeature !== undefined) {
+      fields.push('last_feature = ?');
+      values.push(updates.lastFeature);
+    }
+    if (updates.currentFiles !== undefined) {
+      fields.push('current_files = ?');
+      values.push(JSON.stringify(updates.currentFiles));
+    }
+    if (updates.completedTasks !== undefined) {
+      fields.push('completed_tasks = ?');
+      values.push(JSON.stringify(updates.completedTasks));
+    }
+    if (updates.pendingTasks !== undefined) {
+      fields.push('pending_tasks = ?');
+      values.push(JSON.stringify(updates.pendingTasks));
+    }
+    if (updates.blockers !== undefined) {
+      fields.push('blockers = ?');
+      values.push(JSON.stringify(updates.blockers));
+    }
+    if (updates.sessionNotes !== undefined) {
+      fields.push('session_notes = ?');
+      values.push(updates.sessionNotes);
+    }
+
+    if (fields.length === 0) return;
+
+    fields.push('last_updated = CURRENT_TIMESTAMP');
+    values.push(sessionId);
+
+    const stmt = this.db.prepare(`
+      UPDATE work_sessions SET ${fields.join(', ')} WHERE id = ?
+    `);
+
+    stmt.run(...values);
+  }
+
+  getCurrentWorkSession(projectPath: string): WorkSession | null {
+    const stmt = this.db.prepare(`
+      SELECT * FROM work_sessions
+      WHERE project_path = ? AND session_end IS NULL
+      ORDER BY session_start DESC
+      LIMIT 1
+    `);
+    const row = stmt.get(projectPath) as any;
+
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      projectPath: row.project_path,
+      sessionStart: new Date(row.session_start + ' UTC'),
+      sessionEnd: row.session_end ? new Date(row.session_end + ' UTC') : undefined,
+      lastFeature: row.last_feature,
+      currentFiles: JSON.parse(row.current_files || '[]'),
+      completedTasks: JSON.parse(row.completed_tasks || '[]'),
+      pendingTasks: JSON.parse(row.pending_tasks || '[]'),
+      blockers: JSON.parse(row.blockers || '[]'),
+      sessionNotes: row.session_notes,
+      lastUpdated: new Date(row.last_updated + ' UTC')
+    };
+  }
+
+  getWorkSessions(projectPath: string, limit = 10): WorkSession[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM work_sessions
+      WHERE project_path = ?
+      ORDER BY session_start DESC
+      LIMIT ?
+    `);
+    const rows = stmt.all(projectPath, limit) as any[];
+
+    return rows.map(row => ({
+      id: row.id,
+      projectPath: row.project_path,
+      sessionStart: new Date(row.session_start + ' UTC'),
+      sessionEnd: row.session_end ? new Date(row.session_end + ' UTC') : undefined,
+      lastFeature: row.last_feature,
+      currentFiles: JSON.parse(row.current_files || '[]'),
+      completedTasks: JSON.parse(row.completed_tasks || '[]'),
+      pendingTasks: JSON.parse(row.pending_tasks || '[]'),
+      blockers: JSON.parse(row.blockers || '[]'),
+      sessionNotes: row.session_notes,
+      lastUpdated: new Date(row.last_updated + ' UTC')
+    }));
+  }
+
+  upsertProjectDecision(decision: Omit<ProjectDecision, 'madeAt'>): void {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO project_decisions (
+        id, project_path, decision_key, decision_value, reasoning
+      ) VALUES (?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      decision.id,
+      decision.projectPath,
+      decision.decisionKey,
+      decision.decisionValue,
+      decision.reasoning || null
+    );
+  }
+
+  getProjectDecisions(projectPath: string, limit = 20): ProjectDecision[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM project_decisions
+      WHERE project_path = ?
+      ORDER BY made_at DESC
+      LIMIT ?
+    `);
+    const rows = stmt.all(projectPath, limit) as any[];
+
+    return rows.map(row => ({
+      id: row.id,
+      projectPath: row.project_path,
+      decisionKey: row.decision_key,
+      decisionValue: row.decision_value,
+      reasoning: row.reasoning,
+      madeAt: new Date(row.made_at + ' UTC')
+    }));
+  }
+
+  getProjectDecision(projectPath: string, decisionKey: string): ProjectDecision | null {
+    const stmt = this.db.prepare(`
+      SELECT * FROM project_decisions
+      WHERE project_path = ? AND decision_key = ?
+    `);
+    const row = stmt.get(projectPath, decisionKey) as any;
+
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      projectPath: row.project_path,
+      decisionKey: row.decision_key,
+      decisionValue: row.decision_value,
+      reasoning: row.reasoning,
+      madeAt: new Date(row.made_at + ' UTC')
+    };
   }
 
   close(): void {

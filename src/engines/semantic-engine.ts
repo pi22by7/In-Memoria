@@ -20,7 +20,6 @@ export interface CodebaseAnalysisResult {
   }>;
   analysisStatus?: 'normal' | 'degraded';
   errors?: string[];
-  // Phase 1: Blueprint data
   entryPoints?: Array<{
     type: string;
     filePath: string;
@@ -125,7 +124,6 @@ export class SemanticEngine {
         async () => this.fallbackAnalysis(path)
       );
 
-      // Phase 1: Add blueprint detection
       const entryPoints = await this.detectEntryPoints(path, result.frameworks);
       const keyDirectories = await this.mapKeyDirectories(path);
 
@@ -489,7 +487,7 @@ export class SemanticEngine {
   }
 
   /**
-   * Phase 1: Detect entry points based on framework patterns
+   * Detect entry points based on framework patterns
    */
   async detectEntryPoints(projectPath: string, frameworks: string[]): Promise<Array<{
     type: string;
@@ -562,7 +560,7 @@ export class SemanticEngine {
   }
 
   /**
-   * Phase 1: Map key directories based on common patterns
+   * Map key directories based on common patterns
    */
   async mapKeyDirectories(projectPath: string): Promise<Array<{
     path: string;

@@ -29,12 +29,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Session resume** - Target <100 tokens to restore work context
 - **Smart routing** - Target <50 tokens to route vague requests to specific files
 
+#### 💼 **Work Context System (Phase 2)**
+
+- **Session tracking infrastructure** - New work session management for AI agent memory and context continuity
+  - **Work session persistence** - Track current files, pending tasks, completed tasks, and blockers across AI sessions
+  - **Project decision history** - Record architectural decisions with reasoning for future reference
+  - **Session resume capability** - Enable agents to pick up exactly where they left off (target <100 tokens)
+- **New database tables** - Added `work_sessions` and `project_decisions` tables with full migration support (Migration v6)
+- **Enhanced `get_developer_profile` tool** - Added optional `includeWorkContext` parameter to include current work session data
+  - Returns current files being worked on
+  - Lists pending tasks and recently completed tasks
+  - Provides recent project decisions with reasoning
+- **Enhanced `contribute_insights` tool** - Added optional `sessionUpdate` parameter to update work context
+  - Update current files and feature being worked on
+  - Modify task lists (pending/completed)
+  - Record project decisions with key-value pairs and reasoning
+- **Comprehensive session management** - Full CRUD operations for work sessions and decisions
+  - `createWorkSession()` - Initialize new work sessions
+  - `updateWorkSession()` - Update session state (files, tasks, feature)
+  - `getCurrentWorkSession()` - Retrieve active session for project
+  - `upsertProjectDecision()` - Store or update architectural decisions
+  - `getProjectDecisions()` - Fetch recent decisions with reasoning
+
 ### 🛠️ **Changed**
 
-- **Database schema** - Added blueprint-related tables with proper foreign key constraints
-- **Migration system** - Enhanced validation for blueprint tables in Migration v5
+- **Database schema** - Added blueprint-related tables (Phase 1) and work context tables (Phase 2) with proper foreign key constraints
+- **Migration system** - Enhanced validation for blueprint tables (Migration v5) and session tracking (Migration v6)
 - **CodebaseAnalysisResult interface** - Extended with optional `entryPoints` and `keyDirectories` fields
-- **Tool architecture** - Foundation laid for Phase 2 (work context) and Phase 3 (smart navigation)
+- **DeveloperProfile interface** - Extended with optional `currentWork` field containing session context
+- **Tool architecture** - Phase 1 (blueprint) and Phase 2 (work context) complete; foundation laid for Phase 3 (smart navigation)
 
 ## [0.4.6] - 2025-09-11
 

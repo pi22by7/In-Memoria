@@ -119,6 +119,10 @@ export class IntelligenceTools {
             includeRecentActivity: {
               type: 'boolean',
               description: 'Include recent coding activity in the profile'
+            },
+            includeWorkContext: {
+              type: 'boolean',
+              description: 'Include current work session context (files, tasks, decisions)'
             }
           }
         }
@@ -151,6 +155,30 @@ export class IntelligenceTools {
             impactPrediction: {
               type: 'object',
               description: 'Predicted impact of applying this insight'
+            },
+            sessionUpdate: {
+              type: 'object',
+              description: 'Optional work session update',
+              properties: {
+                files: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Files currently being worked on'
+                },
+                feature: {
+                  type: 'string',
+                  description: 'Feature being worked on'
+                },
+                tasks: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Current tasks'
+                },
+                decisions: {
+                  type: 'object',
+                  description: 'Project decisions made'
+                }
+              }
             }
           },
           required: ['type', 'content', 'confidence', 'sourceAgent']
@@ -421,7 +449,10 @@ export class IntelligenceTools {
     };
   }
 
-  async getDeveloperProfile(args: { includeRecentActivity?: boolean }): Promise<DeveloperProfile> {
+  async getDeveloperProfile(args: {
+    includeRecentActivity?: boolean;
+    includeWorkContext?: boolean;
+  }): Promise<DeveloperProfile> {
     const patterns = this.database.getDeveloperPatterns();
     const recentPatterns = patterns.filter(p => {
       const daysSinceLastSeen = Math.floor(
@@ -444,17 +475,44 @@ export class IntelligenceTools {
         testingApproach: this.extractTestingApproach(patterns)
       },
       expertiseAreas: this.extractExpertiseAreas(patterns),
-      recentFocus: args.includeRecentActivity ? 
+      recentFocus: args.includeRecentActivity ?
         this.extractRecentFocus(recentPatterns) : []
     };
+
+    if (args.includeWorkContext) {
+      const projectPath = process.cwd();
+      const session = this.database.getCurrentWorkSession(projectPath);
+
+      if (session) {
+        const decisions = this.database.getProjectDecisions(projectPath, 5);
+        profile.currentWork = {
+          lastFeature: session.lastFeature,
+          currentFiles: session.currentFiles,
+          pendingTasks: session.pendingTasks,
+          recentDecisions: decisions.map(d => ({
+            key: d.decisionKey,
+            value: d.decisionValue,
+            reasoning: d.reasoning
+          }))
+        };
+      }
+    }
 
     return profile;
   }
 
-  async contributeInsights(args: AIInsights): Promise<{
+  async contributeInsights(args: AIInsights & {
+    sessionUpdate?: {
+      files?: string[];
+      feature?: string;
+      tasks?: string[];
+      decisions?: Record<string, string>;
+    };
+  }): Promise<{
     success: boolean;
     insightId: string;
     message: string;
+    sessionUpdated?: boolean;
   }> {
     const validatedInsight = AIInsightsSchema.parse(args);
 
@@ -471,10 +529,17 @@ export class IntelligenceTools {
         impactPrediction: validatedInsight.impactPrediction || {}
       });
 
+      let sessionUpdated = false;
+      if (args.sessionUpdate) {
+        await this.updateWorkSession(args.sessionUpdate);
+        sessionUpdated = true;
+      }
+
       return {
         success: true,
         insightId,
-        message: 'Insight contributed successfully and pending validation'
+        message: 'Insight contributed successfully and pending validation',
+        ...(sessionUpdated && { sessionUpdated })
       };
     } catch (error) {
       return {
@@ -482,6 +547,60 @@ export class IntelligenceTools {
         insightId: '',
         message: `Failed to contribute insight: ${error}`
       };
+    }
+  }
+
+  private async updateWorkSession(sessionUpdate: {
+    files?: string[];
+    feature?: string;
+    tasks?: string[];
+    decisions?: Record<string, string>;
+  }): Promise<void> {
+    const projectPath = process.cwd();
+    const { nanoid } = await import('nanoid');
+
+    let session = this.database.getCurrentWorkSession(projectPath);
+
+    if (!session) {
+      this.database.createWorkSession({
+        id: nanoid(),
+        projectPath,
+        currentFiles: sessionUpdate.files || [],
+        completedTasks: [],
+        pendingTasks: sessionUpdate.tasks || [],
+        blockers: [],
+        lastFeature: sessionUpdate.feature
+      });
+      session = this.database.getCurrentWorkSession(projectPath);
+    }
+
+    if (session) {
+      const updates: any = {};
+
+      if (sessionUpdate.files) {
+        updates.currentFiles = sessionUpdate.files;
+      }
+      if (sessionUpdate.feature) {
+        updates.lastFeature = sessionUpdate.feature;
+      }
+      if (sessionUpdate.tasks) {
+        updates.pendingTasks = sessionUpdate.tasks;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        this.database.updateWorkSession(session.id, updates);
+      }
+    }
+
+    if (sessionUpdate.decisions) {
+      for (const [key, value] of Object.entries(sessionUpdate.decisions)) {
+        this.database.upsertProjectDecision({
+          id: nanoid(),
+          projectPath,
+          decisionKey: key,
+          decisionValue: value
+        });
+      }
     }
   }
 

@@ -253,7 +253,6 @@ export class DatabaseMigrator {
       `
     });
 
-    // Migration 5: Add project blueprint tables (Phase 1)
     this.migrations.push({
       version: 5,
       name: 'add_project_blueprint_tables',
@@ -310,6 +309,52 @@ export class DatabaseMigrator {
         DROP INDEX IF EXISTS idx_feature_map_name;
         DROP INDEX IF EXISTS idx_entry_points_project;
         DROP INDEX IF EXISTS idx_key_directories_project;
+      `
+    });
+
+    this.migrations.push({
+      version: 6,
+      name: 'add_work_session_tracking',
+      up: `
+        -- Work sessions tracking
+        CREATE TABLE IF NOT EXISTS work_sessions (
+          id TEXT PRIMARY KEY,
+          project_path TEXT NOT NULL,
+          session_start DATETIME DEFAULT (datetime('now', 'utc')),
+          session_end DATETIME,
+          last_feature TEXT,
+          current_files TEXT,
+          completed_tasks TEXT,
+          pending_tasks TEXT,
+          blockers TEXT,
+          session_notes TEXT,
+          last_updated DATETIME DEFAULT (datetime('now', 'utc')),
+          FOREIGN KEY (project_path) REFERENCES project_metadata(project_path)
+        );
+
+        -- Project decisions tracking
+        CREATE TABLE IF NOT EXISTS project_decisions (
+          id TEXT PRIMARY KEY,
+          project_path TEXT NOT NULL,
+          decision_key TEXT NOT NULL,
+          decision_value TEXT NOT NULL,
+          reasoning TEXT,
+          made_at DATETIME DEFAULT (datetime('now', 'utc')),
+          UNIQUE(project_path, decision_key),
+          FOREIGN KEY (project_path) REFERENCES project_metadata(project_path)
+        );
+
+        -- Indexes for session tables
+        CREATE INDEX IF NOT EXISTS idx_work_sessions_project ON work_sessions(project_path);
+        CREATE INDEX IF NOT EXISTS idx_work_sessions_updated ON work_sessions(last_updated DESC);
+        CREATE INDEX IF NOT EXISTS idx_project_decisions_key ON project_decisions(project_path, decision_key);
+      `,
+      down: `
+        DROP TABLE IF EXISTS work_sessions;
+        DROP TABLE IF EXISTS project_decisions;
+        DROP INDEX IF EXISTS idx_work_sessions_project;
+        DROP INDEX IF EXISTS idx_work_sessions_updated;
+        DROP INDEX IF EXISTS idx_project_decisions_key;
       `
     });
   }
@@ -405,6 +450,10 @@ export class DatabaseMigrator {
           this.validateTableExists(['feature_map', 'entry_points', 'key_directories']);
           this.validateIndexExists(['idx_feature_map_project', 'idx_entry_points_project', 'idx_key_directories_project']);
           break;
+        case 6: // Work session tracking
+          this.validateTableExists(['work_sessions', 'project_decisions']);
+          this.validateIndexExists(['idx_work_sessions_project', 'idx_work_sessions_updated', 'idx_project_decisions_key']);
+          break;
         default:
           // Generic validation - check migration was recorded
           break;
@@ -424,7 +473,8 @@ export class DatabaseMigrator {
         'semantic_concepts', 'developer_patterns', 'file_intelligence',
         'architectural_decisions', 'shared_patterns', 'ai_insights',
         'project_metadata', 'migrations',
-        'feature_map', 'entry_points', 'key_directories'
+        'feature_map', 'entry_points', 'key_directories',
+        'work_sessions', 'project_decisions'
       ];
 
       for (const table of requiredTables) {
