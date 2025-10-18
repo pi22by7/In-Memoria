@@ -74,38 +74,39 @@ export class CoreAnalysisTools {
           },
           required: ['query']
         }
-      },
-      {
-        name: 'generate_documentation',
-        description: 'Generate intelligent documentation for the codebase',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            path: {
-              type: 'string',
-              description: 'Path to the codebase'
-            },
-            format: {
-              type: 'string',
-              enum: ['markdown', 'html', 'json'],
-              description: 'Output format for documentation'
-            },
-            includeExamples: {
-              type: 'boolean',
-              description: 'Include code examples in documentation'
-            },
-            includeArchitecture: {
-              type: 'boolean',
-              description: 'Include architectural analysis'
-            },
-            outputPath: {
-              type: 'string',
-              description: 'Optional path to save generated documentation'
-            }
-          },
-          required: ['path']
-        }
       }
+      // DEPRECATED (Phase 4): Not agent-facing, removed from tool list
+      // {
+      //   name: 'generate_documentation',
+      //   description: 'Generate intelligent documentation for the codebase',
+      //   inputSchema: {
+      //     type: 'object',
+      //     properties: {
+      //       path: {
+      //         type: 'string',
+      //         description: 'Path to the codebase'
+      //       },
+      //       format: {
+      //         type: 'string',
+      //         enum: ['markdown', 'html', 'json'],
+      //         description: 'Output format for documentation'
+      //       },
+      //       includeExamples: {
+      //         type: 'boolean',
+      //         description: 'Include code examples in documentation'
+      //       },
+      //       includeArchitecture: {
+      //         type: 'boolean',
+      //         description: 'Include architectural analysis'
+      //       },
+      //       outputPath: {
+      //         type: 'string',
+      //         description: 'Optional path to save generated documentation'
+      //       }
+      //     },
+      //     required: ['path']
+      //   }
+      // }
     ];
   }
 

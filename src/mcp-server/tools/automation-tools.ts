@@ -19,7 +19,7 @@ export class AutomationTools {
     return [
       {
         name: 'auto_learn_if_needed',
-        description: 'Automatically learn from codebase if intelligence data is missing or stale. Perfect for seamless agent integration.',
+        description: 'Automatically learn from codebase if intelligence data is missing or stale. Includes project setup and verification. Perfect for seamless agent integration.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -36,41 +36,53 @@ export class AutomationTools {
               type: 'boolean',
               description: 'Include detailed progress information in response',
               default: true
-            }
-          }
-        }
-      },
-      {
-        name: 'get_learning_status',
-        description: 'Get the current learning/intelligence status of the codebase',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            path: {
-              type: 'string',
-              description: 'Path to check (defaults to current working directory)'
-            }
-          }
-        }
-      },
-      {
-        name: 'quick_setup',
-        description: 'Perform quick setup and learning for immediate use by AI agents',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            path: {
-              type: 'string',
-              description: 'Path to the project directory'
             },
             skipLearning: {
               type: 'boolean',
-              description: 'Skip the learning phase for faster setup',
+              description: 'Skip the learning phase for faster setup (Phase 4: merged from quick_setup)',
+              default: false
+            },
+            includeSetupSteps: {
+              type: 'boolean',
+              description: 'Include detailed setup verification steps (Phase 4: merged from quick_setup)',
               default: false
             }
           }
         }
       }
+      // DEPRECATED (Phase 4): Merged into get_project_blueprint - returns learning status in blueprint
+      // {
+      //   name: 'get_learning_status',
+      //   description: 'Get the current learning/intelligence status of the codebase',
+      //   inputSchema: {
+      //     type: 'object',
+      //     properties: {
+      //       path: {
+      //         type: 'string',
+      //         description: 'Path to check (defaults to current working directory)'
+      //       }
+      //     }
+      //   }
+      // },
+      // DEPRECATED (Phase 4): Merged into auto_learn_if_needed - same functionality
+      // {
+      //   name: 'quick_setup',
+      //   description: 'Perform quick setup and learning for immediate use by AI agents',
+      //   inputSchema: {
+      //     type: 'object',
+      //     properties: {
+      //       path: {
+      //         type: 'string',
+      //         description: 'Path to the project directory'
+      //       },
+      //       skipLearning: {
+      //         type: 'boolean',
+      //         description: 'Skip the learning phase for faster setup',
+      //         default: false
+      //       }
+      //     }
+      //   }
+      // }
     ];
   }
 
@@ -78,17 +90,115 @@ export class AutomationTools {
     path?: string;
     force?: boolean;
     includeProgress?: boolean;
+    skipLearning?: boolean;
+    includeSetupSteps?: boolean;
   }): Promise<any> {
     const projectPath = args.path || process.cwd();
     const force = args.force || false;
     const includeProgress = args.includeProgress !== false;
+    const skipLearning = args.skipLearning || false;
+    const includeSetupSteps = args.includeSetupSteps || false;
 
-    console.error(`🤖 Auto-learning check for: ${projectPath}`);
+    // Phase 4: If includeSetupSteps is true, include quick_setup functionality
+    const setupSteps: Array<{
+      step: string;
+      status: string;
+      message: string;
+      details?: any;
+      error?: string;
+    }> | undefined = includeSetupSteps ? [] : undefined;
+
+    if (includeSetupSteps) {
+      console.error(`🚀 Quick setup for: ${projectPath}`);
+
+      // Step 1: Project check
+      const files = await this.countProjectFiles(projectPath);
+      setupSteps!.push({
+        step: 'project_check',
+        status: 'completed',
+        message: `Project detected at ${projectPath}`,
+        details: files
+      });
+
+      // Step 2: Database initialization (automatic)
+      setupSteps!.push({
+        step: 'database_init',
+        status: 'completed',
+        message: 'Database initialized and migrations applied',
+        details: {
+          version: this.database.getMigrator().getCurrentVersion(),
+          tablesReady: true
+        }
+      });
+    } else {
+      console.error(`🤖 Auto-learning check for: ${projectPath}`);
+    }
 
     // Check if learning is needed
     const status = await this.getLearningStatus({ path: projectPath });
 
+    // Phase 4: Handle skipLearning from quick_setup
+    if (skipLearning) {
+      if (includeSetupSteps) {
+        setupSteps!.push({
+          step: 'learning',
+          status: 'skipped',
+          message: 'Learning phase skipped as requested'
+        });
+
+        // Verification step
+        setupSteps!.push({
+          step: 'verification',
+          status: 'completed',
+          message: status.message,
+          details: status
+        });
+
+        return {
+          success: true,
+          action: 'setup_completed',
+          projectPath,
+          steps: setupSteps,
+          message: '✅ Quick setup completed! In Memoria is ready for AI agent use.',
+          readyForAgents: status.hasIntelligence,
+          intelligenceStatus: status
+        };
+      }
+
+      return {
+        action: 'skipped',
+        reason: 'Learning phase skipped',
+        status,
+        message: 'Setup completed without learning.'
+      };
+    }
+
     if (!force && status.hasIntelligence && !status.isStale) {
+      if (includeSetupSteps) {
+        setupSteps!.push({
+          step: 'learning',
+          status: 'skipped',
+          message: 'Intelligence data is up-to-date'
+        });
+
+        setupSteps!.push({
+          step: 'verification',
+          status: 'completed',
+          message: status.message,
+          details: status
+        });
+
+        return {
+          success: true,
+          action: 'setup_completed',
+          projectPath,
+          steps: setupSteps,
+          message: '✅ Setup completed! Intelligence data is current.',
+          readyForAgents: true,
+          intelligenceStatus: status
+        };
+      }
+
       return {
         action: 'skipped',
         reason: 'Intelligence data is up-to-date',
@@ -158,6 +268,43 @@ export class AutomationTools {
 
       progressRenderer.stop();
 
+      // Phase 4: Handle setup steps from quick_setup
+      if (includeSetupSteps) {
+        setupSteps!.push({
+          step: 'learning',
+          status: 'completed',
+          message: `Learned ${concepts.length} concepts and ${patterns.length} patterns`,
+          details: {
+            conceptsLearned: concepts.length,
+            patternsLearned: patterns.length,
+            filesAnalyzed: files.codeFiles
+          }
+        });
+
+        const finalStatus = await this.getLearningStatus({ path: projectPath });
+        setupSteps!.push({
+          step: 'verification',
+          status: 'completed',
+          message: finalStatus.message,
+          details: finalStatus
+        });
+
+        return {
+          success: true,
+          action: 'setup_completed',
+          projectPath,
+          steps: setupSteps,
+          conceptsLearned: concepts.length,
+          patternsLearned: patterns.length,
+          filesAnalyzed: files.codeFiles,
+          totalFiles: files.total,
+          timeElapsed: Date.now() - tracker.getProgress()!.startTime,
+          message: '✅ Quick setup completed! In Memoria is ready for AI agent use.',
+          readyForAgents: true,
+          intelligenceStatus: finalStatus
+        };
+      }
+
       const result = {
         action: 'learned',
         conceptsLearned: concepts.length,
@@ -178,6 +325,27 @@ export class AutomationTools {
     } catch (error: unknown) {
       progressRenderer.stop();
       console.error('❌ Auto-learning failed:', error);
+
+      // Phase 4: Handle setup steps failure
+      if (includeSetupSteps) {
+        setupSteps!.push({
+          step: 'error',
+          status: 'failed',
+          message: `Setup failed: ${error instanceof Error ? error.message : String(error)}`,
+          error: error instanceof Error ? error.message : String(error)
+        });
+
+        return {
+          success: false,
+          action: 'setup_failed',
+          projectPath,
+          steps: setupSteps,
+          message: '❌ Quick setup failed. Manual intervention may be required.',
+          readyForAgents: false,
+          error: error instanceof Error ? error.message : String(error),
+          status: await this.getLearningStatus({ path: projectPath })
+        };
+      }
 
       return {
         action: 'failed',

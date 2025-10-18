@@ -669,6 +669,14 @@ export class IntelligenceTools {
     keyDirectories: Record<string, string>;
     architecture: string;
     featureMap?: Record<string, string[]>;
+    learningStatus?: {
+      hasIntelligence: boolean;
+      isStale: boolean;
+      conceptsStored: number;
+      patternsStored: number;
+      recommendation: string;
+      message: string;
+    };
   }> {
     const projectPath = args.path || process.cwd();
     const { config } = await import('../../config/config.js');
@@ -709,15 +717,62 @@ export class IntelligenceTools {
         keyDirectories: keyDirs
       });
 
+      // Get learning status (Phase 4 enhancement - replaces get_learning_status tool)
+      const learningStatus = await this.getLearningStatus(projectDatabase, projectPath);
+
       return {
         techStack,
         entryPoints: entryPointsMap,
         keyDirectories: keyDirsMap,
         architecture,
-        ...(featureMap && Object.keys(featureMap).length > 0 ? { featureMap } : {})
+        ...(featureMap && Object.keys(featureMap).length > 0 ? { featureMap } : {}),
+        learningStatus
       };
     } finally {
       projectDatabase.close();
+    }
+  }
+
+  /**
+   * Get learning/intelligence status for the project
+   * Phase 4: Merged from automation-tools get_learning_status
+   */
+  private async getLearningStatus(database: SQLiteDatabase, projectPath: string): Promise<{
+    hasIntelligence: boolean;
+    isStale: boolean;
+    conceptsStored: number;
+    patternsStored: number;
+    recommendation: string;
+    message: string;
+  }> {
+    try {
+      const concepts = database.getSemanticConcepts();
+      const patterns = database.getDeveloperPatterns();
+
+      const hasIntelligence = concepts.length > 0 || patterns.length > 0;
+
+      // Simple staleness check - could be enhanced with file modification time comparison
+      const isStale = false; // For now, assume not stale unless we implement file time checking
+
+      return {
+        hasIntelligence,
+        isStale,
+        conceptsStored: concepts.length,
+        patternsStored: patterns.length,
+        recommendation: hasIntelligence && !isStale ? 'ready' : 'learning_recommended',
+        message: hasIntelligence && !isStale
+          ? `Intelligence is ready! ${concepts.length} concepts and ${patterns.length} patterns available.`
+          : `Learning recommended for optimal functionality.`
+      };
+    } catch (error) {
+      return {
+        hasIntelligence: false,
+        isStale: false,
+        conceptsStored: 0,
+        patternsStored: 0,
+        recommendation: 'learning_needed',
+        message: 'No intelligence data available. Learning needed for optimal functionality.'
+      };
     }
   }
 
