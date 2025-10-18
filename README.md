@@ -57,6 +57,49 @@ npx in-memoria learn ./my-project
 # Intelligent filtering excludes build artifacts and dependencies
 ```
 
+## GitHub Copilot Integration
+
+In Memoria works seamlessly with GitHub Copilot through custom instructions and chat modes.
+
+### Repository Instructions
+
+This repository includes `.github/copilot-instructions.md` which automatically guides GitHub Copilot on how to use In Memoria's MCP tools effectively.
+
+### Custom Chat Modes
+
+Three specialized chat modes are available in `.github/chatmodes/`:
+
+- **🔍 inmemoria-explorer** - Intelligent codebase navigation with semantic search
+- **🚀 inmemoria-feature** - Feature implementation with pattern guidance
+- **🔎 inmemoria-review** - Code review with consistency checking
+
+To use them in VS Code:
+1. Open Command Palette (Cmd/Ctrl+Shift+P)
+2. Run "Chat: Configure Chat Modes..."
+3. Select a mode from `.github/chatmodes/`
+
+### Quick Start for Copilot Users
+
+```typescript
+// Copilot will automatically use In Memoria when you:
+
+// 1. Ask about the codebase
+@workspace "Where is the authentication logic?"
+// → Copilot uses semantic search
+
+// 2. Request a new feature
+"Add password reset functionality"
+// → Copilot gets approach + file routing + patterns
+
+// 3. Ask for a review
+"Review this code for consistency"
+// → Copilot checks against project patterns
+```
+
+### AGENT.md Reference
+
+See `AGENT.md` for complete AI agent instructions, tool reference card, and usage patterns. This file provides detailed guidance for any AI coding assistant (not just Copilot).
+
 ## How It Works
 
 In Memoria runs as an MCP server that AI tools connect to. It provides 17 tools for codebase analysis and pattern learning.
