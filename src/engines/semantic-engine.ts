@@ -1,4 +1,4 @@
-import { SemanticAnalyzer } from '../rust-bindings.js';
+import { SemanticAnalyzer, BlueprintAnalyzer, FrameworkDetector } from '../rust-bindings.js';
 import { SQLiteDatabase, SemanticConcept } from '../storage/sqlite-db.js';
 import { SemanticVectorDB } from '../storage/vector-db.js';
 import { nanoid } from 'nanoid';
@@ -487,169 +487,213 @@ export class SemanticEngine {
   }
 
   /**
-   * Detect entry points based on framework patterns
-   * Uses async file operations to prevent blocking event loop
+   * Detect entry points using Rust analyzer with TypeScript fallback
+   * Uses CircuitBreaker pattern for graceful degradation
    */
   async detectEntryPoints(projectPath: string, frameworks: string[]): Promise<Array<{
     type: string;
     filePath: string;
     framework?: string;
   }>> {
-    const { access } = await import('fs/promises');
-    const { join, resolve } = await import('path');
-    const { constants } = await import('fs');
-    const entryPoints: Array<{ type: string; filePath: string; framework?: string }> = [];
+    // Rust implementation
+    const rustImplementation = async () => {
+      const frameworkDetector = new FrameworkDetector();
+      const frameworkInfo = await FrameworkDetector.detectFrameworks(projectPath);
+      const blueprintAnalyzer = new BlueprintAnalyzer();
+      const entryPoints = await BlueprintAnalyzer.detectEntryPoints(projectPath, frameworkInfo);
 
-    try {
-      // Validate projectPath is safe (prevent path traversal)
-      const resolvedProject = resolve(projectPath);
+      return entryPoints.map((ep: any) => ({
+        type: ep.entry_type,
+        filePath: ep.file_path,
+        framework: ep.framework || undefined,
+      }));
+    };
 
-      // Helper to safely check file existence
-      const fileExists = async (relPath: string): Promise<boolean> => {
-        try {
-          const fullPath = join(projectPath, relPath);
-          const resolved = resolve(fullPath);
+    // TypeScript fallback implementation
+    const fallbackImplementation = async () => {
+      const { access } = await import('fs/promises');
+      const { join, resolve } = await import('path');
+      const { constants } = await import('fs');
+      const entryPoints: Array<{ type: string; filePath: string; framework?: string }> = [];
 
-          // Ensure path is within project boundaries
-          if (!resolved.startsWith(resolvedProject)) {
-            console.warn(`⚠️  Path traversal detected: ${relPath}`);
+      try {
+        // Validate projectPath is safe (prevent path traversal)
+        const resolvedProject = resolve(projectPath);
+
+        // Helper to safely check file existence
+        const fileExists = async (relPath: string): Promise<boolean> => {
+          try {
+            const fullPath = join(projectPath, relPath);
+            const resolved = resolve(fullPath);
+
+            // Ensure path is within project boundaries
+            if (!resolved.startsWith(resolvedProject)) {
+              console.warn(`⚠️  Path traversal detected: ${relPath}`);
+              return false;
+            }
+
+            await access(resolved, constants.F_OK);
+            return true;
+          } catch {
             return false;
           }
+        };
 
-          await access(resolved, constants.F_OK);
-          return true;
-        } catch {
-          return false;
-        }
-      };
-
-      // React/Next.js entry points
-      if (frameworks.some(f => f.toLowerCase().includes('react') || f.toLowerCase().includes('next'))) {
-        const reactEntries = ['src/index.tsx', 'src/index.jsx', 'src/App.tsx', 'src/App.jsx', 'pages/_app.tsx', 'pages/_app.js'];
-        for (const entry of reactEntries) {
-          if (await fileExists(entry)) {
-            entryPoints.push({ type: 'web', filePath: entry, framework: 'react' });
+        // React/Next.js entry points
+        if (frameworks.some(f => f.toLowerCase().includes('react') || f.toLowerCase().includes('next'))) {
+          const reactEntries = ['src/index.tsx', 'src/index.jsx', 'src/App.tsx', 'src/App.jsx', 'pages/_app.tsx', 'pages/_app.js'];
+          for (const entry of reactEntries) {
+            if (await fileExists(entry)) {
+              entryPoints.push({ type: 'web', filePath: entry, framework: 'react' });
+            }
           }
         }
-      }
 
-      // Express/Node API entry points
-      if (frameworks.some(f => f.toLowerCase().includes('express') || f.toLowerCase().includes('node'))) {
-        const apiEntries = ['server.js', 'app.js', 'index.js', 'src/server.ts', 'src/app.ts', 'src/index.ts'];
-        for (const entry of apiEntries) {
-          if (await fileExists(entry)) {
-            entryPoints.push({ type: 'api', filePath: entry, framework: 'express' });
+        // Express/Node API entry points
+        if (frameworks.some(f => f.toLowerCase().includes('express') || f.toLowerCase().includes('node'))) {
+          const apiEntries = ['server.js', 'app.js', 'index.js', 'src/server.ts', 'src/app.ts', 'src/index.ts'];
+          for (const entry of apiEntries) {
+            if (await fileExists(entry)) {
+              entryPoints.push({ type: 'api', filePath: entry, framework: 'express' });
+            }
           }
         }
-      }
 
-      // FastAPI/Python entry points
-      if (frameworks.some(f => f.toLowerCase().includes('fastapi') || f.toLowerCase().includes('flask'))) {
-        const pythonEntries = ['main.py', 'app.py', 'server.py', 'api/main.py'];
-        for (const entry of pythonEntries) {
-          if (await fileExists(entry)) {
-            entryPoints.push({ type: 'api', filePath: entry, framework: 'fastapi' });
+        // FastAPI/Python entry points
+        if (frameworks.some(f => f.toLowerCase().includes('fastapi') || f.toLowerCase().includes('flask'))) {
+          const pythonEntries = ['main.py', 'app.py', 'server.py', 'api/main.py'];
+          for (const entry of pythonEntries) {
+            if (await fileExists(entry)) {
+              entryPoints.push({ type: 'api', filePath: entry, framework: 'fastapi' });
+            }
           }
         }
-      }
 
-      // Svelte entry points
-      if (frameworks.some(f => f.toLowerCase().includes('svelte'))) {
-        const svelteEntries = ['src/routes/+page.svelte', 'src/main.ts', 'src/main.js'];
-        for (const entry of svelteEntries) {
-          if (await fileExists(entry)) {
-            entryPoints.push({ type: 'web', filePath: entry, framework: 'svelte' });
+        // Svelte entry points
+        if (frameworks.some(f => f.toLowerCase().includes('svelte'))) {
+          const svelteEntries = ['src/routes/+page.svelte', 'src/main.ts', 'src/main.js'];
+          for (const entry of svelteEntries) {
+            if (await fileExists(entry)) {
+              entryPoints.push({ type: 'web', filePath: entry, framework: 'svelte' });
+            }
           }
         }
-      }
 
-      // CLI entry points
-      const cliEntries = ['cli.js', 'bin/cli.js', 'src/cli.ts', 'src/cli.js'];
-      for (const entry of cliEntries) {
-        if (await fileExists(entry)) {
-          entryPoints.push({ type: 'cli', filePath: entry });
+        // CLI entry points
+        const cliEntries = ['cli.js', 'bin/cli.js', 'src/cli.ts', 'src/cli.js'];
+        for (const entry of cliEntries) {
+          if (await fileExists(entry)) {
+            entryPoints.push({ type: 'cli', filePath: entry });
+          }
         }
-      }
 
-      return entryPoints;
-    } catch (error) {
-      console.warn('⚠️  Entry point detection failed:', error instanceof Error ? error.message : 'Unknown error');
-      console.warn('   Blueprint may be incomplete. This could indicate:');
-      console.warn('   • Invalid project path');
-      console.warn('   • Permission issues');
-      console.warn('   • Unsupported project structure');
-      return [];
-    }
+        return entryPoints;
+      } catch (error) {
+        console.warn('⚠️  Entry point detection failed:', error instanceof Error ? error.message : 'Unknown error');
+        console.warn('   Blueprint may be incomplete. This could indicate:');
+        console.warn('   • Invalid project path');
+        console.warn('   • Permission issues');
+        console.warn('   • Unsupported project structure');
+        return [];
+      }
+    };
+
+    // Use CircuitBreaker to try Rust first, fall back to TypeScript
+    return this.rustCircuitBreaker.execute(
+      rustImplementation,
+      fallbackImplementation
+    );
   }
 
   /**
-   * Map key directories based on common patterns
-   * Uses async file operations with depth limits
+   * Map key directories using Rust analyzer with TypeScript fallback
+   * Uses CircuitBreaker pattern for graceful degradation
    */
   async mapKeyDirectories(projectPath: string): Promise<Array<{
     path: string;
     type: string;
     fileCount: number;
   }>> {
-    const { access, stat } = await import('fs/promises');
-    const { join, resolve } = await import('path');
-    const { constants } = await import('fs');
-    const keyDirectories: Array<{ path: string; type: string; fileCount: number }> = [];
+    // Rust implementation
+    const rustImplementation = async () => {
+      const blueprintAnalyzer = new BlueprintAnalyzer();
+      const keyDirs = await BlueprintAnalyzer.mapKeyDirectories(projectPath);
 
-    try {
-      // Validate projectPath
-      const resolvedProject = resolve(projectPath);
+      return keyDirs.map((dir: any) => ({
+        path: dir.path,
+        type: dir.dir_type,
+        fileCount: dir.file_count,
+      }));
+    };
 
-      const commonDirs = [
-        { pattern: 'src/components', type: 'components' },
-        { pattern: 'src/utils', type: 'utils' },
-        { pattern: 'src/services', type: 'services' },
-        { pattern: 'src/api', type: 'api' },
-        { pattern: 'src/auth', type: 'auth' },
-        { pattern: 'src/models', type: 'models' },
-        { pattern: 'src/views', type: 'views' },
-        { pattern: 'src/pages', type: 'pages' },
-        { pattern: 'src/lib', type: 'library' },
-        { pattern: 'lib', type: 'library' },
-        { pattern: 'utils', type: 'utils' },
-        { pattern: 'middleware', type: 'middleware' },
-        { pattern: 'routes', type: 'routes' }
-      ];
+    // TypeScript fallback implementation
+    const fallbackImplementation = async () => {
+      const { access, stat } = await import('fs/promises');
+      const { join, resolve } = await import('path');
+      const { constants } = await import('fs');
+      const keyDirectories: Array<{ path: string; type: string; fileCount: number }> = [];
 
-      for (const dir of commonDirs) {
-        const fullPath = join(projectPath, dir.pattern);
-        const resolved = resolve(fullPath);
+      try {
+        // Validate projectPath
+        const resolvedProject = resolve(projectPath);
 
-        // Path validation
-        if (!resolved.startsWith(resolvedProject)) {
-          continue;
-        }
+        const commonDirs = [
+          { pattern: 'src/components', type: 'components' },
+          { pattern: 'src/utils', type: 'utils' },
+          { pattern: 'src/services', type: 'services' },
+          { pattern: 'src/api', type: 'api' },
+          { pattern: 'src/auth', type: 'auth' },
+          { pattern: 'src/models', type: 'models' },
+          { pattern: 'src/views', type: 'views' },
+          { pattern: 'src/pages', type: 'pages' },
+          { pattern: 'src/lib', type: 'library' },
+          { pattern: 'lib', type: 'library' },
+          { pattern: 'utils', type: 'utils' },
+          { pattern: 'middleware', type: 'middleware' },
+          { pattern: 'routes', type: 'routes' }
+        ];
 
-        try {
-          await access(resolved, constants.F_OK);
-          const stats = await stat(resolved);
+        for (const dir of commonDirs) {
+          const fullPath = join(projectPath, dir.pattern);
+          const resolved = resolve(fullPath);
 
-          if (stats.isDirectory()) {
-            // Count files in directory with depth limit
-            const fileCount = await this.countFilesInDirectory(resolved, 5);
-            keyDirectories.push({
-              path: dir.pattern,
-              type: dir.type,
-              fileCount
-            });
+          // Path validation
+          if (!resolved.startsWith(resolvedProject)) {
+            continue;
           }
-        } catch {
-          // Directory doesn't exist, skip it
-          continue;
-        }
-      }
 
-      return keyDirectories;
-    } catch (error) {
-      console.warn('⚠️  Failed to map key directories:', error instanceof Error ? error.message : 'Unknown error');
-      console.warn('   Blueprint may be incomplete');
-      return [];
-    }
+          try {
+            await access(resolved, constants.F_OK);
+            const stats = await stat(resolved);
+
+            if (stats.isDirectory()) {
+              // Count files in directory with depth limit
+              const fileCount = await this.countFilesInDirectory(resolved, 5);
+              keyDirectories.push({
+                path: dir.pattern,
+                type: dir.type,
+                fileCount
+              });
+            }
+          } catch {
+            // Directory doesn't exist, skip it
+            continue;
+          }
+        }
+
+        return keyDirectories;
+      } catch (error) {
+        console.warn('⚠️  Failed to map key directories:', error instanceof Error ? error.message : 'Unknown error');
+        console.warn('   Blueprint may be incomplete');
+        return [];
+      }
+    };
+
+    // Use CircuitBreaker to try Rust first, fall back to TypeScript
+    return this.rustCircuitBreaker.execute(
+      rustImplementation,
+      fallbackImplementation
+    );
   }
 
   /**

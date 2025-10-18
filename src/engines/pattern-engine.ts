@@ -1,6 +1,7 @@
-import { PatternLearner } from '../rust-bindings.js';
+import { PatternLearner, BlueprintAnalyzer } from '../rust-bindings.js';
 import { SQLiteDatabase, DeveloperPattern } from '../storage/sqlite-db.js';
 import { FileChange } from '../watchers/file-watcher.js';
+import { CircuitBreaker, createRustAnalyzerCircuitBreaker } from '../utils/circuit-breaker.js';
 import { nanoid } from 'nanoid';
 
 export interface PatternExtractionResult {
@@ -34,9 +35,11 @@ export interface RelevantPattern {
 
 export class PatternEngine {
   private rustLearner: InstanceType<typeof PatternLearner>;
+  private rustCircuitBreaker: CircuitBreaker;
 
   constructor(private database: SQLiteDatabase) {
     this.rustLearner = new PatternLearner();
+    this.rustCircuitBreaker = createRustAnalyzerCircuitBreaker();
   }
 
   async extractPatterns(path: string): Promise<PatternExtractionResult[]> {
@@ -534,7 +537,8 @@ export class PatternEngine {
   }
 
   /**
-   * Build feature map with async file operations and depth limits
+   * Build feature map using Rust analyzer with TypeScript fallback
+   * Uses CircuitBreaker pattern for graceful degradation
    */
   async buildFeatureMap(projectPath: string): Promise<Array<{
     id: string;
@@ -543,114 +547,136 @@ export class PatternEngine {
     relatedFiles: string[];
     dependencies: string[];
   }>> {
-    const { access } = await import('fs/promises');
-    const { join, relative, resolve } = await import('path');
-    const { constants } = await import('fs');
-    const { nanoid } = await import('nanoid');
+    // Rust implementation
+    const rustImplementation = async () => {
+      const blueprintAnalyzer = new BlueprintAnalyzer();
+      const featureMaps = await BlueprintAnalyzer.buildFeatureMap(projectPath);
 
-    const featureMap: Array<{
-      id: string;
-      featureName: string;
-      primaryFiles: string[];
-      relatedFiles: string[];
-      dependencies: string[];
-    }> = [];
+      return featureMaps.map((fm: any) => ({
+        id: fm.id,
+        featureName: fm.feature_name,
+        primaryFiles: fm.primary_files,
+        relatedFiles: fm.related_files,
+        dependencies: fm.dependencies,
+      }));
+    };
 
-    try {
-      // Validate projectPath
-      const resolvedProject = resolve(projectPath);
+    // TypeScript fallback implementation
+    const fallbackImplementation = async () => {
+      const { access } = await import('fs/promises');
+      const { join, relative, resolve } = await import('path');
+      const { constants } = await import('fs');
 
-      const featurePatterns: Record<string, { patterns: string[]; directories: string[] }> = {
-        'authentication': {
-          patterns: ['**/auth/**', '**/authentication/**', '**/login*', '**/signup*', '**/register*'],
-          directories: ['auth', 'authentication']
-        },
-        'api': {
-          patterns: ['**/api/**', '**/routes/**', '**/endpoints/**', '**/controllers/**'],
-          directories: ['api', 'routes', 'endpoints', 'controllers']
-        },
-        'database': {
-          patterns: ['**/db/**', '**/database/**', '**/models/**', '**/schemas/**', '**/migrations/**'],
-          directories: ['db', 'database', 'models', 'schemas', 'migrations', 'storage']
-        },
-        'ui-components': {
-          patterns: ['**/components/**', '**/ui/**'],
-          directories: ['components', 'ui']
-        },
-        'views': {
-          patterns: ['**/views/**', '**/pages/**', '**/screens/**'],
-          directories: ['views', 'pages', 'screens']
-        },
-        'services': {
-          patterns: ['**/services/**', '**/api-clients/**'],
-          directories: ['services', 'api-clients']
-        },
-        'utilities': {
-          patterns: ['**/utils/**', '**/helpers/**', '**/lib/**'],
-          directories: ['utils', 'helpers', 'lib']
-        },
-        'testing': {
-          patterns: ['**/*.test.*', '**/*.spec.*', '**/tests/**', '**/__tests__/**'],
-          directories: ['tests', '__tests__', 'test']
-        },
-        'configuration': {
-          patterns: ['**/config/**', '**/.config/**', '**/settings/**'],
-          directories: ['config', '.config', 'settings']
-        },
-        'middleware': {
-          patterns: ['**/middleware/**', '**/middlewares/**'],
-          directories: ['middleware', 'middlewares']
-        }
-      };
+      const featureMap: Array<{
+        id: string;
+        featureName: string;
+        primaryFiles: string[];
+        relatedFiles: string[];
+        dependencies: string[];
+      }> = [];
 
-      for (const [featureName, { directories }] of Object.entries(featurePatterns)) {
-        const primaryFiles: string[] = [];
-        const relatedFiles: string[] = [];
+      try {
+        // Validate projectPath
+        const resolvedProject = resolve(projectPath);
 
-        for (const dir of directories) {
-          const fullPath = join(projectPath, 'src', dir);
-          const altPath = join(projectPath, dir);
+        const featurePatterns: Record<string, { patterns: string[]; directories: string[] }> = {
+          'authentication': {
+            patterns: ['**/auth/**', '**/authentication/**', '**/login*', '**/signup*', '**/register*'],
+            directories: ['auth', 'authentication']
+          },
+          'api': {
+            patterns: ['**/api/**', '**/routes/**', '**/endpoints/**', '**/controllers/**'],
+            directories: ['api', 'routes', 'endpoints', 'controllers']
+          },
+          'database': {
+            patterns: ['**/db/**', '**/database/**', '**/models/**', '**/schemas/**', '**/migrations/**'],
+            directories: ['db', 'database', 'models', 'schemas', 'migrations', 'storage']
+          },
+          'ui-components': {
+            patterns: ['**/components/**', '**/ui/**'],
+            directories: ['components', 'ui']
+          },
+          'views': {
+            patterns: ['**/views/**', '**/pages/**', '**/screens/**'],
+            directories: ['views', 'pages', 'screens']
+          },
+          'services': {
+            patterns: ['**/services/**', '**/api-clients/**'],
+            directories: ['services', 'api-clients']
+          },
+          'utilities': {
+            patterns: ['**/utils/**', '**/helpers/**', '**/lib/**'],
+            directories: ['utils', 'helpers', 'lib']
+          },
+          'testing': {
+            patterns: ['**/*.test.*', '**/*.spec.*', '**/tests/**', '**/__tests__/**'],
+            directories: ['tests', '__tests__', 'test']
+          },
+          'configuration': {
+            patterns: ['**/config/**', '**/.config/**', '**/settings/**'],
+            directories: ['config', '.config', 'settings']
+          },
+          'middleware': {
+            patterns: ['**/middleware/**', '**/middlewares/**'],
+            directories: ['middleware', 'middlewares']
+          }
+        };
 
-          for (const checkPath of [fullPath, altPath]) {
-            const resolved = resolve(checkPath);
+        for (const [featureName, { directories }] of Object.entries(featurePatterns)) {
+          const primaryFiles: string[] = [];
+          const relatedFiles: string[] = [];
 
-            // Path validation
-            if (!resolved.startsWith(resolvedProject)) {
-              continue;
-            }
+          for (const dir of directories) {
+            const fullPath = join(projectPath, 'src', dir);
+            const altPath = join(projectPath, dir);
 
-            try {
-              await access(resolved, constants.F_OK);
-              const files = await this.collectFilesInDirectory(resolved, projectPath, 5);
+            for (const checkPath of [fullPath, altPath]) {
+              const resolved = resolve(checkPath);
 
-              if (files.length > 0) {
-                primaryFiles.push(...files.slice(0, Math.ceil(files.length / 2)));
-                relatedFiles.push(...files.slice(Math.ceil(files.length / 2)));
+              // Path validation
+              if (!resolved.startsWith(resolvedProject)) {
+                continue;
               }
-            } catch {
-              // Directory doesn't exist, skip it
-              continue;
+
+              try {
+                await access(resolved, constants.F_OK);
+                const files = await this.collectFilesInDirectory(resolved, projectPath, 5);
+
+                if (files.length > 0) {
+                  primaryFiles.push(...files.slice(0, Math.ceil(files.length / 2)));
+                  relatedFiles.push(...files.slice(Math.ceil(files.length / 2)));
+                }
+              } catch {
+                // Directory doesn't exist, skip it
+                continue;
+              }
             }
+          }
+
+          if (primaryFiles.length > 0) {
+            featureMap.push({
+              id: nanoid(),
+              featureName,
+              primaryFiles: [...new Set(primaryFiles)],
+              relatedFiles: [...new Set(relatedFiles)],
+              dependencies: []
+            });
           }
         }
 
-        if (primaryFiles.length > 0) {
-          featureMap.push({
-            id: nanoid(),
-            featureName,
-            primaryFiles: [...new Set(primaryFiles)],
-            relatedFiles: [...new Set(relatedFiles)],
-            dependencies: []
-          });
-        }
+        return featureMap;
+      } catch (error) {
+        console.error('⚠️  Feature mapping error:', error instanceof Error ? error.message : 'Unknown error');
+        console.warn('   Feature map may be incomplete');
+        return [];
       }
+    };
 
-      return featureMap;
-    } catch (error) {
-      console.error('⚠️  Feature mapping error:', error instanceof Error ? error.message : 'Unknown error');
-      console.warn('   Feature map may be incomplete');
-      return [];
-    }
+    // Use CircuitBreaker to try Rust first, fall back to TypeScript
+    return this.rustCircuitBreaker.execute(
+      rustImplementation,
+      fallbackImplementation
+    );
   }
 
   /**

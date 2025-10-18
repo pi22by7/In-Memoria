@@ -509,6 +509,7 @@ if (!nativeBinding) {
 
 module.exports = nativeBinding
 module.exports.ApproachPredictor = nativeBinding.ApproachPredictor
+module.exports.BlueprintAnalyzer = nativeBinding.BlueprintAnalyzer
 module.exports.ComplexityAnalyzer = nativeBinding.ComplexityAnalyzer
 module.exports.FrameworkDetector = nativeBinding.FrameworkDetector
 module.exports.ImplementationPatternAnalyzer = nativeBinding.ImplementationPatternAnalyzer

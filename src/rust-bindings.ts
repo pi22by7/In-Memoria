@@ -40,10 +40,24 @@ function loadNativeBinary() {
 }
 
 const nativeModule = loadNativeBinary();
-const { SemanticAnalyzer: NativeSemanticAnalyzer, PatternLearner: NativePatternLearner, AstParser: NativeAstParser, initCore } = nativeModule;
+const {
+  SemanticAnalyzer: NativeSemanticAnalyzer,
+  PatternLearner: NativePatternLearner,
+  AstParser: NativeAstParser,
+  BlueprintAnalyzer: NativeBlueprintAnalyzer,
+  FrameworkDetector: NativeFrameworkDetector,
+  initCore
+} = nativeModule;
 
 // Re-export the native classes directly
-export { NativeSemanticAnalyzer as SemanticAnalyzer, NativePatternLearner as PatternLearner, NativeAstParser as AstParser, initCore };
+export {
+  NativeSemanticAnalyzer as SemanticAnalyzer,
+  NativePatternLearner as PatternLearner,
+  NativeAstParser as AstParser,
+  NativeBlueprintAnalyzer as BlueprintAnalyzer,
+  NativeFrameworkDetector as FrameworkDetector,
+  initCore
+};
 
 // Re-export types from the generated definitions
 export type {
@@ -64,3 +78,5 @@ export type {
 export type SemanticAnalyzerType = typeof NativeSemanticAnalyzer;
 export type PatternLearnerType = typeof NativePatternLearner;
 export type AstParserType = typeof NativeAstParser;
+export type BlueprintAnalyzerType = typeof NativeBlueprintAnalyzer;
+export type FrameworkDetectorType = typeof NativeFrameworkDetector;

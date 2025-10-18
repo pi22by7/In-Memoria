@@ -7,6 +7,17 @@ export declare class ApproachPredictor {
   predictApproach(problemDescription: string, contextData?: string | undefined | null): ApproachPrediction
 }
 
+/** Blueprint analyzer for detecting project structure */
+export declare class BlueprintAnalyzer {
+  constructor()
+  /** Detect entry points using AST-based analysis and pattern matching */
+  static detectEntryPoints(path: string, frameworks: Array<FrameworkInfo>): Promise<Array<EntryPoint>>
+  /** Map key directories in the project */
+  static mapKeyDirectories(path: string): Promise<Array<KeyDirectory>>
+  /** Build feature map for the project */
+  static buildFeatureMap(path: string): Promise<Array<FeatureMap>>
+}
+
 /** Analyzer for calculating code complexity metrics */
 export declare class ComplexityAnalyzer {
   constructor()
@@ -222,6 +233,23 @@ export interface ComplexityMetrics {
   maxNestingDepth: number
 }
 
+/** Entry point information */
+export interface EntryPoint {
+  entryType: string
+  filePath: string
+  framework?: string
+  confidence: number
+}
+
+/** Feature mapping information */
+export interface FeatureMap {
+  id: string
+  featureName: string
+  primaryFiles: Array<string>
+  relatedFiles: Array<string>
+  dependencies: Array<string>
+}
+
 /** Framework detection results */
 export interface FrameworkInfo {
   name: string
@@ -231,6 +259,13 @@ export interface FrameworkInfo {
 }
 
 export declare function initCore(): string
+
+/** Key directory information */
+export interface KeyDirectory {
+  path: string
+  dirType: string
+  fileCount: number
+}
 
 export interface LineRange {
   start: number
