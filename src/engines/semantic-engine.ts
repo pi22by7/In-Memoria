@@ -488,23 +488,46 @@ export class SemanticEngine {
 
   /**
    * Detect entry points based on framework patterns
+   * Uses async file operations to prevent blocking event loop
    */
   async detectEntryPoints(projectPath: string, frameworks: string[]): Promise<Array<{
     type: string;
     filePath: string;
     framework?: string;
   }>> {
-    const { readdirSync, statSync, existsSync } = await import('fs');
-    const { join } = await import('path');
+    const { access } = await import('fs/promises');
+    const { join, resolve } = await import('path');
+    const { constants } = await import('fs');
     const entryPoints: Array<{ type: string; filePath: string; framework?: string }> = [];
 
     try {
+      // Validate projectPath is safe (prevent path traversal)
+      const resolvedProject = resolve(projectPath);
+
+      // Helper to safely check file existence
+      const fileExists = async (relPath: string): Promise<boolean> => {
+        try {
+          const fullPath = join(projectPath, relPath);
+          const resolved = resolve(fullPath);
+
+          // Ensure path is within project boundaries
+          if (!resolved.startsWith(resolvedProject)) {
+            console.warn(`⚠️  Path traversal detected: ${relPath}`);
+            return false;
+          }
+
+          await access(resolved, constants.F_OK);
+          return true;
+        } catch {
+          return false;
+        }
+      };
+
       // React/Next.js entry points
       if (frameworks.some(f => f.toLowerCase().includes('react') || f.toLowerCase().includes('next'))) {
         const reactEntries = ['src/index.tsx', 'src/index.jsx', 'src/App.tsx', 'src/App.jsx', 'pages/_app.tsx', 'pages/_app.js'];
         for (const entry of reactEntries) {
-          const fullPath = join(projectPath, entry);
-          if (existsSync(fullPath)) {
+          if (await fileExists(entry)) {
             entryPoints.push({ type: 'web', filePath: entry, framework: 'react' });
           }
         }
@@ -514,8 +537,7 @@ export class SemanticEngine {
       if (frameworks.some(f => f.toLowerCase().includes('express') || f.toLowerCase().includes('node'))) {
         const apiEntries = ['server.js', 'app.js', 'index.js', 'src/server.ts', 'src/app.ts', 'src/index.ts'];
         for (const entry of apiEntries) {
-          const fullPath = join(projectPath, entry);
-          if (existsSync(fullPath)) {
+          if (await fileExists(entry)) {
             entryPoints.push({ type: 'api', filePath: entry, framework: 'express' });
           }
         }
@@ -525,8 +547,7 @@ export class SemanticEngine {
       if (frameworks.some(f => f.toLowerCase().includes('fastapi') || f.toLowerCase().includes('flask'))) {
         const pythonEntries = ['main.py', 'app.py', 'server.py', 'api/main.py'];
         for (const entry of pythonEntries) {
-          const fullPath = join(projectPath, entry);
-          if (existsSync(fullPath)) {
+          if (await fileExists(entry)) {
             entryPoints.push({ type: 'api', filePath: entry, framework: 'fastapi' });
           }
         }
@@ -536,8 +557,7 @@ export class SemanticEngine {
       if (frameworks.some(f => f.toLowerCase().includes('svelte'))) {
         const svelteEntries = ['src/routes/+page.svelte', 'src/main.ts', 'src/main.js'];
         for (const entry of svelteEntries) {
-          const fullPath = join(projectPath, entry);
-          if (existsSync(fullPath)) {
+          if (await fileExists(entry)) {
             entryPoints.push({ type: 'web', filePath: entry, framework: 'svelte' });
           }
         }
@@ -546,32 +566,40 @@ export class SemanticEngine {
       // CLI entry points
       const cliEntries = ['cli.js', 'bin/cli.js', 'src/cli.ts', 'src/cli.js'];
       for (const entry of cliEntries) {
-        const fullPath = join(projectPath, entry);
-        if (existsSync(fullPath)) {
+        if (await fileExists(entry)) {
           entryPoints.push({ type: 'cli', filePath: entry });
         }
       }
 
       return entryPoints;
     } catch (error) {
-      console.warn('Failed to detect entry points:', error);
+      console.warn('⚠️  Entry point detection failed:', error instanceof Error ? error.message : 'Unknown error');
+      console.warn('   Blueprint may be incomplete. This could indicate:');
+      console.warn('   • Invalid project path');
+      console.warn('   • Permission issues');
+      console.warn('   • Unsupported project structure');
       return [];
     }
   }
 
   /**
    * Map key directories based on common patterns
+   * Uses async file operations with depth limits
    */
   async mapKeyDirectories(projectPath: string): Promise<Array<{
     path: string;
     type: string;
     fileCount: number;
   }>> {
-    const { readdirSync, statSync, existsSync } = await import('fs');
-    const { join } = await import('path');
+    const { access, stat } = await import('fs/promises');
+    const { join, resolve } = await import('path');
+    const { constants } = await import('fs');
     const keyDirectories: Array<{ path: string; type: string; fileCount: number }> = [];
 
     try {
+      // Validate projectPath
+      const resolvedProject = resolve(projectPath);
+
       const commonDirs = [
         { pattern: 'src/components', type: 'components' },
         { pattern: 'src/utils', type: 'utils' },
@@ -590,50 +618,77 @@ export class SemanticEngine {
 
       for (const dir of commonDirs) {
         const fullPath = join(projectPath, dir.pattern);
-        if (existsSync(fullPath)) {
-          const stats = statSync(fullPath);
+        const resolved = resolve(fullPath);
+
+        // Path validation
+        if (!resolved.startsWith(resolvedProject)) {
+          continue;
+        }
+
+        try {
+          await access(resolved, constants.F_OK);
+          const stats = await stat(resolved);
+
           if (stats.isDirectory()) {
-            // Count files in directory
-            const fileCount = this.countFilesInDirectory(fullPath);
+            // Count files in directory with depth limit
+            const fileCount = await this.countFilesInDirectory(resolved, 5);
             keyDirectories.push({
               path: dir.pattern,
               type: dir.type,
               fileCount
             });
           }
+        } catch {
+          // Directory doesn't exist, skip it
+          continue;
         }
       }
 
       return keyDirectories;
     } catch (error) {
-      console.warn('Failed to map key directories:', error);
+      console.warn('⚠️  Failed to map key directories:', error instanceof Error ? error.message : 'Unknown error');
+      console.warn('   Blueprint may be incomplete');
       return [];
     }
   }
 
   /**
-   * Count files recursively in a directory
+   * Count files recursively in a directory (async with depth limit)
+   * @param dirPath - Directory to count files in
+   * @param maxDepth - Maximum recursion depth (default 5)
+   * @param currentDepth - Current depth (for internal recursion tracking)
    */
-  private countFilesInDirectory(dirPath: string): number {
-    const { readdirSync, statSync } = require('fs');
-    const { join } = require('path');
+  private async countFilesInDirectory(
+    dirPath: string,
+    maxDepth: number = 5,
+    currentDepth: number = 0
+  ): Promise<number> {
+    // Prevent infinite recursion
+    if (currentDepth >= maxDepth) {
+      return 0;
+    }
+
+    const { readdir } = await import('fs/promises');
+    const { join } = await import('path');
     let count = 0;
 
     try {
-      const entries = readdirSync(dirPath, { withFileTypes: true });
+      const entries = await readdir(dirPath, { withFileTypes: true });
+
       for (const entry of entries) {
         const fullPath = join(dirPath, entry.name);
+
         if (entry.isDirectory()) {
           // Skip node_modules and other common ignore patterns
-          if (!['node_modules', '.git', 'dist', 'build', '.next'].includes(entry.name)) {
-            count += this.countFilesInDirectory(fullPath);
+          if (!['node_modules', '.git', 'dist', 'build', '.next', '__pycache__', 'venv'].includes(entry.name)) {
+            count += await this.countFilesInDirectory(fullPath, maxDepth, currentDepth + 1);
           }
-        } else {
+        } else if (entry.isFile()) {
           count++;
         }
       }
-    } catch (error) {
-      // Ignore errors for individual directories
+    } catch {
+      // Ignore errors for individual directories (permission issues, etc.)
     }
 
     return count;

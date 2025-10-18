@@ -533,6 +533,9 @@ export class PatternEngine {
     }
   }
 
+  /**
+   * Build feature map with async file operations and depth limits
+   */
   async buildFeatureMap(projectPath: string): Promise<Array<{
     id: string;
     featureName: string;
@@ -540,8 +543,9 @@ export class PatternEngine {
     relatedFiles: string[];
     dependencies: string[];
   }>> {
-    const { readdirSync, statSync, existsSync } = await import('fs');
-    const { join, relative } = await import('path');
+    const { access } = await import('fs/promises');
+    const { join, relative, resolve } = await import('path');
+    const { constants } = await import('fs');
     const { nanoid } = await import('nanoid');
 
     const featureMap: Array<{
@@ -553,6 +557,9 @@ export class PatternEngine {
     }> = [];
 
     try {
+      // Validate projectPath
+      const resolvedProject = resolve(projectPath);
+
       const featurePatterns: Record<string, { patterns: string[]; directories: string[] }> = {
         'authentication': {
           patterns: ['**/auth/**', '**/authentication/**', '**/login*', '**/signup*', '**/register*'],
@@ -605,12 +612,24 @@ export class PatternEngine {
           const altPath = join(projectPath, dir);
 
           for (const checkPath of [fullPath, altPath]) {
-            if (existsSync(checkPath)) {
-              const files = this.collectFilesInDirectory(checkPath, projectPath);
+            const resolved = resolve(checkPath);
+
+            // Path validation
+            if (!resolved.startsWith(resolvedProject)) {
+              continue;
+            }
+
+            try {
+              await access(resolved, constants.F_OK);
+              const files = await this.collectFilesInDirectory(resolved, projectPath, 5);
+
               if (files.length > 0) {
                 primaryFiles.push(...files.slice(0, Math.ceil(files.length / 2)));
                 relatedFiles.push(...files.slice(Math.ceil(files.length / 2)));
               }
+            } catch {
+              // Directory doesn't exist, skip it
+              continue;
             }
           }
         }
@@ -628,25 +647,49 @@ export class PatternEngine {
 
       return featureMap;
     } catch (error) {
-      console.error('Feature mapping error:', error);
+      console.error('⚠️  Feature mapping error:', error instanceof Error ? error.message : 'Unknown error');
+      console.warn('   Feature map may be incomplete');
       return [];
     }
   }
 
-  private collectFilesInDirectory(dirPath: string, projectPath: string): string[] {
-    const { readdirSync, statSync } = require('fs');
-    const { join, relative } = require('path');
+  /**
+   * Collect files from directory (async with depth limit)
+   * @param dirPath - Directory to collect files from
+   * @param projectPath - Project root path (for relative path calculation)
+   * @param maxDepth - Maximum recursion depth
+   * @param currentDepth - Current depth (for internal recursion tracking)
+   */
+  private async collectFilesInDirectory(
+    dirPath: string,
+    projectPath: string,
+    maxDepth: number = 5,
+    currentDepth: number = 0
+  ): Promise<string[]> {
+    // Prevent infinite recursion
+    if (currentDepth >= maxDepth) {
+      return [];
+    }
+
+    const { readdir } = await import('fs/promises');
+    const { join, relative } = await import('path');
     const files: string[] = [];
 
     try {
-      const entries = readdirSync(dirPath, { withFileTypes: true });
+      const entries = await readdir(dirPath, { withFileTypes: true });
 
       for (const entry of entries) {
         const fullPath = join(dirPath, entry.name);
 
         if (entry.isDirectory()) {
-          if (!['node_modules', '.git', 'dist', 'build', '.next'].includes(entry.name)) {
-            files.push(...this.collectFilesInDirectory(fullPath, projectPath));
+          if (!['node_modules', '.git', 'dist', 'build', '.next', '__pycache__', 'venv'].includes(entry.name)) {
+            const nestedFiles = await this.collectFilesInDirectory(
+              fullPath,
+              projectPath,
+              maxDepth,
+              currentDepth + 1
+            );
+            files.push(...nestedFiles);
           }
         } else if (entry.isFile()) {
           const ext = entry.name.split('.').pop()?.toLowerCase();
@@ -655,13 +698,17 @@ export class PatternEngine {
           }
         }
       }
-    } catch (error) {
-      // Ignore errors for individual directories
+    } catch {
+      // Ignore errors for individual directories (permission issues, etc.)
     }
 
     return files;
   }
 
+  /**
+   * Route request to files with confidence scoring
+   * Returns files ranked by relevance with confidence indicators
+   */
   async routeRequestToFiles(
     problemDescription: string,
     projectPath: string
@@ -670,11 +717,20 @@ export class PatternEngine {
     targetFiles: string[];
     workType: 'feature' | 'bugfix' | 'refactor' | 'test';
     suggestedStartPoint: string;
+    confidence: number; // 0.0 to 1.0
+    reasoning: string; // Why this routing was chosen
   } | null> {
     try {
       const featureMaps = this.database.getFeatureMaps(projectPath);
+
+      if (featureMaps.length === 0) {
+        console.warn('⚠️  No feature maps found - run learning first');
+        return null;
+      }
+
       const lowerDesc = problemDescription.toLowerCase();
 
+      // Determine work type (affects confidence slightly)
       let workType: 'feature' | 'bugfix' | 'refactor' | 'test' = 'feature';
       if (lowerDesc.includes('fix') || lowerDesc.includes('bug') || lowerDesc.includes('error')) {
         workType = 'bugfix';
@@ -684,47 +740,95 @@ export class PatternEngine {
         workType = 'test';
       }
 
-      const keywords = [
-        'auth', 'authentication', 'login', 'signup', 'register',
-        'api', 'endpoint', 'route', 'controller',
-        'database', 'db', 'model', 'schema', 'migration',
-        'component', 'ui', 'view', 'page', 'screen',
-        'service', 'client', 'util', 'helper',
-        'test', 'spec', 'middleware', 'config'
-      ];
+      // Keyword matching with scoring
+      const keywordGroups: Record<string, string[]> = {
+        'authentication': ['auth', 'login', 'signup', 'register', 'password', 'session'],
+        'api': ['api', 'endpoint', 'route', 'controller', 'rest', 'graphql'],
+        'database': ['database', 'db', 'model', 'schema', 'migration', 'query', 'sql'],
+        'ui-components': ['component', 'ui', 'button', 'form', 'input', 'widget'],
+        'views': ['view', 'page', 'screen', 'template', 'layout'],
+        'services': ['service', 'client', 'provider', 'manager'],
+        'utilities': ['util', 'helper', 'function', 'library'],
+        'testing': ['test', 'spec', 'mock', 'fixture', 'assertion'],
+        'configuration': ['config', 'setting', 'environment', 'variable'],
+        'middleware': ['middleware', 'interceptor', 'guard', 'filter']
+      };
 
-      for (const keyword of keywords) {
-        if (lowerDesc.includes(keyword)) {
-          const matchedFeature = featureMaps.find(f =>
-            f.featureName.includes(keyword) ||
-            keyword.includes(f.featureName.split('-')[0])
-          );
+      // Calculate match scores for each feature
+      const featureScores: Array<{ feature: typeof featureMaps[0]; score: number; matchedKeywords: string[] }> = [];
 
-          if (matchedFeature) {
-            const allFiles = [...matchedFeature.primaryFiles, ...matchedFeature.relatedFiles];
-            return {
-              intendedFeature: matchedFeature.featureName,
-              targetFiles: allFiles.slice(0, 5),
-              workType,
-              suggestedStartPoint: matchedFeature.primaryFiles[0] || allFiles[0]
-            };
+      for (const feature of featureMaps) {
+        const featureKeywords = keywordGroups[feature.featureName] || [];
+        const matchedKeywords: string[] = [];
+        let score = 0;
+
+        for (const keyword of featureKeywords) {
+          if (lowerDesc.includes(keyword)) {
+            matchedKeywords.push(keyword);
+            // Weight longer keywords more heavily
+            score += keyword.length / 10;
           }
+        }
+
+        // Also check direct feature name match
+        if (lowerDesc.includes(feature.featureName.replace('-', ' '))) {
+          score += 1.0; // Strong boost for direct name match
+          matchedKeywords.push(feature.featureName);
+        }
+
+        if (score > 0) {
+          featureScores.push({ feature, score, matchedKeywords });
         }
       }
 
-      if (featureMaps.length > 0) {
-        const firstFeature = featureMaps[0];
+      // Sort by score (highest first)
+      featureScores.sort((a, b) => b.score - a.score);
+
+      if (featureScores.length > 0) {
+        const best = featureScores[0];
+        const allFiles = [...best.feature.primaryFiles, ...best.feature.relatedFiles];
+
+        // Calculate confidence based on:
+        // 1. Match score strength (0-1)
+        // 2. Number of matched keywords (more = higher confidence)
+        // 3. File count (more files = lower confidence per file)
+        const maxPossibleScore = 3.0; // Tuned based on typical keyword counts
+        const scoreConfidence = Math.min(best.score / maxPossibleScore, 1.0);
+        const keywordBoost = Math.min(best.matchedKeywords.length * 0.15, 0.3);
+        const fileCountPenalty = allFiles.length > 20 ? 0.1 : 0; // Penalize very large features
+
+        const confidence = Math.min(Math.max(scoreConfidence + keywordBoost - fileCountPenalty, 0.3), 0.95);
+
         return {
-          intendedFeature: firstFeature.featureName,
-          targetFiles: [...firstFeature.primaryFiles, ...firstFeature.relatedFiles].slice(0, 5),
+          intendedFeature: best.feature.featureName,
+          targetFiles: allFiles.slice(0, 5),
           workType,
-          suggestedStartPoint: firstFeature.primaryFiles[0]
+          suggestedStartPoint: best.feature.primaryFiles[0] || allFiles[0],
+          confidence,
+          reasoning: `Matched keywords: ${best.matchedKeywords.join(', ')}. Found ${allFiles.length} relevant files.`
         };
       }
 
+      // Fallback: return first feature with low confidence
+      if (featureMaps.length > 0) {
+        const firstFeature = featureMaps[0];
+        const allFiles = [...firstFeature.primaryFiles, ...firstFeature.relatedFiles];
+
+        return {
+          intendedFeature: firstFeature.featureName,
+          targetFiles: allFiles.slice(0, 5),
+          workType,
+          suggestedStartPoint: firstFeature.primaryFiles[0],
+          confidence: 0.2, // Low confidence for fallback
+          reasoning: 'No keyword matches found. Suggesting most common feature as fallback.'
+        };
+      }
+
+      console.warn('⚠️  Could not route request - no features available');
       return null;
     } catch (error) {
-      console.error('Request routing error:', error);
+      console.error('⚠️  Request routing error:', error instanceof Error ? error.message : 'Unknown error');
+      console.warn('   Routing failed. Check if feature maps exist.');
       return null;
     }
   }

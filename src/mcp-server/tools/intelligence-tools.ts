@@ -464,6 +464,8 @@ export class IntelligenceTools {
       targetFiles: string[];
       workType: string;
       suggestedStartPoint: string;
+      confidence: number;
+      reasoning: string;
     }
   }> {
     const prediction = await this.patternEngine.predictApproach(
@@ -477,6 +479,8 @@ export class IntelligenceTools {
         targetFiles: string[];
         workType: string;
         suggestedStartPoint: string;
+        confidence: number;
+        reasoning: string;
       }
     } = {
       approach: prediction.approach,
@@ -490,7 +494,14 @@ export class IntelligenceTools {
       const projectPath = process.cwd();
       const routing = await this.patternEngine.routeRequestToFiles(args.problemDescription, projectPath);
       if (routing) {
-        result.fileRouting = routing;
+        result.fileRouting = {
+          intendedFeature: routing.intendedFeature,
+          targetFiles: routing.targetFiles,
+          workType: routing.workType,
+          suggestedStartPoint: routing.suggestedStartPoint,
+          confidence: routing.confidence,
+          reasoning: routing.reasoning
+        };
       }
     }
 
