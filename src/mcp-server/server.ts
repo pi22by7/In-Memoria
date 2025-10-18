@@ -154,17 +154,20 @@ export class CodeCartographerMCP {
       case 'analyze_codebase':
         return await this.coreTools.analyzeCodebase(args);
 
-      case 'get_file_content':
-        return await this.coreTools.getFileContent(args);
+      // DEPRECATED (Phase 4): Merged into analyze_codebase - now handles both files and directories
+      // case 'get_file_content':
+      //   return await this.coreTools.getFileContent(args);
 
-      case 'get_project_structure':
-        return await this.coreTools.getProjectStructure(args);
+      // DEPRECATED (Phase 4): Merged into get_project_blueprint
+      // case 'get_project_structure':
+      //   return await this.coreTools.getProjectStructure(args);
 
       case 'search_codebase':
         return await this.coreTools.searchCodebase(args);
 
-      case 'generate_documentation':
-        return await this.coreTools.generateDocumentation(args);
+      // DEPRECATED (Phase 4): Not agent-facing, removed from tool list
+      // case 'generate_documentation':
+      //   return await this.coreTools.generateDocumentation(args);
 
       // Intelligence Tools
       case 'learn_codebase_intelligence':
@@ -189,11 +192,13 @@ export class CodeCartographerMCP {
       case 'auto_learn_if_needed':
         return await this.automationTools.autoLearnIfNeeded(args);
 
-      case 'get_learning_status':
-        return await this.automationTools.getLearningStatus(args);
+      // DEPRECATED (Phase 4): Merged into get_project_blueprint - returns learning status in blueprint
+      // case 'get_learning_status':
+      //   return await this.automationTools.getLearningStatus(args);
 
-      case 'quick_setup':
-        return await this.automationTools.quickSetup(args);
+      // DEPRECATED (Phase 4): Merged into auto_learn_if_needed - same functionality
+      // case 'quick_setup':
+      //   return await this.automationTools.quickSetup(args);
 
       // Monitoring Tools
       case 'get_system_status':
