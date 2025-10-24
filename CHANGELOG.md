@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.5.2] - 2025-10-24
+## [0.5.3] - 2025-10-24
 
 ### 🐛 **Fixed**
 
@@ -123,6 +123,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.4.6] - 2025-09-11
 
 ### 🐛 **Fixed**
+
 - **CLI help accuracy** - Fixed misrepresented flags and outdated environment variables in help text (closes #2)
 - **Learning process crash** - Fixed "Cannot read properties of undefined (reading 'toFixed')" error during complexity analysis
 - **Framework detection false positives** - Improved accuracy by using file extension counting instead of unreliable source code text matching, fixes dependency pattern specificity (closes #8)

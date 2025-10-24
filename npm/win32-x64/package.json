@@ -1,6 +1,6 @@
 {
   "name": "@in-memoria/win32-x64",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Windows x64 native bindings for In Memoria",
   "main": "in-memoria-core.win32-x64-msvc.node",
   "files": [
