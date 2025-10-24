@@ -279,7 +279,7 @@ npm run build
 **Requirements:**
 
 - Node.js 18+
-- Rust 1.70+ (for building)
+- Rust 1.70+ (for building from source)
 - 2GB RAM minimum
 
 **Quality & Testing:**
@@ -300,19 +300,10 @@ npm run build:rust  # Build Rust components
 
 ### Development Setup
 
-For Node.js v24+, native dependencies require C++20 compiler support:
-
 ```bash
-# Set C++20 compiler flag
-export CXXFLAGS="-std=c++20"
-
-# Install dependencies
 npm install
-
-# The .npmrc file in the repository handles --legacy-peer-deps automatically
+npm run build
 ```
-
-Note: End users installing from npm won't need these flags as they receive pre-built binaries.
 
 ## Contributing
 

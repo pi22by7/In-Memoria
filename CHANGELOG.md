@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2025-10-24
+
+### 🐛 **Fixed**
+
+- **End user installation** - Removed unnecessary native dependencies that caused C++20 compilation errors
+  - Removed tree-sitter packages from dependencies (tree-sitter is implemented in Rust, not TypeScript)
+  - Removed unused `ws` package
+  - End users can now install from npm without requiring C++20 compiler flags
+
 ## [0.5.0] - 2025-10-24
 
 ### ✨ **Added**

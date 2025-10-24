@@ -181,7 +181,7 @@ npm run test:integration
 cd tests/integration
 node test-mcp-client.js        # Basic MCP functionality
 node test-advanced-mcp.js      # Advanced features
-node test-error-handling.js    # Error validation  
+node test-error-handling.js    # Error validation
 node test-server-lifecycle.js  # Server lifecycle
 ```
 
@@ -328,7 +328,7 @@ A clear and concise description of what you expected to happen.
 **Environment**
 
 - OS: [e.g. macOS 13.0]
-- Node.js: [e.g. 20.5.0]
+- Node.js: [e.g. 20.5.1]
 - Rust: [e.g. 1.72.0]
 - In Memoria: [e.g. 0.3.2]
 
