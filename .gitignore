@@ -115,6 +115,7 @@ Thumbs.db
 # In Memoria specific
 in-memoria.db
 in-memoria-*.db
+.db-journal
 .in-memoria/cache/
 data/*.json
 vector-store.json

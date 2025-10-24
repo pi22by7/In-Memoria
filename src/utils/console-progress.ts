@@ -4,7 +4,7 @@ export class ConsoleProgressRenderer {
   private tracker: ProgressTracker;
   private isActive: boolean = false;
   private lastRenderTime: number = 0;
-  private renderInterval: number = 500; // Update every 500ms
+  private renderInterval: number = 250; // Update every 250ms for more responsive feedback
   private currentLines: number = 0;
 
   constructor(tracker: ProgressTracker) {
@@ -15,7 +15,13 @@ export class ConsoleProgressRenderer {
   private setupListeners(): void {
     this.tracker.on('progress', (update: ProgressUpdate) => {
       if (this.isActive) {
-        this.throttledRender();
+        // Immediate render for phase starts (0%) and completions (100%)
+        if (update.percentage === 0 || update.percentage === 100) {
+          this.render();
+          this.lastRenderTime = Date.now();
+        } else {
+          this.throttledRender();
+        }
       }
     });
 
@@ -51,24 +57,24 @@ export class ConsoleProgressRenderer {
     const isMCPMode = process.env.MCP_SERVER === 'true';
     
     if (isMCPMode) {
-      // In MCP mode, send simple ASCII progress to stdout
+      // In MCP mode, send simple ASCII progress to stderr (not logged as output)
       const lines = this.tracker.getConsoleStatus();
       for (const line of lines) {
-        console.log(line);
+        console.error(line);
       }
     } else {
       // Normal mode with ANSI codes for terminal
       // Clear previous lines
       if (this.currentLines > 0) {
-        process.stdout.write(`\x1b[${this.currentLines}A`); // Move cursor up
-        process.stdout.write('\x1b[J'); // Clear from cursor down
+        process.stderr.write(`\x1b[${this.currentLines}A`); // Move cursor up
+        process.stderr.write('\x1b[J'); // Clear from cursor down
       }
 
       const lines = this.tracker.getConsoleStatus();
       this.currentLines = lines.length;
 
       for (const line of lines) {
-        console.log(line);
+        console.error(line);
       }
     }
   }
@@ -77,22 +83,22 @@ export class ConsoleProgressRenderer {
     const isMCPMode = process.env.MCP_SERVER === 'true';
     
     if (isMCPMode) {
-      // In MCP mode, send final message to stdout
+      // In MCP mode, send final message to stderr
       const overall = this.tracker.getProgress();
       if (overall) {
-        console.log(`✅ All operations completed in ${this.formatElapsed(overall.elapsed)}`);
+        console.error(`✅ All operations completed in ${this.formatElapsed(overall.elapsed)}`);
       }
     } else {
       // Normal mode with ANSI codes
       // Clear previous lines
       if (this.currentLines > 0) {
-        process.stdout.write(`\x1b[${this.currentLines}A`);
-        process.stdout.write('\x1b[J');
+        process.stderr.write(`\x1b[${this.currentLines}A`);
+        process.stderr.write('\x1b[J');
       }
 
       const overall = this.tracker.getProgress();
       if (overall) {
-        console.log(`✅ All operations completed in ${this.formatElapsed(overall.elapsed)}`);
+        console.error(`✅ All operations completed in ${this.formatElapsed(overall.elapsed)}`);
       }
     }
   }

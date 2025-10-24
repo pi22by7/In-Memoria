@@ -82,6 +82,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **DeveloperProfile interface** - Extended with optional `currentWork` field containing session context
 - **Tool architecture** - Phase 1 (blueprint), Phase 2 (work context), and Phase 3 (smart navigation) complete; ready for Phase 4 (tool consolidation)
 
+### 🐛 **Fixed**
+
+- **Phase 1-4 integration** - Fixed missing route handlers and Rust exports causing test failures
+  - Added `get_project_blueprint` route handler (Phase 1 feature was defined but not routed)
+  - Fixed BlueprintAnalyzer Rust exports and removed incorrect constructor calls
+  - Added missing validation schema parameters (`skipLearning`, `includeSetupSteps`)
+  - Fixed migration rollback to version 0 (now properly deletes migration records)
+  - Fixed Rust HashMap type compatibility in pattern prediction context handling
+- **Progress rendering** - Improved learning process console output clarity and accuracy
+  - Only display phases after they've started (eliminates visual clutter)
+  - Removed duplicate progress updates during phase transitions
+  - Phases now appear progressively instead of all at once
+
 ## [0.4.6] - 2025-09-11
 
 ### 🐛 **Fixed**

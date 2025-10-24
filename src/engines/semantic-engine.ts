@@ -184,7 +184,7 @@ export class SemanticEngine {
     });
   }
 
-  async learnFromCodebase(path: string): Promise<Array<{
+  async learnFromCodebase(path: string, progressCallback?: (current: number, total: number, message: string) => void): Promise<Array<{
     id: string;
     name: string;
     type: string;
@@ -199,15 +199,60 @@ export class SemanticEngine {
       // Ensure Rust analyzer is initialized
       await this.initializeRustAnalyzer();
 
-      // Add timeout protection for the entire learning process
-      const concepts = await Promise.race([
-        this.rustAnalyzer!.learnFromCodebase(path),
-        new Promise<never>((_, reject) => {
-          setTimeout(() => {
+      // Estimate file count for progress reporting
+      let estimatedFiles = 0;
+      try {
+        const glob = (await import('glob')).glob;
+        const files = await glob('**/*.{ts,tsx,js,jsx,py,rs,go,java,c,cpp,svelte,vue}', {
+          cwd: path,
+          ignore: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.git/**'],
+          nodir: true
+        });
+        estimatedFiles = files.length;
+        if (progressCallback && estimatedFiles > 0) {
+          progressCallback(0, estimatedFiles, 'Starting semantic analysis...');
+        }
+      } catch (error) {
+        console.warn('Failed to estimate file count for progress tracking');
+      }
+
+      // Add timeout protection for the entire learning process with periodic progress updates
+      let progressTimer: NodeJS.Timeout | null = null;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        let elapsed = 0;
+        const timeoutDuration = 300000; // 5 minutes
+        const progressInterval = 2000; // Update every 2 seconds
+        
+        progressTimer = setInterval(() => {
+          elapsed += progressInterval;
+          
+          if (elapsed >= timeoutDuration) {
+            if (progressTimer) clearInterval(progressTimer);
             reject(new Error('Learning process timed out after 5 minutes. This can happen with very large Svelte/Vue codebases.'));
-          }, 300000); // 5 minutes
-        })
-      ]);
+          } else if (progressCallback && estimatedFiles > 0) {
+            // Provide estimated progress based on time (rough heuristic)
+            const estimatedProgress = Math.min(Math.floor((elapsed / timeoutDuration) * estimatedFiles), estimatedFiles - 1);
+            progressCallback(estimatedProgress, estimatedFiles, `Analyzing codebase... (${Math.floor(elapsed / 1000)}s elapsed)`);
+          }
+        }, progressInterval);
+      });
+
+      let concepts: any[];
+      try {
+        concepts = await Promise.race([
+          this.rustAnalyzer!.learnFromCodebase(path),
+          timeoutPromise
+        ]);
+      } finally {
+        // CRITICAL: Clear progress timer to prevent hanging
+        if (progressTimer !== null) {
+          clearInterval(progressTimer);
+        }
+      }
+
+      if (progressCallback && estimatedFiles > 0) {
+        progressCallback(estimatedFiles, estimatedFiles, 'Semantic analysis complete');
+      }
 
       console.error(`✅ Learned ${concepts.length} concepts from codebase`);
 
@@ -227,7 +272,10 @@ export class SemanticEngine {
         relationships: c.relationships
       }));
 
-      // Store concepts for persistence (with error handling)
+      // Store concepts for persistence (with error handling and progress updates)
+      const totalToStore = result.length;
+      let stored = 0;
+      
       for (const concept of result) {
         try {
           this.database.insertSemanticConcept({
@@ -240,6 +288,13 @@ export class SemanticEngine {
             filePath: concept.filePath,
             lineRange: concept.lineRange
           });
+
+          stored++;
+          
+          // Report progress every 50 concepts or at the end
+          if (progressCallback && (stored % 50 === 0 || stored === totalToStore)) {
+            progressCallback(stored, totalToStore, `Storing concepts in database...`);
+          }
 
           // Store in vector DB if it's a significant concept
           if (concept.confidence > 0.5) {
@@ -497,9 +552,7 @@ export class SemanticEngine {
   }>> {
     // Rust implementation
     const rustImplementation = async () => {
-      const frameworkDetector = new FrameworkDetector();
       const frameworkInfo = await FrameworkDetector.detectFrameworks(projectPath);
-      const blueprintAnalyzer = new BlueprintAnalyzer();
       const entryPoints = await BlueprintAnalyzer.detectEntryPoints(projectPath, frameworkInfo);
 
       return entryPoints.map((ep: any) => ({
@@ -616,7 +669,6 @@ export class SemanticEngine {
   }>> {
     // Rust implementation
     const rustImplementation = async () => {
-      const blueprintAnalyzer = new BlueprintAnalyzer();
       const keyDirs = await BlueprintAnalyzer.mapKeyDirectories(projectPath);
 
       return keyDirs.map((dir: any) => ({

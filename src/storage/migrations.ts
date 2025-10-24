@@ -588,16 +588,16 @@ export class DatabaseMigrator {
       for (const migration of migrationsToRollback) {
         if (migration.down) {
           console.log(`Rolling back migration ${migration.version}: ${migration.name}`);
-          
+
           try {
             // Execute the rollback
             this.db.exec(migration.down);
-            
+
             // Remove migration record
             this.db.prepare(`
               DELETE FROM migrations WHERE version = ?
             `).run(migration.version);
-            
+
             console.log(`✅ Migration ${migration.version} rolled back successfully`);
           } catch (error) {
             console.error(`❌ Rollback ${migration.version} failed:`, error);
@@ -605,6 +605,14 @@ export class DatabaseMigrator {
           }
         } else {
           console.warn(`⚠️ Migration ${migration.version} has no rollback script`);
+          // When rolling back to version 0, we still need to delete the migration record
+          // to maintain consistency, even though we can't undo the schema changes
+          if (targetVersion === 0) {
+            this.db.prepare(`
+              DELETE FROM migrations WHERE version = ?
+            `).run(migration.version);
+            console.log(`✅ Migration ${migration.version} record removed (no rollback script available)`);
+          }
         }
       }
     })();

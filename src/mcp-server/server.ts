@@ -188,6 +188,9 @@ export class CodeCartographerMCP {
       case 'contribute_insights':
         return await this.intelligenceTools.contributeInsights(args);
 
+      case 'get_project_blueprint':
+        return await this.intelligenceTools.getProjectBlueprint(args);
+
       // Automation Tools
       case 'auto_learn_if_needed':
         return await this.automationTools.autoLearnIfNeeded(args);
@@ -228,6 +231,18 @@ export class CodeCartographerMCP {
     await this.server.connect(transport);
 
     console.error('In Memoria MCP Server started');
+  }
+
+  /**
+   * Get all registered tools (for testing and introspection)
+   */
+  getAllTools(): any[] {
+    return [
+      ...this.coreTools.tools,
+      ...this.intelligenceTools.tools,
+      ...this.automationTools.tools,
+      ...this.monitoringTools.tools
+    ];
   }
 
   /**

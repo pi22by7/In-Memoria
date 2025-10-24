@@ -183,7 +183,7 @@ export class PatternEngine {
     return patterns;
   }
 
-  async learnFromCodebase(path: string): Promise<Array<{
+  async learnFromCodebase(path: string, progressCallback?: (current: number, total: number, message: string) => void): Promise<Array<{
     id: string;
     type: string;
     content: Record<string, any>;
@@ -193,7 +193,37 @@ export class PatternEngine {
     examples: Array<{ code: string }>;
   }>> {
     try {
-      const patterns = await this.rustLearner.learnFromCodebase(path);
+      if (progressCallback) {
+        progressCallback(1, 100, 'Starting pattern analysis...');
+      }
+      
+      // Create a progress indicator while Rust code runs
+      let progressInterval: NodeJS.Timeout | null = null;
+      let currentProgress = 1;
+      
+      if (progressCallback) {
+        progressInterval = setInterval(() => {
+          // Simulate progress while waiting (max 90%)
+          if (currentProgress < 90) {
+            currentProgress += 2;
+            progressCallback(currentProgress, 100, 'Analyzing code patterns...');
+          }
+        }, 1000); // Update every second
+      }
+      
+      let patterns: any[];
+      try {
+        patterns = await this.rustLearner.learnFromCodebase(path);
+      } finally {
+        // CRITICAL: Clear interval to prevent hanging
+        if (progressInterval !== null) {
+          clearInterval(progressInterval);
+        }
+      }
+      
+      if (progressCallback) {
+        progressCallback(90, 100, `Extracted ${patterns.length} patterns, storing...`);
+      }
       
       const result = patterns.map((p: any) => ({
         id: p.id,
@@ -205,7 +235,10 @@ export class PatternEngine {
         examples: p.examples.map((ex: any) => ({ code: ex.code }))
       }));
 
-      // Store patterns in database
+      // Store patterns in database with progress updates
+      const totalPatterns = result.length;
+      let storedPatterns = 0;
+      
       for (const pattern of result) {
         this.database.insertDeveloperPattern({
           patternId: pattern.id,
@@ -216,6 +249,13 @@ export class PatternEngine {
           examples: pattern.examples,
           confidence: pattern.confidence
         });
+        
+        storedPatterns++;
+        // Report every 5 patterns or at completion
+        if (progressCallback && totalPatterns > 0 && (storedPatterns % 5 === 0 || storedPatterns === totalPatterns)) {
+          const progress = 90 + Math.floor((storedPatterns / totalPatterns) * 10);
+          progressCallback(progress, 100, `Stored ${storedPatterns}/${totalPatterns} patterns`);
+        }
       }
 
       console.log(`✅ Pattern learning completed: ${result.length} patterns discovered`);
@@ -227,6 +267,10 @@ export class PatternEngine {
       console.warn('   • Rust pattern learning engine not accessible');
       console.warn('   • Using simple heuristic-based pattern detection');
       console.warn(`   • Analysis quality significantly reduced for: ${path}`);
+      
+      if (progressCallback) {
+        progressCallback(100, 100, 'Pattern learning failed (degraded mode)');
+      }
       
       // Return empty array but with clear warning that this is a degraded state
       return [];
@@ -300,7 +344,13 @@ export class PatternEngine {
     complexity: 'low' | 'medium' | 'high';
   }> {
     try {
-      const prediction = await this.rustLearner.predictApproach(problemDescription, context);
+      // Convert context values to strings for Rust binding
+      const stringContext: Record<string, string> = {};
+      for (const [key, value] of Object.entries(context)) {
+        stringContext[key] = typeof value === 'string' ? value : JSON.stringify(value);
+      }
+
+      const prediction = await this.rustLearner.predictApproach(problemDescription, stringContext);
       
       return {
         approach: prediction.approach,
@@ -549,7 +599,6 @@ export class PatternEngine {
   }>> {
     // Rust implementation
     const rustImplementation = async () => {
-      const blueprintAnalyzer = new BlueprintAnalyzer();
       const featureMaps = await BlueprintAnalyzer.buildFeatureMap(projectPath);
 
       return featureMaps.map((fm: any) => ({

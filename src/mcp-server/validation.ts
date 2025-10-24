@@ -69,7 +69,9 @@ export const ContributeInsightsSchema = z.object({
 export const AutoLearnIfNeededSchema = z.object({
   path: z.string().optional(),
   force: z.boolean().optional().default(false),
-  includeProgress: z.boolean().optional().default(true)
+  includeProgress: z.boolean().optional().default(true),
+  skipLearning: z.boolean().optional().default(false),
+  includeSetupSteps: z.boolean().optional().default(false)
 });
 
 export const GetLearningStatusSchema = z.object({

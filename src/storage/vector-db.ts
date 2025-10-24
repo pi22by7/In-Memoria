@@ -753,6 +753,20 @@ export class SemanticVectorDB {
 
   // Cleanup method
   async close(): Promise<void> {
+    // Dispose of transformers.js pipeline to prevent hanging
+    if (this.localEmbeddingPipeline) {
+      try {
+        // Check if the pipeline has a dispose method
+        if (typeof this.localEmbeddingPipeline.dispose === 'function') {
+          await this.localEmbeddingPipeline.dispose();
+        }
+        this.localEmbeddingPipeline = null;
+      } catch (error) {
+        console.warn('Warning: Failed to dispose local embedding pipeline:', error);
+      }
+    }
+
+    // Close SurrealDB connection
     if (this.db) {
       await this.db.close();
     }

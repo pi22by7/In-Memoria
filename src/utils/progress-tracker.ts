@@ -17,6 +17,7 @@ export interface ProgressPhase {
   weight: number; // relative weight for overall progress
   current: number;
   total: number;
+  started: boolean; // track if phase has been started
 }
 
 export class ProgressTracker extends EventEmitter {
@@ -36,6 +37,7 @@ export class ProgressTracker extends EventEmitter {
       weight,
       current: 0,
       total,
+      started: false,
     });
     this.totalWeight += weight;
   }
@@ -44,6 +46,8 @@ export class ProgressTracker extends EventEmitter {
     if (!this.phases.has(phaseName)) {
       throw new Error(`Phase ${phaseName} not found. Add it first with addPhase()`);
     }
+    const phase = this.phases.get(phaseName)!;
+    phase.started = true;
     this.currentPhase = phaseName;
     this.emitProgress(phaseName, 0);
   }
@@ -207,15 +211,18 @@ export class ProgressTracker extends EventEmitter {
   getConsoleStatus(): string[] {
     const lines: string[] = [];
     const overall = this.getProgress();
-    
+
     if (overall) {
       lines.push(`Overall Progress: ${overall.percentage.toFixed(1)}% (${this.formatElapsed(overall.elapsed)})`);
     }
-    
-    for (const [name, _] of this.phases) {
-      lines.push(this.renderProgressBar(name));
+
+    // Only show phases that have been started
+    for (const [name, phase] of this.phases) {
+      if (phase.started) {
+        lines.push(this.renderProgressBar(name));
+      }
     }
-    
+
     return lines;
   }
 

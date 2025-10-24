@@ -227,7 +227,6 @@ export class AutomationTools {
 
       // Phase 1: Discovery
       tracker.startPhase('discovery');
-      tracker.updateProgress('discovery', files.total, 'Discovered project files');
       tracker.complete('discovery');
 
       // Phase 2: Semantic Analysis (with timeout warning)
@@ -236,14 +235,31 @@ export class AutomationTools {
       let concepts: any[] = [];
       
       try {
-        concepts = await Promise.race([
-          this.semanticEngine.learnFromCodebase(projectPath),
-          new Promise<never>((_, reject) => {
-            setTimeout(() => {
-              reject(new Error('Semantic analysis timed out after 5 minutes. This often happens with large projects.'));
-            }, 300000); // 5 minutes
-          })
-        ]);
+        // Create timeout promise with proper cleanup
+        let timeoutId: NodeJS.Timeout | null = null;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error('Semantic analysis timed out after 5 minutes. This often happens with large projects.'));
+          }, 300000); // 5 minutes
+        });
+
+        try {
+          concepts = await Promise.race([
+            this.semanticEngine.learnFromCodebase(
+              projectPath,
+              (current: number, total: number, message: string) => {
+                // Update progress tracker with real-time updates from semantic engine
+                tracker.updateProgress('semantic_analysis', current, message);
+              }
+            ),
+            timeoutPromise
+          ]);
+        } finally {
+          // CRITICAL: Clear timeout to prevent hanging
+          if (timeoutId !== null) {
+            clearTimeout(timeoutId);
+          }
+        }
         
         tracker.complete('semantic_analysis');
         const analysisTime = Date.now() - analysisStart;
@@ -257,14 +273,37 @@ export class AutomationTools {
       }
 
       // Phase 3: Pattern Learning  
+      console.error('🔍 Learning code patterns...');
+      const patternStart = Date.now();
       tracker.startPhase('pattern_learning');
-      const patterns = await this.patternEngine.learnFromCodebase(projectPath);
+      tracker.updateProgress('pattern_learning', 1, 'Analyzing code patterns...');
+      
+      const patterns = await this.patternEngine.learnFromCodebase(
+        projectPath,
+        (current: number, total: number, message: string) => {
+          // Update progress tracker with real-time updates from pattern engine
+          // Map the 0-100 range to the actual file count
+          const mapped = Math.floor((current / 100) * files.codeFiles);
+          tracker.updateProgress('pattern_learning', Math.max(1, mapped), message);
+        }
+      );
+      
+      const patternTime = Date.now() - patternStart;
       tracker.complete('pattern_learning');
+      console.error(`✅ Pattern learning completed in ${Math.round(patternTime / 1000)}s - ${patterns.length} patterns discovered`);
 
       // Phase 4: Indexing
+      console.error('📇 Building search indexes...');
+      const indexStart = Date.now();
       tracker.startPhase('indexing');
-      tracker.updateProgress('indexing', files.codeFiles, 'Building search indexes');
+      tracker.updateProgress('indexing', 1, 'Indexing concepts and patterns...');
+      
+      // Indexing happens in-memory, mark progress
+      tracker.updateProgress('indexing', Math.floor(files.codeFiles / 2), 'Building search structures...');
+      
+      const indexTime = Date.now() - indexStart;
       tracker.complete('indexing');
+      console.error(`✅ Indexing completed in ${Math.round(indexTime / 1000)}s`);
 
       progressRenderer.stop();
 

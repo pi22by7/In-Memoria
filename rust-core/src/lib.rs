@@ -14,7 +14,7 @@ pub mod patterns;
 
 // Re-export core types and main structs for easy access
 pub use types::*;
-pub use analysis::{SemanticAnalyzer, ComplexityAnalyzer, RelationshipLearner, FrameworkDetector};
+pub use analysis::{SemanticAnalyzer, ComplexityAnalyzer, RelationshipLearner, FrameworkDetector, BlueprintAnalyzer};
 pub use parsing::{ParserManager, TreeWalker, FallbackExtractor};
 pub use patterns::{
     PatternLearningEngine, NamingPatternAnalyzer, StructuralPatternAnalyzer, 
