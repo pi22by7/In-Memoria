@@ -1,6 +1,6 @@
 ---
 description: 🚀 In Memoria feature builder - intelligent implementation with pattern guidance
-tools: ['mcp', 'edit', 'create']
+tools: ['search/codebase', 'edit/editFiles', 'edit/createFile', 'search/readFile', 'search']
 ---
 
 # In Memoria Feature Builder Mode

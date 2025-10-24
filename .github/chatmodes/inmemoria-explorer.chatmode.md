@@ -1,6 +1,6 @@
 ---
 description: 🔍 In Memoria codebase explorer - uses MCP for intelligent navigation
-tools: ['mcp']
+tools: ['search/codebase', 'search', 'search/fileSearch', 'search/readFile']
 ---
 
 # In Memoria Explorer Mode

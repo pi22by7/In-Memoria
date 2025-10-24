@@ -298,6 +298,22 @@ npm test            # Run test suite
 npm run build:rust  # Build Rust components
 ```
 
+### Development Setup
+
+For Node.js v24+, native dependencies require C++20 compiler support:
+
+```bash
+# Set C++20 compiler flag
+export CXXFLAGS="-std=c++20"
+
+# Install dependencies
+npm install
+
+# The .npmrc file in the repository handles --legacy-peer-deps automatically
+```
+
+Note: End users installing from npm won't need these flags as they receive pre-built binaries.
+
 ## Contributing
 
 This is infrastructure for the AI development ecosystem. Contributions welcome:

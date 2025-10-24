@@ -1,6 +1,6 @@
 ---
 description: 🔎 In Memoria code reviewer - pattern-aware review and refactoring
-tools: ['mcp', 'edit']
+tools: ['search/codebase', 'edit/editFiles', 'search/readFile', 'search', 'changes']
 ---
 
 # In Memoria Code Review Mode
