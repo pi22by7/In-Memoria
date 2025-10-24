@@ -38,7 +38,7 @@ describe('MonitoringTools', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.status.version).toBe('0.4.6');
+      expect(result.status.version).toBe('0.5.0');
       expect(result.status.timestamp).toBeDefined();
       expect(result.status.components.database).toBeDefined();
       expect(result.status.intelligence).toBeDefined();
