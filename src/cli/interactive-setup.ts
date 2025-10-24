@@ -41,17 +41,26 @@ export class InteractiveSetup {
         await this.performInitialLearning(config);
       }
 
-      console.log('\n✅ Setup completed successfully!');
-      console.log('\nNext steps:');
-      console.log('1. Run `in-memoria server` to start the MCP server');
-      console.log('2. Add In Memoria to your Claude Desktop/Code configuration');
-      console.log('3. Start using AI agents with persistent intelligence!');
+      console.log('\n' + '━'.repeat(60));
+      console.log('✅ Setup completed successfully!\n');
+      console.log('🚀 Next steps:');
+      console.log('   1️⃣  Run `in-memoria server` to start the MCP server');
+      console.log('   2️⃣  Add In Memoria to your Claude Desktop/Code configuration');
+      console.log('   3️⃣  Start using AI agents with persistent intelligence!');
+      console.log('\n' + '━'.repeat(60));
 
     } catch (error: unknown) {
       console.error('\n❌ Setup failed:', error instanceof Error ? error.message : String(error));
       process.exit(1);
     } finally {
+      // CRITICAL: Close readline interface to release stdin
       this.rl.close();
+
+      // CRITICAL: Pause stdin to allow process to exit naturally
+      // This prevents the process from hanging waiting for input
+      if (process.stdin.isTTY) {
+        process.stdin.pause();
+      }
     }
   }
 
@@ -149,6 +158,7 @@ export class InteractiveSetup {
 
   private async createConfiguration(config: SetupConfig): Promise<void> {
     console.log('\n⚙️  Creating configuration...');
+    console.log('━'.repeat(60));
 
     // Create .in-memoria directory
     const configDir = join(config.projectPath, '.in-memoria');
@@ -158,7 +168,7 @@ export class InteractiveSetup {
 
     // Create configuration file
     const configFile = {
-      version: "0.5.1",
+      version: "0.5.2",
       project: {
         name: config.projectName,
         languages: config.languages
@@ -185,14 +195,16 @@ export class InteractiveSetup {
 
     const configPath = join(configDir, 'config.json');
     writeFileSync(configPath, JSON.stringify(configFile, null, 2));
-    console.log(`✅ Configuration saved to: ${configPath}`);
+    console.log(`\n✅ Configuration saved`);
+    console.log(`   📄 Location: ${configPath}`);
 
     // Create environment file if API key provided
     if (config.openaiApiKey) {
       const envPath = join(configDir, '.env');
       writeFileSync(envPath, `OPENAI_API_KEY=${config.openaiApiKey}\n`);
-      console.log(`✅ Environment file created: ${envPath}`);
-      console.log('⚠️  Make sure to add .in-memoria/.env to your .gitignore!');
+      console.log(`\n✅ Environment file created`);
+      console.log(`   🔒 Location: ${envPath}`);
+      console.log(`   ⚠️  Remember to add .in-memoria/.env to your .gitignore!`);
     }
 
     // Update .gitignore
@@ -201,46 +213,100 @@ export class InteractiveSetup {
 
   private async performInitialLearning(config: SetupConfig): Promise<void> {
     console.log('\n🧠 Starting initial learning...');
+    console.log('━'.repeat(60));
+
+    // Keep track of resources for cleanup
+    let database: SQLiteDatabase | null = null;
+    let vectorDB: SemanticVectorDB | null = null;
+    let semanticEngine: SemanticEngine | null = null;
+    let patternEngine: PatternEngine | null = null;
+    let renderer: ConsoleProgressRenderer | null = null;
 
     try {
       // Initialize components
-      const database = new SQLiteDatabase(join(config.projectPath, 'in-memoria.db'));
-      const vectorDB = new SemanticVectorDB(config.openaiApiKey);
-      const semanticEngine = new SemanticEngine(database, vectorDB);
-      const patternEngine = new PatternEngine(database);
+      database = new SQLiteDatabase(join(config.projectPath, 'in-memoria.db'));
+      vectorDB = new SemanticVectorDB(config.openaiApiKey);
+      semanticEngine = new SemanticEngine(database, vectorDB);
+      patternEngine = new PatternEngine(database);
 
       // Setup progress tracking
       const fileCount = await this.countProjectFiles(config.projectPath, config.watchPatterns, config.ignoredPaths);
       const tracker = new ProgressTracker();
-      const renderer = new ConsoleProgressRenderer(tracker);
+      renderer = new ConsoleProgressRenderer(tracker);
 
+      // Add phases with descriptive names
       tracker.addPhase('semantic_analysis', fileCount, 3);
       tracker.addPhase('pattern_learning', fileCount, 2);
 
       renderer.start();
 
-      // Semantic learning
+      // Phase 1: Semantic learning
       tracker.startPhase('semantic_analysis');
-      const concepts = await semanticEngine.learnFromCodebase(config.projectPath);
+      const concepts = await semanticEngine.learnFromCodebase(config.projectPath,
+        (current, total, message) => {
+          tracker.updateProgress('semantic_analysis', current, message);
+        }
+      );
       tracker.complete('semantic_analysis');
 
-      // Pattern learning
+      // Phase 2: Pattern learning
       tracker.startPhase('pattern_learning');
-      const patterns = await patternEngine.learnFromCodebase(config.projectPath);
+      const patterns = await patternEngine.learnFromCodebase(config.projectPath,
+        (current, total, message) => {
+          tracker.updateProgress('pattern_learning', Math.floor((current / 100) * fileCount), message);
+        }
+      );
       tracker.complete('pattern_learning');
 
       renderer.stop();
 
-      console.log(`\n✅ Learning completed!`);
-      console.log(`   📊 Concepts learned: ${concepts.length}`);
-      console.log(`   🔍 Patterns learned: ${patterns.length}`);
-      console.log(`   📁 Files analyzed: ${fileCount}`);
-
-      database.close();
+      // Success summary with nice formatting
+      console.log('\n' + '━'.repeat(60));
+      console.log('✅ Learning completed successfully!\n');
+      console.log('📈 Results:');
+      console.log(`   📊 Concepts learned:  ${concepts.length.toLocaleString()}`);
+      console.log(`   🔍 Patterns learned:  ${patterns.length.toLocaleString()}`);
+      console.log(`   📁 Files analyzed:    ${fileCount.toLocaleString()}`);
 
     } catch (error: unknown) {
-      console.error(`\n❌ Learning failed: ${error instanceof Error ? error.message : String(error)}`);
-      console.log('You can run learning later with: in-memoria learn');
+      console.error('\n' + '━'.repeat(60));
+      console.error('❌ Learning failed:', error instanceof Error ? error.message : String(error));
+      console.error('\n💡 You can run learning later with: `in-memoria learn`');
+      console.error('━'.repeat(60));
+    } finally {
+      // CRITICAL: Clean up all resources to prevent hanging
+
+      // Stop progress renderer first
+      if (renderer) {
+        renderer.stop();
+      }
+
+      // Cleanup engines (releases Rust resources)
+      if (semanticEngine) {
+        try {
+          semanticEngine.cleanup();
+        } catch (error) {
+          console.warn('Warning: Failed to cleanup semantic engine:', error);
+        }
+      }
+
+      // Close vector database
+      if (vectorDB) {
+        try {
+          await vectorDB.close();
+        } catch (error) {
+          console.warn('Warning: Failed to close vector database:', error);
+        }
+      }
+
+      // Close SQLite database
+      if (database) {
+        try {
+          database.close();
+        } catch (error) {
+          console.warn('Warning: Failed to close database:', error);
+        }
+      }
     }
   }
 
@@ -257,11 +323,11 @@ export class InteractiveSetup {
       const content = readFileSync(gitignorePath, 'utf-8');
       if (!content.includes('in-memoria.db')) {
         writeFileSync(gitignorePath, content + '\n\n' + gitignoreEntries + '\n');
-        console.log('✅ Updated .gitignore');
+        console.log('\n✅ Updated .gitignore with In Memoria entries');
       }
     } else {
       writeFileSync(gitignorePath, gitignoreEntries + '\n');
-      console.log('✅ Created .gitignore');
+      console.log('\n✅ Created .gitignore with In Memoria entries');
     }
   }
 
@@ -269,12 +335,13 @@ export class InteractiveSetup {
     try {
       const files = await glob('**/*', {
         cwd: projectPath,
-        ignore: ['**/node_modules/**', '**/.git/**', '**/dist/**', '**/build/**'],
+        ignore: ['**/node_modules/**', '**/.git/**', '**/dist/**', '**/build/**', '**/target/**'],
         nodir: true
       });
 
       const extensions = new Set<string>();
-      for (const file of files.slice(0, 1000)) { // Limit to avoid too many files
+      const sampleSize = Math.min(files.length, 1000); // Limit to avoid too many files
+      for (const file of files.slice(0, sampleSize)) {
         const ext = file.split('.').pop()?.toLowerCase();
         if (ext) extensions.add(ext);
       }

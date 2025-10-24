@@ -75,7 +75,7 @@ export class MonitoringTools {
 
     const status = {
       timestamp: new Date().toISOString(),
-      version: '0.5.1',
+      version: '0.5.2',
       status: 'operational',
       components: {} as any,
       intelligence: {} as any,

@@ -1,0 +1,41 @@
+{
+  "version": "0.5.2",
+  "project": {
+    "name": "In-Memoria",
+    "languages": [
+      "rust",
+      "typescript",
+      "javascript"
+    ]
+  },
+  "intelligence": {
+    "enableRealTimeAnalysis": true,
+    "enablePatternLearning": true,
+    "vectorEmbeddings": false
+  },
+  "watching": {
+    "patterns": [
+      "**/*.rs",
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx"
+    ],
+    "ignored": [
+      "**/node_modules/**",
+      "**/.git/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/target/**"
+    ],
+    "debounceMs": 500
+  },
+  "mcp": {
+    "serverPort": 3000,
+    "enableAllTools": true
+  },
+  "setup": {
+    "createdAt": "2025-10-24T12:51:36.224Z",
+    "setupVersion": "interactive-v1"
+  }
+}

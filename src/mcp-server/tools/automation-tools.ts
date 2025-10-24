@@ -131,8 +131,10 @@ export class AutomationTools {
         }
       });
     } else {
-      console.error(`🤖 Auto-learning check for: ${projectPath}`);
+      console.error(`\n🚀 Quick setup for: ${projectPath}`);
     }
+
+    // Don't show progress bars yet - wait until we actually start learning
 
     // Check if learning is needed
     const status = await this.getLearningStatus({ path: projectPath });
@@ -219,21 +221,23 @@ export class AutomationTools {
       tracker.addPhase('pattern_learning', files.codeFiles, 2);
       tracker.addPhase('indexing', files.codeFiles, 1);
 
+      console.error(`\n🧠 Starting intelligent learning...`);
+      console.error('━'.repeat(60) + '\n');
+
+      // Start the progress renderer which shows all phases
       if (includeProgress) {
         progressRenderer.start();
       }
 
-      console.error('🧠 Starting intelligent learning...');
-
-      // Phase 1: Discovery
+      // Phase 1: Discovery (fast, completes immediately)
       tracker.startPhase('discovery');
       tracker.complete('discovery');
 
-      // Phase 2: Semantic Analysis (with timeout warning)
+      // Phase 2: Semantic Analysis
       tracker.startPhase('semantic_analysis');
       const analysisStart = Date.now();
       let concepts: any[] = [];
-      
+
       try {
         // Create timeout promise with proper cleanup
         let timeoutId: NodeJS.Timeout | null = null;
@@ -260,24 +264,23 @@ export class AutomationTools {
             clearTimeout(timeoutId);
           }
         }
-        
+
         tracker.complete('semantic_analysis');
         const analysisTime = Date.now() - analysisStart;
-        
+
         if (analysisTime > 120000) { // More than 2 minutes
-          console.error(`⚠️  Semantic analysis took ${Math.round(analysisTime/1000)}s. Consider excluding large generated files.`);
+          console.error(`\n⚠️  Semantic analysis took ${Math.round(analysisTime / 1000)}s. Consider excluding large generated files.`);
         }
       } catch (error) {
         tracker.complete('semantic_analysis');
         throw error;
       }
 
-      // Phase 3: Pattern Learning  
-      console.error('🔍 Learning code patterns...');
+      // Phase 3: Pattern Learning
       const patternStart = Date.now();
       tracker.startPhase('pattern_learning');
       tracker.updateProgress('pattern_learning', 1, 'Analyzing code patterns...');
-      
+
       const patterns = await this.patternEngine.learnFromCodebase(
         projectPath,
         (current: number, total: number, message: string) => {
@@ -287,25 +290,33 @@ export class AutomationTools {
           tracker.updateProgress('pattern_learning', Math.max(1, mapped), message);
         }
       );
-      
+
       const patternTime = Date.now() - patternStart;
       tracker.complete('pattern_learning');
-      console.error(`✅ Pattern learning completed in ${Math.round(patternTime / 1000)}s - ${patterns.length} patterns discovered`);
 
       // Phase 4: Indexing
-      console.error('📇 Building search indexes...');
       const indexStart = Date.now();
       tracker.startPhase('indexing');
       tracker.updateProgress('indexing', 1, 'Indexing concepts and patterns...');
-      
+
       // Indexing happens in-memory, mark progress
       tracker.updateProgress('indexing', Math.floor(files.codeFiles / 2), 'Building search structures...');
-      
+
       const indexTime = Date.now() - indexStart;
       tracker.complete('indexing');
-      console.error(`✅ Indexing completed in ${Math.round(indexTime / 1000)}s`);
 
       progressRenderer.stop();
+
+      // Print final summary (without duplicate completion message)
+      const totalTime = Date.now() - tracker.getProgress()!.startTime;
+      const separator = '━'.repeat(60);
+
+      console.error(`${separator}`);
+      console.error(`📊 Concepts:  ${concepts.length.toLocaleString()}`);
+      console.error(`🔍 Patterns:  ${patterns.length.toLocaleString()}`);
+      console.error(`📁 Files:     ${files.codeFiles.toLocaleString()}`);
+      console.error(`⏱️  Time:      ${this.formatDuration(totalTime)}`);
+      console.error(separator);
 
       // Phase 4: Handle setup steps from quick_setup
       if (includeSetupSteps) {
@@ -392,6 +403,23 @@ export class AutomationTools {
         message: 'Learning failed. The system will continue with limited intelligence.',
         status: await this.getLearningStatus({ path: projectPath })
       };
+    } finally {
+      // CRITICAL: Ensure progress renderer is stopped even if errors occur
+      if (progressRenderer) {
+        progressRenderer.stop();
+      }
+
+      // CRITICAL: Clean up engine resources to prevent hanging
+      // Note: We use the shared engines from the MCP server, so we don't close them here
+      // But we should ensure no hanging timers or intervals remain
+      if (this.semanticEngine) {
+        try {
+          // Don't call cleanup on shared engines - just ensure no hanging operations
+          // The cleanup will be handled when the MCP server shuts down
+        } catch (error) {
+          console.warn('Warning: Issue during resource cleanup:', error);
+        }
+      }
     }
   }
 
@@ -547,12 +575,12 @@ export class AutomationTools {
           '**/bower_components/**',
           '**/jspm_packages/**',
           '**/vendor/**',
-          
+
           // Version control
           '**/.git/**',
           '**/.svn/**',
           '**/.hg/**',
-          
+
           // Build outputs and artifacts
           '**/dist/**',
           '**/build/**',
@@ -563,19 +591,19 @@ export class AutomationTools {
           '**/obj/**',
           '**/Debug/**',
           '**/Release/**',
-          
+
           // Framework-specific build directories
           '**/.next/**',
           '**/.nuxt/**',
           '**/.svelte-kit/**',
           '**/.vitepress/**',
           '**/_site/**',
-          
+
           // Static assets and public files
           '**/public/**',
           '**/static/**',
           '**/assets/**',
-          
+
           // Testing and coverage
           '**/coverage/**',
           '**/.coverage/**',
@@ -584,14 +612,14 @@ export class AutomationTools {
           '**/.nyc_output/**',
           '**/nyc_output/**',
           '**/lib-cov/**',
-          
+
           // Python environments and cache
           '**/__pycache__/**',
           '**/.venv/**',
           '**/venv/**',
           '**/env/**',
           '**/.env/**',
-          
+
           // Temporary and cache directories
           '**/tmp/**',
           '**/temp/**',
@@ -600,14 +628,14 @@ export class AutomationTools {
           '**/.cache/**',
           '**/logs/**',
           '**/.logs/**',
-          
+
           // Generated/minified files
           '**/*.min.js',
           '**/*.min.css',
           '**/*.bundle.js',
           '**/*.chunk.js',
           '**/*.map',
-          
+
           // Lock files
           '**/package-lock.json',
           '**/yarn.lock',
@@ -652,6 +680,20 @@ export class AutomationTools {
       return latestTime > 0 ? new Date(latestTime).toISOString() : null;
     } catch (error) {
       return null;
+    }
+  }
+
+  private formatDuration(ms: number): string {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+
+    if (hours > 0) {
+      return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s`;
+    } else {
+      return `${seconds}s`;
     }
   }
 

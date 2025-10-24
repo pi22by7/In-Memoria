@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2] - 2025-10-24
+
+### 🐛 **Fixed**
+
+- **Progress tracking display** - Fixed janky and unreliable progress reports during learning (closes #11)
+  - Eliminated console flooding with duplicate progress bar renders
+  - Fixed line clearing issues that were erasing previous console output
+  - Removed duplicate "Learning Complete!" messages appearing multiple times
+  - Progress bars now update in-place smoothly without flickering
+  - Empty progress bars no longer appear before phases actually start
+  - All phases displayed consistently from start to finish
+  - Fixed update frequency to 500ms for smooth, non-intrusive updates
+  - Applied consistent progress display across all commands: `learn`, `setup --interactive`, and MCP `auto_learn_if_needed` tool
+
 ## [0.5.1] - 2025-10-24
 
 ### 🐛 **Fixed**

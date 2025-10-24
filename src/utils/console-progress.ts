@@ -3,9 +3,11 @@ import { ProgressTracker, ProgressUpdate } from './progress-tracker.js';
 export class ConsoleProgressRenderer {
   private tracker: ProgressTracker;
   private isActive: boolean = false;
-  private lastRenderTime: number = 0;
-  private renderInterval: number = 250; // Update every 250ms for more responsive feedback
-  private currentLines: number = 0;
+  private renderTimer: NodeJS.Timeout | null = null;
+  private lastOutput: string = '';
+  private hasRendered: boolean = false;
+  private isCompleted: boolean = false;
+  private hasShownCompletionMessage: boolean = false;
 
   constructor(tracker: ProgressTracker) {
     this.tracker = tracker;
@@ -13,100 +15,101 @@ export class ConsoleProgressRenderer {
   }
 
   private setupListeners(): void {
-    this.tracker.on('progress', (update: ProgressUpdate) => {
+    // No need for phaseStart listener since we show all phases from the beginning
+    
+    // Listen for completion to handle final state properly
+    this.tracker.on('complete', () => {
+      this.isCompleted = true;
       if (this.isActive) {
-        // Immediate render for phase starts (0%) and completions (100%)
-        if (update.percentage === 0 || update.percentage === 100) {
-          this.render();
-          this.lastRenderTime = Date.now();
-        } else {
-          this.throttledRender();
-        }
-      }
-    });
-
-    this.tracker.on('overall', (update: ProgressUpdate) => {
-      if (this.isActive && update.percentage >= 100) {
-        this.renderFinal();
-        this.stop();
+        this.render(); // One final render with complete state
       }
     });
   }
 
   start(): void {
     this.isActive = true;
-    this.currentLines = 0;
+    this.hasRendered = false;
+    this.isCompleted = false;
+    this.hasShownCompletionMessage = false;
+    
+    // Always render immediately to show initial state
     this.render();
+
+    // Update reasonably frequently for smooth progress - every 500ms
+    this.renderTimer = setInterval(() => {
+      if (this.isActive) {
+        this.render();
+      }
+    }, 500);
   }
 
   stop(): void {
-    this.isActive = false;
-  }
-
-  private throttledRender(): void {
-    const now = Date.now();
-    if (now - this.lastRenderTime >= this.renderInterval) {
-      this.render();
-      this.lastRenderTime = now;
+    // Ensure one final render with completion state
+    this.renderFinal();
+    
+    // Clean up
+    if (this.renderTimer) {
+      clearInterval(this.renderTimer);
+      this.renderTimer = null;
     }
+    this.isActive = false;
   }
 
   private render(): void {
     if (!this.isActive) return;
 
-    const isMCPMode = process.env.MCP_SERVER === 'true';
-    
-    if (isMCPMode) {
-      // In MCP mode, send simple ASCII progress to stderr (not logged as output)
-      const lines = this.tracker.getConsoleStatus();
-      for (const line of lines) {
-        console.error(line);
-      }
-    } else {
-      // Normal mode with ANSI codes for terminal
-      // Clear previous lines
-      if (this.currentLines > 0) {
-        process.stderr.write(`\x1b[${this.currentLines}A`); // Move cursor up
-        process.stderr.write('\x1b[J'); // Clear from cursor down
-      }
+    // Get all lines 
+    const allLines = this.tracker.getConsoleStatus();
+    if (allLines.length === 0) return;
 
-      const lines = this.tracker.getConsoleStatus();
-      this.currentLines = lines.length;
+    // Filter out phases that haven't started (all zeros) unless we're completed
+    const lines = this.isCompleted 
+      ? allLines 
+      : allLines.filter((line, idx) => {
+          // Always keep the overall progress line (first line)
+          if (idx === 0) return true;
+          // Keep lines that have progress or are complete
+          return !line.includes('0% (0/') || line.includes('✓');
+        });
 
-      for (const line of lines) {
-        console.error(line);
+    if (lines.length <= 1) return; // Only overall line, don't render yet
+
+    // Build the output with separator
+    const output = '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+                  lines.join('\n') + 
+                  '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+
+    // Only update if something changed
+    if (output !== this.lastOutput) {
+      if (this.hasRendered) {
+        // Move cursor up to the beginning of our progress display and overwrite
+        const lineCount = this.lastOutput.split('\n').length;
+        process.stderr.write(`\x1b[${lineCount}A`); // Move up
+        process.stderr.write('\x1b[0J'); // Clear from cursor to end of screen
       }
+      
+      process.stderr.write(output + '\n');
+      this.lastOutput = output;
+      this.hasRendered = true;
     }
   }
 
   private renderFinal(): void {
-    const isMCPMode = process.env.MCP_SERVER === 'true';
+    if (!this.hasRendered) return;
+    this.isCompleted = true;
+    this.render();
     
-    if (isMCPMode) {
-      // In MCP mode, send final message to stderr
-      const overall = this.tracker.getProgress();
-      if (overall) {
-        console.error(`✅ All operations completed in ${this.formatElapsed(overall.elapsed)}`);
-      }
-    } else {
-      // Normal mode with ANSI codes
-      // Clear previous lines
-      if (this.currentLines > 0) {
-        process.stderr.write(`\x1b[${this.currentLines}A`);
-        process.stderr.write('\x1b[J');
-      }
-
-      const overall = this.tracker.getProgress();
-      if (overall) {
-        console.error(`✅ All operations completed in ${this.formatElapsed(overall.elapsed)}`);
-      }
+    // Show completion message only once
+    if (!this.hasShownCompletionMessage) {
+      process.stderr.write('✅ Learning Complete!\n\n');
+      this.hasShownCompletionMessage = true;
     }
   }
 
   private formatElapsed(elapsed: number): string {
     const seconds = Math.floor(elapsed / 1000);
     const minutes = Math.floor(seconds / 60);
-    
+
     if (minutes > 0) {
       return `${minutes}m ${seconds % 60}s`;
     } else {
@@ -119,16 +122,16 @@ export class ConsoleProgressRenderer {
     const percentage = total > 0 ? (current / total) : 0;
     const filled = Math.floor(percentage * width);
     const empty = width - filled;
-    
+
     // Use ASCII characters in MCP mode, Unicode in terminal mode
     const isMCPMode = process.env.MCP_SERVER === 'true';
-    const bar = isMCPMode 
+    const bar = isMCPMode
       ? '='.repeat(filled) + '-'.repeat(empty)  // ASCII: [====----] 
       : '█'.repeat(filled) + '░'.repeat(empty); // Unicode: [████░░░░]
-    
+
     const percent = (percentage * 100).toFixed(1);
     const baseText = `[${bar}] ${percent}% (${current}/${total})`;
-    
+
     return message ? `${message}: ${baseText}` : baseText;
   }
 

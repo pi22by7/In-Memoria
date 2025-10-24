@@ -13,6 +13,8 @@ import { SemanticVectorDB } from './storage/vector-db.js';
 import { InteractiveSetup } from './cli/interactive-setup.js';
 import { DebugTools } from './cli/debug-tools.js';
 import { config } from './config/config.js';
+import { ProgressTracker } from './utils/progress-tracker.js';
+import { ConsoleProgressRenderer } from './utils/console-progress.js';
 
 function getVersion(): string {
   try {
@@ -158,25 +160,63 @@ async function startWatcher(path: string): Promise<void> {
 }
 
 async function learnCodebase(path: string): Promise<void> {
-  console.log(`Learning from codebase: ${path}`);
+  console.log(`🧠 Starting intelligent learning from: ${path}\n`);
 
   const database = new SQLiteDatabase(config.getDatabasePath(path));
   const vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
   const semanticEngine = new SemanticEngine(database, vectorDB);
   const patternEngine = new PatternEngine(database);
 
+  // Setup progress tracking
+  const tracker = new ProgressTracker();
+  const renderer = new ConsoleProgressRenderer(tracker);
+
   try {
-    console.log('Extracting semantic concepts...');
-    const concepts = await semanticEngine.learnFromCodebase(path);
-    console.log(`Learned ${concepts.length} semantic concepts`);
+    // Estimate file count for progress tracking
+    const glob = (await import('glob')).glob;
+    const files = await glob('**/*.{ts,tsx,js,jsx,py,rs,go,java,c,cpp,svelte,vue}', {
+      cwd: path,
+      ignore: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.git/**'],
+      nodir: true
+    });
+    const fileCount = files.length;
 
-    console.log('Learning coding patterns...');
-    const patterns = await patternEngine.learnFromCodebase(path);
-    console.log(`Learned ${patterns.length} coding patterns`);
+    // Setup progress phases
+    tracker.addPhase('semantic_analysis', fileCount, 3);
+    tracker.addPhase('pattern_learning', fileCount, 2);
 
-    console.log('Learning complete! Intelligence stored for future sessions.');
+    renderer.start();
+
+    // Phase 1: Semantic analysis
+    tracker.startPhase('semantic_analysis');
+    const concepts = await semanticEngine.learnFromCodebase(path,
+      (current: number, total: number, message: string) => {
+        tracker.updateProgress('semantic_analysis', current, message);
+      }
+    );
+    tracker.complete('semantic_analysis');
+
+    // Phase 2: Pattern learning
+    tracker.startPhase('pattern_learning');
+    const patterns = await patternEngine.learnFromCodebase(path,
+      (current: number, total: number, message: string) => {
+        const mapped = Math.floor((current / 100) * fileCount);
+        tracker.updateProgress('pattern_learning', Math.max(1, mapped), message);
+      }
+    );
+    tracker.complete('pattern_learning');
+
+    renderer.stop();
+
+    // Print summary
+    const separator = '━'.repeat(60);
+    console.log(`${separator}`);
+    console.log(`📊 Concepts:  ${concepts.length}`);
+    console.log(`🔍 Patterns:  ${patterns.length}`);
+    console.log(`📁 Files:     ${fileCount}`);
+    console.log(`${separator}\n`);
   } catch (error) {
-    console.error(`Learning failed: ${error}`);
+    console.error(`❌ Learning failed: ${error}`);
   } finally {
     // Clean up all resources to prevent hanging
     try {
@@ -286,7 +326,7 @@ async function initializeProject(path: string): Promise<void> {
 
   // Create default configuration
   const defaultConfig = {
-    version: "0.5.1",
+    version: "0.5.2",
     intelligence: {
       enableRealTimeAnalysis: true,
       enablePatternLearning: true,

@@ -1,6 +1,6 @@
 {
   "name": "@in-memoria/linux-x64",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Linux x64 native bindings for In Memoria",
   "main": "in-memoria-core.linux-x64-gnu.node",
   "files": [
