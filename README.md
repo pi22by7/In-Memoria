@@ -1,9 +1,9 @@
 # In Memoria
 
-[![npm version](https://badge.fury.io/js/in-memoria.svg)](https://www.npmjs.com/package/in-memoria)
+[![npm version](https://img.shields.io/npm/v/in-memoria.svg)](https://www.npmjs.com/package/in-memoria)
 [![npm downloads](https://img.shields.io/npm/dm/in-memoria.svg)](https://www.npmjs.com/package/in-memoria)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Discord](https://img.shields.io/discord/6mGsM4qkYm?color=7289da&label=Discord&logo=discord&logoColor=white)](https://discord.gg/6mGsM4qkYm)
+[![Discord](https://img.shields.io/discord/1431193342200516630?color=7289da&label=Discord&logo=discord&logoColor=white)](https://discord.gg/6mGsM4qkYm)
 
 **Giving AI coding assistants a memory that actually persists.**
 
