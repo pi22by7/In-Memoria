@@ -168,7 +168,7 @@ export class InteractiveSetup {
 
     // Create configuration file
     const configFile = {
-      version: "0.5.3",
+      version: "0.5.4",
       project: {
         name: config.projectName,
         languages: config.languages

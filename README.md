@@ -27,7 +27,7 @@ In Memoria is an MCP server that learns from your actual codebase and remembers 
 
 Think of it as giving your AI pair programmer a notepad that doesn't get wiped clean every time you restart the session.
 
-**Current version: 0.5.3** - [See what's changed](CHANGELOG.md)
+**Current version: 0.5.4** - [See what's changed](CHANGELOG.md)
 
 ### What It Does
 
@@ -131,18 +131,21 @@ In Memoria is built on Rust + TypeScript, using the Model Context Protocol to co
 ### The Core Components
 
 **Rust Layer** - Fast, native processing:
+
 - Tree-sitter AST parsing for 11 languages (TypeScript, JavaScript, Python, Rust, Go, Java, C/C++, C#, Svelte, SQL)
 - Blueprint analyzer (detects project structure, entry points, architecture patterns)
 - Pattern learner (statistical analysis of your coding style)
 - Semantic engine (understands code relationships and concepts)
 
 **TypeScript Layer** - MCP server and orchestration:
+
 - 13 specialized tools for AI assistants (organized into 4 categories)
 - SQLite for structured data, SurrealDB (in-memory) for vector search
 - File watching for incremental updates
 - Smart routing that maps features to files
 
 **Storage** - Local-first:
+
 - Everything stays on your machine
 - SQLite for patterns and metadata
 - SurrealDB in-memory mode for vector embeddings and semantic search
@@ -164,15 +167,19 @@ This isn't just another RAG system or static rules engine:
 We recently completed Phases 1-4 of the implementation roadmap:
 
 ### 🗺️ Project Blueprints (Phase 1)
+
 Instant project context without full learning. Ask about a codebase and get tech stack, entry points, key directories, and architecture all in under 200 tokens.
 
 ### 💼 Work Context System (Phase 2)
+
 AI agents can now track work sessions, maintain task lists, and record architectural decisions. Resume work exactly where you left off.
 
 ### 🧭 Smart File Routing (Phase 3)
+
 Feature-to-file mapping across 10 categories (auth, API, database, UI, etc.). Vague requests like "add password reset" get routed to specific files automatically.
 
 ### ⚡ Smooth Progress Tracking (v0.5.3)
+
 No more janky console spam. Progress bars update in-place with consistent 500ms refresh rates.
 
 ## MCP Tools for AI Assistants
@@ -180,10 +187,12 @@ No more janky console spam. Progress bars update in-place with consistent 500ms 
 In Memoria provides **13 specialized tools** that AI assistants can call via MCP. They're organized into 4 categories (down from 16 after Phase 4 consolidation merged redundant tools):
 
 ### 🎯 Core Analysis (2 tools)
+
 - `analyze_codebase` - Analyze files/directories with concepts, patterns, complexity (Phase 4: now handles both files and directories)
 - `search_codebase` - Multi-mode search (semantic/text/pattern)
 
 ### 🧠 Intelligence (7 tools)
+
 - `learn_codebase_intelligence` - Deep learning to extract patterns and architecture
 - `get_project_blueprint` - Instant project context with tech stack and entry points ⭐ (Phase 4: includes learning status)
 - `get_semantic_insights` - Query learned concepts and relationships
@@ -193,14 +202,17 @@ In Memoria provides **13 specialized tools** that AI assistants can call via MCP
 - `contribute_insights` - Record architectural decisions
 
 ### 🤖 Automation (1 tool)
+
 - `auto_learn_if_needed` - Smart auto-learning with staleness detection ⭐ (Phase 4: includes quick setup functionality)
 
 ### 📊 Monitoring (3 tools)
+
 - `get_system_status` - Health check
 - `get_intelligence_metrics` - Analytics on learned patterns
 - `get_performance_status` - Performance diagnostics
 
 **Phase 4 Consolidation**: Three tools were merged into existing tools for better AX (agent experience haha):
+
 - ~~get_file_content~~ → merged into `analyze_codebase`
 - ~~get_learning_status~~ → merged into `get_project_blueprint`
 - ~~quick_setup~~ → merged into `auto_learn_if_needed`
@@ -214,6 +226,7 @@ In Memoria works with GitHub Copilot through custom instructions and chat modes.
 ### Setup
 
 This repository includes:
+
 - `.github/copilot-instructions.md` - Automatic guidance for Copilot
 - `.github/chatmodes/` - Three specialized chat modes:
   - 🔍 **inmemoria-explorer** - Intelligent codebase navigation
@@ -221,6 +234,7 @@ This repository includes:
   - 🔎 **inmemoria-review** - Code review with consistency checking
 
 To use in VS Code:
+
 1. Command Palette → "Chat: Configure Chat Modes..."
 2. Select a mode from `.github/chatmodes/`
 
@@ -259,6 +273,7 @@ Build artifacts (`node_modules/`, `dist/`, `.next/`, etc.) are automatically fil
 **Let's be honest**: In Memoria is early-stage software. It works, but it's not perfect.
 
 ### What Works Well
+
 - ✅ Pattern learning from real codebases
 - ✅ Semantic search across concepts
 - ✅ Project blueprint generation
@@ -267,6 +282,7 @@ Build artifacts (`node_modules/`, `dist/`, `.next/`, etc.) are automatically fil
 - ✅ Token-efficient responses
 
 ### Known Limitations
+
 - ⚠️ Semantic search works best with OpenAI embeddings (requires API key) but falls back to local transformers.js
 - ⚠️ Large codebases (100k+ files) can be slow on first analysis
 - ⚠️ Pattern accuracy improves with codebase consistency
@@ -279,6 +295,7 @@ Build artifacts (`node_modules/`, `dist/`, `.next/`, etc.) are automatically fil
 This is open-source infrastructure for AI-assisted development. Currently a solo project by [@pi22by7](https://github.com/pi22by7), but contributions are not just welcome, they're essential.
 
 **Before contributing code**, please:
+
 - Check the [GitHub Projects board](https://github.com/pi22by7/in-memoria/projects) to see what's planned
 - Join [Discord](https://discord.gg/6mGsM4qkYm) to discuss your ideas (@pi_22by7)
 - [Open an issue](https://github.com/pi22by7/in-memoria/issues) to discuss the feature/fix
@@ -298,14 +315,17 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 ## Technical Comparison
 
 **vs GitHub Copilot's memory**:
+
 - Copilot: Basic fact storage, no pattern learning
 - In Memoria: Semantic analysis + pattern learning + architectural intelligence + work context
 
 **vs Cursor's rules**:
+
 - Cursor: Static rules, manually defined
 - In Memoria: Dynamic learning from actual code + smart file routing + project blueprints
 
 **vs Custom RAG**:
+
 - RAG: Retrieves relevant code snippets
 - In Memoria: Understands patterns + predicts approaches + routes to files + tracks work context
 
@@ -314,11 +334,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 In Memoria works for both individual developers and teams:
 
 **Individual**:
+
 - Learns your personal coding style
 - Remembers architectural decisions you've made
 - Provides context-aware suggestions
 
 **Team**:
+
 - Share `.in-memoria.db` files to distribute learned patterns
 - Onboard new developers with pre-learned codebase intelligence
 - Ensure consistent AI suggestions across the team
@@ -333,11 +355,13 @@ npm run build
 ```
 
 **Requirements**:
+
 - Node.js 18+
 - Rust 1.70+ (for building from source)
 - 2GB RAM minimum
 
 **Development**:
+
 ```bash
 npm run dev          # Start in development mode
 npm test            # Run test suite (98.3% pass rate)
@@ -345,6 +369,7 @@ npm run build:rust  # Build Rust components
 ```
 
 **Quality metrics**:
+
 - 118/120 unit tests passing (98.3%)
 - 23/23 MCP integration tests passing (100%)
 - Zero clippy warnings in Rust code
@@ -368,7 +393,7 @@ A: Minimal. Initial learning takes time (proportional to codebase size), but sub
 A: [Open an issue](https://github.com/pi22by7/in-memoria/issues) with details. Built-in timeouts and circuit breakers handle most edge cases, but real-world codebases are messy and we need your feedback to improve.
 
 **Q: Can I use this in production?**
-A: You *can*, but remember this is v0.5.x. Expect rough edges. Test thoroughly. Report issues. We're working toward stability but aren't there yet.
+A: You _can_, but remember this is v0.5.x. Expect rough edges. Test thoroughly. Report issues. We're working toward stability but aren't there yet.
 
 **Q: Why Rust + TypeScript?**
 A: Rust for performance-critical AST parsing and pattern analysis. TypeScript for MCP server and orchestration. Best of both worlds: fast core, flexible integration layer.
@@ -413,8 +438,8 @@ Built with ❤️ by [@pi22by7](https://github.com/pi22by7) for the AI-assisted 
 
 **Try it**: `npx in-memoria server`
 
-**Latest release**: [v0.5.3](CHANGELOG.md) - Smooth progress tracking and Phase 1-4 complete
+**Latest release**: [v0.5.4](CHANGELOG.md) - Smooth progress tracking and Phase 1-4 complete
 
-*In memoria: in memory. Because your AI assistant should remember.*
+_In memoria: in memory. Because your AI assistant should remember._
 
 **Questions? Ideas?** Join us on [Discord](https://discord.gg/6mGsM4qkYm) or reach out at [talk@pi22by7.me](mailto:talk@pi22by7.me)

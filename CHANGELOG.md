@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.4] - 2025-10-25
+
+### 🐛 **Fixed**
+
+- **MCP server binary permissions** - Fixed "Permission denied" error when connecting to In Memoria MCP server via npx
+  - Added `fix-permissions` script to set execute permissions on `dist/index.js` after TypeScript compilation
+  - Created `build:ts` script for CI/CD TypeScript-only builds that includes permission fix
+  - Updated release workflow to use new `build:ts` script ensuring published packages have correct permissions
+  - Cross-platform compatible: uses try-catch for chmod on Windows where it's not critical
+
 ## [0.5.3] - 2025-10-24
 
 ### 🐛 **Fixed**

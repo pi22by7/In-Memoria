@@ -1,6 +1,6 @@
 {
   "name": "in-memoria",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Persistent intelligence infrastructure for agentic development",
   "main": "dist/index.js",
   "type": "module",
@@ -14,8 +14,10 @@
     "schemas"
   ],
   "scripts": {
-    "build": "tsc && npm run build:rust && npm run copy-assets",
+    "build": "tsc && npm run build:rust && npm run copy-assets && npm run fix-permissions",
+    "build:ts": "tsc && npm run copy-assets && npm run fix-permissions",
     "copy-assets": "node -e \"require('fs').mkdirSync('dist/storage', {recursive: true}); require('fs').copyFileSync('src/storage/schema.sql', 'dist/storage/schema.sql')\"",
+    "fix-permissions": "node -e \"try { require('fs').chmodSync('dist/index.js', '755'); } catch (e) { /* chmod not critical on Windows */ }\"",
     "build:rust": "npm --prefix rust-core run build",
     "build:universal": "npm run build:rust -- --target universal",
     "build:windows": "npm --prefix rust-core run build -- --target x86_64-pc-windows-msvc",
@@ -60,10 +62,10 @@
     "zod": "^3.25.76"
   },
   "optionalDependencies": {
-    "@in-memoria/darwin-arm64": "0.5.3",
-    "@in-memoria/darwin-x64": "0.5.3",
-    "@in-memoria/linux-x64": "0.5.3",
-    "@in-memoria/win32-x64": "0.5.3"
+    "@in-memoria/darwin-arm64": "0.5.4",
+    "@in-memoria/darwin-x64": "0.5.4",
+    "@in-memoria/linux-x64": "0.5.4",
+    "@in-memoria/win32-x64": "0.5.4"
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.4.1",

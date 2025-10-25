@@ -158,7 +158,7 @@ jobs:
         run: npm ci
         
       - name: Build TypeScript (without Rust)
-        run: tsc && npm run copy-assets
+        run: npm run build:ts
           
       - name: Publish main package to npm
         run: npm publish --access public
