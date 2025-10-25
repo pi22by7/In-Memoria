@@ -1,6 +1,19 @@
 # Contributing to In Memoria
 
-Welcome! We're excited that you're interested in contributing to In Memoria. This document provides guidelines and information for contributors.
+Welcome! I'm excited that you're interested in contributing to In Memoria. This document provides guidelines and information for contributors.
+
+**Project Maintainer**: [@pi22by7](https://github.com/pi22by7) (Piyush Airani)
+
+**Important**: This is currently a solo project. Before starting work on any feature or significant change, please:
+
+1. **Check existing work**: Review [GitHub Projects](https://github.com/pi22by7/in-memoria/projects) to see what's planned
+2. **Discuss first**: Reach out via:
+   - Discord: [discord.gg/6mGsM4qkYm](https://discord.gg/6mGsM4qkYm) (@pi_22by7)
+   - Email: [talk@pi22by7.me](mailto:talk@pi22by7.me)
+   - GitHub Issue: [Create an issue](https://github.com/pi22by7/in-memoria/issues/new)
+3. **Get alignment**: Make sure your contribution aligns with the project direction
+
+This helps avoid duplicate work and ensures we're all moving in the same direction!
 
 ## 🎯 Project Vision
 
@@ -411,24 +424,33 @@ Add any other context or screenshots about the feature request.
 
 ### Communication Channels
 
+- **Discord**: [discord.gg/6mGsM4qkYm](https://discord.gg/6mGsM4qkYm) - Best for real-time discussions, questions, and brainstorming (@pi_22by7)
+- **Email**: [talk@pi22by7.me](mailto:talk@pi22by7.me) - For private inquiries or detailed technical discussions
 - **GitHub Issues**: Bug reports and feature requests
 - **GitHub Discussions**: General questions and ideas
-- **Discord**: Real-time chat and community (coming soon)
 
 ### Maintainer Availability
 
-- **Response Time**: We aim to respond to issues within 48 hours
+As a solo project, response times may vary:
+
+- **Response Time**: I aim to respond to issues within 48-72 hours (faster on Discord)
 - **Review Time**: Pull requests are typically reviewed within a week
-- **Release Cycle**: Monthly releases with weekly patch releases as needed
+- **Release Cycle**: Releases happen when significant features/fixes are ready
+- **Best contact**: Discord (@pi_22by7) for fastest response
+
+**Tip**: Join Discord for the quickest feedback and to stay updated on project direction!
 
 ## 🙏 Recognition
 
-Contributors are recognized in several ways:
+All contributors are valued and recognized:
 
 - **Contributors list** in README.md
 - **Release notes** mentioning significant contributions
 - **GitHub contributor graph** showing activity
 - **Special recognition** for major contributions
+- **Discord role** for active contributors
+
+Your contributions, no matter how small, help build better infrastructure for AI-assisted development!
 
 ## 📄 License
 
@@ -436,4 +458,8 @@ By contributing to In Memoria, you agree that your contributions will be license
 
 ---
 
-Thank you for contributing to In Memoria! Together, we're building the future of persistent AI intelligence for development. 🚀
+Thank you for your interest in contributing to In Memoria! Whether you're fixing a typo, reporting a bug, or building a major feature, your help is appreciated.
+
+**Remember**: Reach out on [Discord](https://discord.gg/6mGsM4qkYm) (@pi_22by7) before starting significant work. Let's build the future of persistent AI intelligence for development together! 🚀
+
+— Piyush (@pi22by7)
