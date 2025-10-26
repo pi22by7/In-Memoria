@@ -115,7 +115,22 @@ export class ConfigManager {
    */
   getDatabasePath(projectPath?: string): string {
     const basePath = projectPath || process.cwd();
-    return join(basePath, this.config.database.filename);
+    const filename = this.config.database.filename;
+    
+    // Warn if filename contains path separators (indicates misconfiguration)
+    if (filename.includes('/') || filename.includes('\\')) {
+      console.warn(
+        '⚠️  Warning: IN_MEMORIA_DB_FILENAME contains path separators.\n' +
+        `   Current: "${filename}"\n` +
+        '   This may cause issues. Consider using a simple filename.\n' +
+        `   The database directory is determined by the project path: ${basePath}\n` +
+        '   Example: Set IN_MEMORIA_DB_FILENAME="in-memoria.db" instead of a path.'
+      );
+    }
+    
+    const dbPath = join(basePath, filename);
+    console.error(`📁 Database path resolved to: ${dbPath}`);
+    return dbPath;
   }
   
   /**

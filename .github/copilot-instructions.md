@@ -2,6 +2,43 @@
 
 This repository includes **In Memoria**, an intelligent MCP (Model Context Protocol) server that provides codebase intelligence through semantic analysis, pattern recognition, and smart navigation.
 
+## ⚠️ CRITICAL: Path Parameter Usage
+
+**ALWAYS provide absolute paths to In-Memoria tools. NEVER rely on default values.**
+
+### Why This Matters
+
+In MCP server context, `process.cwd()` is unpredictable and may point to the wrong directory (like `/home/user` instead of your project). Always specify the path explicitly to avoid analyzing the wrong codebase or creating databases in unexpected locations.
+
+```typescript
+// ❌ WRONG - May use incorrect directory
+await use_mcp_tool('in-memoria', 'get_project_blueprint', {
+  includeFeatureMap: true
+});
+
+// ✅ CORRECT - Always specify path explicitly
+await use_mcp_tool('in-memoria', 'get_project_blueprint', {
+  path: '/absolute/path/to/project',  // Use workspace root
+  includeFeatureMap: true
+});
+```
+
+### Getting the Project Path
+
+- In VS Code: Use `${workspaceFolder}` or workspace root API
+- Ensure it's an **absolute path** (starts with `/` on Unix, `C:\` on Windows)
+- Be **consistent** across all tool calls in a session
+- Verify the path exists before calling tools
+
+### Path Convention for All Tools
+
+Every tool that accepts a `path` parameter should receive:
+- **Absolute paths** to the project root directory
+- **Same path** throughout the entire session
+- **No relative paths** like `.` or `./src` (resolve them first)
+
+---
+
 ## Core Capabilities
 
 In Memoria learns from codebases and provides:
@@ -17,9 +54,12 @@ In Memoria learns from codebases and provides:
 
 **ALWAYS start new sessions with:**
 ```typescript
+// IMPORTANT: Get the absolute project path first
+const projectPath = '/absolute/path/to/project'; // or ${workspaceFolder}
+
 // 1. Get instant project blueprint
 const blueprint = await use_mcp_tool('in-memoria', 'get_project_blueprint', {
-  path: '.',
+  path: projectPath,  // Always provide path!
   includeFeatureMap: true
 });
 
@@ -27,7 +67,7 @@ const blueprint = await use_mcp_tool('in-memoria', 'get_project_blueprint', {
 if (blueprint.learningStatus.recommendation === 'learning_recommended') {
   // 2. Auto-learn from codebase if needed
   await use_mcp_tool('in-memoria', 'auto_learn_if_needed', {
-    path: '.',
+    path: projectPath,  // Same path throughout session
     includeProgress: true
   });
 }
@@ -40,14 +80,16 @@ This eliminates cold-start exploration and gives you instant context.
 #### 1. **analyze_codebase** - Comprehensive Analysis
 Use for: Understanding files or directories
 ```typescript
+const projectPath = '/absolute/path/to/project';
+
 // Analyze a specific file
 await use_mcp_tool('in-memoria', 'analyze_codebase', {
-  path: './src/components/Header.tsx'
+  path: `${projectPath}/src/components/Header.tsx`
 });
 
 // Analyze entire directory
 await use_mcp_tool('in-memoria', 'analyze_codebase', {
-  path: './src'
+  path: `${projectPath}/src`
 });
 ```
 Returns: Languages, frameworks, complexity, top concepts, top patterns (token-efficient)
@@ -73,7 +115,7 @@ await use_mcp_tool('in-memoria', 'search_codebase', {
 Use for: Cold-start elimination, understanding project structure
 ```typescript
 await use_mcp_tool('in-memoria', 'get_project_blueprint', {
-  path: '.',
+  path: '/absolute/path/to/project',  // ALWAYS provide path
   includeFeatureMap: true
 });
 ```
@@ -146,16 +188,32 @@ Returns: Naming conventions, structural patterns, testing approach, expertise ar
 
 #### 10. **contribute_insights** - Record Learnings
 Use for: Teaching In Memoria about the codebase
+
+**⚠️ IMPORTANT:** The `content` field is REQUIRED and must contain the actual insight data.
+
 ```typescript
+// ✅ CORRECT - content field with insight details
 await use_mcp_tool('in-memoria', 'contribute_insights', {
-  type: 'architectural_decision',
-  content: {
-    decision: 'Use React Query for all API calls',
+  type: 'best_practice',
+  content: {  // REQUIRED FIELD
+    practice: 'Use React Query for all API calls',
     reasoning: 'Provides better caching and error handling',
     affectedFiles: ['src/hooks/', 'src/api/']
   },
   confidence: 0.95,
+  sourceAgent: 'github-copilot',
+  sessionUpdate: {  // OPTIONAL
+    feature: 'API integration',
+    files: ['src/api/users.ts']
+  }
+});
+
+// ❌ WRONG - missing content field
+await use_mcp_tool('in-memoria', 'contribute_insights', {
+  type: 'best_practice',
+  confidence: 0.9,
   sourceAgent: 'github-copilot'
+  // ERROR: content is required!
 });
 ```
 
@@ -165,6 +223,20 @@ Use these for debugging and system health:
 - `get_system_status` - Database status, learning state
 - `get_intelligence_metrics` - Concept/pattern counts, quality scores
 - `get_performance_status` - Vector DB health, query performance
+- `health_check` - Verify setup and configuration (checks paths, database, API keys)
+
+**Example: Run health check**
+```typescript
+// Diagnose setup issues
+const health = await use_mcp_tool('in-memoria', 'health_check', {
+  path: '/absolute/path/to/project'
+});
+
+// Check status: 'healthy', 'warning', or 'error'
+console.log(health.status);       // Overall status
+console.log(health.summary);      // Human-readable summary
+console.log(health.checks);       // Detailed check results
+```
 
 ## 🎯 Usage Patterns
 

@@ -14,6 +14,7 @@ import { PatternEngine } from '../../engines/pattern-engine.js';
 import { SQLiteDatabase } from '../../storage/sqlite-db.js';
 import { SemanticVectorDB } from '../../storage/vector-db.js';
 import { config } from '../../config/config.js';
+import { PathValidator } from '../../utils/path-validator.js';
 
 export class IntelligenceTools {
   constructor(
@@ -137,7 +138,7 @@ export class IntelligenceTools {
       },
       {
         name: 'contribute_insights',
-        description: 'Allow AI agents to contribute insights back to the knowledge base',
+        description: 'Allow AI agents to contribute insights back to the knowledge base. IMPORTANT: The `content` field is REQUIRED and must contain the actual insight details as a structured object.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -148,7 +149,8 @@ export class IntelligenceTools {
             },
             content: {
               type: 'object',
-              description: 'The insight content and details'
+              description: 'The insight content and details. REQUIRED. Must be a structured object describing the insight. Examples: {practice: "...", reasoning: "..."} for best_practice, or {bugPattern: "...", fix: "..."} for bug_pattern.',
+              additionalProperties: true
             },
             confidence: {
               type: 'number',
@@ -678,7 +680,8 @@ export class IntelligenceTools {
       message: string;
     };
   }> {
-    const projectPath = args.path || process.cwd();
+    // Validate and resolve project path with warnings
+    const projectPath = PathValidator.validateAndWarnProjectPath(args.path, 'get_project_blueprint');
     const { config } = await import('../../config/config.js');
     const projectDbPath = config.getDatabasePath(projectPath);
     const projectDatabase = new SQLiteDatabase(projectDbPath);

@@ -1,4 +1,6 @@
 import Database from 'better-sqlite3';
+import { mkdirSync, existsSync } from 'fs';
+import { dirname } from 'path';
 import { DatabaseMigrator } from './migrations.js';
 
 export interface SemanticConcept {
@@ -108,6 +110,15 @@ export class SQLiteDatabase {
   private migrator: DatabaseMigrator;
 
   constructor(dbPath: string = ':memory:') {
+    // Ensure parent directory exists for file-based databases
+    if (dbPath !== ':memory:') {
+      const dir = dirname(dbPath);
+      if (!existsSync(dir)) {
+        console.error(`Creating database directory: ${dir}`);
+        mkdirSync(dir, { recursive: true });
+      }
+    }
+    
     this.db = new Database(dbPath);
     this.migrator = new DatabaseMigrator(this.db);
     this.initializeDatabase();

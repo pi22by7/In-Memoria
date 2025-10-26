@@ -127,8 +127,9 @@ test-*.db
 docs/GENERATED_*.md
 *.session-*.txt
 
-# Claude configuration
+# Agent configuration
 .claude/
+GEMINI.md
 
 wiki/
 lang_tests/

@@ -50,8 +50,26 @@ async function main() {
     case '-v':
       showVersion();
       break;
+      
     case 'server':
-      console.log('Starting In Memoria MCP Server...');
+      // Accept optional path argument to set working directory
+      const serverPath = args[1];
+      if (serverPath) {
+        const { resolve } = await import('path');
+        const { existsSync } = await import('fs');
+        const resolvedPath = resolve(serverPath);
+        
+        if (!existsSync(resolvedPath)) {
+          console.error(`❌ Error: Path does not exist: ${resolvedPath}`);
+          console.error('   Please provide a valid project directory path.');
+          process.exit(1);
+        }
+        
+        console.log(`📂 Setting working directory to: ${resolvedPath}`);
+        process.chdir(resolvedPath);
+      }
+      
+      console.log(`🚀 Starting In Memoria MCP Server from: ${process.cwd()}`);
       await runServer();
       break;
 

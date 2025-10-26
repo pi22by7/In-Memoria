@@ -213,6 +213,9 @@ export class CodeCartographerMCP {
       case 'get_performance_status':
         return await this.monitoringTools.getPerformanceStatus(args);
 
+      case 'health_check':
+        return await this.monitoringTools.healthCheck(args);
+
       default:
         throw new McpError(
           ErrorCode.MethodNotFound,
