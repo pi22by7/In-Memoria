@@ -4,6 +4,7 @@ import { CircuitBreaker, createOpenAICircuitBreaker } from '../utils/circuit-bre
 import { globalProfiler, PerformanceOptimizer } from '../utils/performance-profiler.js';
 import OpenAI from 'openai';
 import { pipeline } from '@xenova/transformers';
+import { Logger } from '../utils/logger.js';
 
 export interface CodeMetadata {
   id: string;
@@ -71,16 +72,16 @@ export class SemanticVectorDB {
    */
   private async initializeLocalEmbeddings(): Promise<void> {
     try {
-      console.log('🔧 Initializing local embedding pipeline...');
+      Logger.info('🔧 Initializing local embedding pipeline...');
       // Use all-MiniLM-L6-v2 for quality local embeddings
       this.localEmbeddingPipeline = await pipeline(
         'feature-extraction',
         'Xenova/all-MiniLM-L6-v2'
       );
-      console.log('✅ Local embedding pipeline ready');
+      Logger.info('✅ Local embedding pipeline ready');
     } catch (error: unknown) {
-      console.warn('⚠️  Failed to initialize local embeddings:', error instanceof Error ? error.message : String(error));
-      console.log('📝 Will use fallback local embedding method');
+      Logger.warn('⚠️  Failed to initialize local embeddings:', error instanceof Error ? error.message : String(error));
+      Logger.info('📝 Will use fallback local embedding method');
     }
   }
 
@@ -110,7 +111,7 @@ export class SemanticVectorDB {
 
       this.initialized = true;
     } catch (error) {
-      console.error('Failed to initialize SurrealDB:', error);
+      Logger.error('Failed to initialize SurrealDB:', error);
       throw error;
     }
   }
@@ -312,9 +313,9 @@ export class SemanticVectorDB {
     // Log once at start of embedding process
     if (!this.hasLoggedEmbeddingStart) {
       if (this.openaiClient && this.apiKey && this.apiKey.length > 0) {
-        console.log('🔧 Initializing OpenAI embedding pipeline...');
+        Logger.info('🔧 Initializing OpenAI embedding pipeline...');
       } else {
-        console.log('🔧 Initializing local embedding pipeline...');
+        Logger.info('🔧 Initializing local embedding pipeline...');
       }
       this.hasLoggedEmbeddingStart = true;
     }
@@ -324,7 +325,7 @@ export class SemanticVectorDB {
       try {
         embedding = await this.getOpenAIEmbedding(code);
       } catch (error: unknown) {
-        console.warn('⚠️  OpenAI embedding failed, using local embedding:', error instanceof Error ? error.message : String(error));
+        Logger.warn('⚠️  OpenAI embedding failed, using local embedding:', error instanceof Error ? error.message : String(error));
         embedding = await this.getLocalEmbedding(code);
       }
     } else {
@@ -377,7 +378,7 @@ export class SemanticVectorDB {
         const embedding = Array.from(result.data) as number[];
         return embedding;
       } catch (error: unknown) {
-        console.warn('⚠️  Local embedding pipeline failed:', error instanceof Error ? error.message : String(error));
+        Logger.warn('⚠️  Local embedding pipeline failed:', error instanceof Error ? error.message : String(error));
       }
     }
 
@@ -762,7 +763,7 @@ export class SemanticVectorDB {
         }
         this.localEmbeddingPipeline = null;
       } catch (error) {
-        console.warn('Warning: Failed to dispose local embedding pipeline:', error);
+        Logger.warn('Warning: Failed to dispose local embedding pipeline:', error);
       }
     }
 

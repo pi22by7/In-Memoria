@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { mkdirSync, existsSync } from 'fs';
 import { dirname } from 'path';
 import { DatabaseMigrator } from './migrations.js';
+import { Logger } from '../utils/logger.js';
 
 export interface SemanticConcept {
   id: string;
@@ -114,7 +115,7 @@ export class SQLiteDatabase {
     if (dbPath !== ':memory:') {
       const dir = dirname(dbPath);
       if (!existsSync(dir)) {
-        console.error(`Creating database directory: ${dir}`);
+        Logger.info(`Creating database directory: ${dir}`);
         mkdirSync(dir, { recursive: true });
       }
     }
@@ -127,10 +128,10 @@ export class SQLiteDatabase {
   private initializeDatabase(): void {
     // Run migrations if needed
     if (this.migrator.needsMigration()) {
-      console.log('Running database migrations...');
+      Logger.info('Running database migrations...');
       this.migrator.migrate();
     } else {
-      console.log('Database is up to date');
+      Logger.info('Database is up to date');
     }
   }
 

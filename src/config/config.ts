@@ -5,6 +5,7 @@
 
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { Logger } from '../utils/logger.js';
 
 export interface InMemoriaConfig {
   // Database configuration - always relative to analyzed project
@@ -119,7 +120,7 @@ export class ConfigManager {
     
     // Warn if filename contains path separators (indicates misconfiguration)
     if (filename.includes('/') || filename.includes('\\')) {
-      console.warn(
+      Logger.warn(
         '⚠️  Warning: IN_MEMORIA_DB_FILENAME contains path separators.\n' +
         `   Current: "${filename}"\n` +
         '   This may cause issues. Consider using a simple filename.\n' +
@@ -129,7 +130,7 @@ export class ConfigManager {
     }
     
     const dbPath = join(basePath, filename);
-    console.error(`📁 Database path resolved to: ${dbPath}`);
+    Logger.info(`📁 Database path resolved to: ${dbPath}`);
     return dbPath;
   }
   

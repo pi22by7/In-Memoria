@@ -6,6 +6,7 @@ import { existsSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { PathValidator } from '../../utils/path-validator.js';
 import { config } from '../../config/config.js';
+import { Logger } from '../../utils/logger.js';
 
 export class MonitoringTools {
   constructor(
@@ -86,7 +87,7 @@ export class MonitoringTools {
     const includeMetrics = args.includeMetrics !== false;
     const includeDiagnostics = args.includeDiagnostics || false;
 
-    console.error('📊 Gathering system status...');
+    Logger.info('📊 Gathering system status...');
 
     const status = {
       timestamp: new Date().toISOString(),
@@ -126,7 +127,7 @@ export class MonitoringTools {
       };
 
     } catch (error: unknown) {
-      console.error('❌ Status check failed:', error);
+      Logger.info('❌ Status check failed:', error);
 
       return {
         success: false,
@@ -142,7 +143,7 @@ export class MonitoringTools {
   }): Promise<any> {
     const includeBreakdown = args.includeBreakdown !== false;
 
-    console.error('🧠 Analyzing intelligence metrics...');
+    Logger.info('🧠 Analyzing intelligence metrics...');
 
     try {
       const concepts = this.database.getSemanticConcepts();
@@ -231,7 +232,7 @@ export class MonitoringTools {
       };
 
     } catch (error: unknown) {
-      console.error('❌ Intelligence metrics failed:', error);
+      Logger.info('❌ Intelligence metrics failed:', error);
 
       return {
         success: false,
@@ -246,7 +247,7 @@ export class MonitoringTools {
   }): Promise<any> {
     const runBenchmark = args.runBenchmark || false;
 
-    console.error('⚡ Checking performance status...');
+    Logger.info('⚡ Checking performance status...');
 
     try {
       const performance = {
@@ -299,7 +300,7 @@ export class MonitoringTools {
 
       // Benchmark (if requested)
       if (runBenchmark) {
-        console.error('🏃 Running performance benchmark...');
+        Logger.info('🏃 Running performance benchmark...');
         performance.benchmark = await this.runQuickBenchmark();
       }
 
@@ -310,7 +311,7 @@ export class MonitoringTools {
       };
 
     } catch (error: unknown) {
-      console.error('❌ Performance check failed:', error);
+      Logger.info('❌ Performance check failed:', error);
 
       return {
         success: false,
@@ -490,7 +491,7 @@ export class MonitoringTools {
     const checks: Array<{ name: string; status: 'pass' | 'fail' | 'warning'; message: string }> = [];
     const projectPath = args.path || process.cwd();
 
-    console.error(`🏥 Running health check for: ${projectPath}`);
+    Logger.info(`🏥 Running health check for: ${projectPath}`);
 
     // Check 1: Project path exists
     try {

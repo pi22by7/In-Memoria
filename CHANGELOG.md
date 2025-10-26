@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 **Fixed**
+
+- **MCP STDIO transport** - Fixed JSON parse errors in MCP Inspector
+  - Logs now go to stderr instead of stdout (per MCP spec)
+  - Stdout is reserved for JSON-RPC messages only
+  - All logging is still visible and AI agents can see progress updates
+
+### ✨ **Added**
+
+- **Database auto-initialization** - Parent directories are created automatically
+- **Path validation** - Helpful warnings when database paths look suspicious
+- **Server path argument** - `in-memoria server /path/to/project` now sets working directory
+- **PathValidator utility** - Reusable path validation with project detection
+- **health_check tool** - New diagnostic tool for troubleshooting MCP setup issues
+- **Better Copilot instructions** - Clear guidance on path parameter usage and tool examples
+
+### 📝 **Documentation**
+
+- **Issue #9 analysis** - Comprehensive root cause analysis in `docs/ISSUE_9_ANALYSIS.md`
+  - Detailed breakdown of all 4 reported issues
+  - Root cause analysis for each problem
+  - 7 recommended fixes with code examples
+  - Testing plan and migration guide for users
+  - Code location appendix for quick reference
+
 ## [0.5.4] - 2025-10-25
 
 ### 🐛 **Fixed**

@@ -17,6 +17,7 @@ import { SQLiteDatabase } from '../storage/sqlite-db.js';
 import { SemanticVectorDB } from '../storage/vector-db.js';
 import { validateInput, VALIDATION_SCHEMAS } from './validation.js';
 import { config } from '../config/config.js';
+import { Logger } from '../utils/logger.js';
 
 export class CodeCartographerMCP {
   private server: Server;
@@ -47,30 +48,30 @@ export class CodeCartographerMCP {
 
   private async initializeComponents(): Promise<void> {
     try {
-      console.error('Initializing In Memoria components...');
+      Logger.info('Initializing In Memoria components...');
 
       // Initialize storage using configuration management
       // Database path is determined by config based on the analyzed project
       const appConfig = config.getConfig();
       const dbPath = config.getDatabasePath(); // Will use current directory as project path
-      console.error(`Attempting to initialize database at: ${dbPath}`);
+      Logger.info(`Attempting to initialize database at: ${dbPath}`);
 
       try {
         this.database = new SQLiteDatabase(dbPath);
-        console.error('SQLite database initialized successfully');
+        Logger.info('SQLite database initialized successfully');
       } catch (dbError: unknown) {
-        console.error('Failed to initialize SQLite database:', dbError);
-        console.error('The MCP server will continue with limited functionality');
+        Logger.error('Failed to initialize SQLite database:', dbError);
+        Logger.error('The MCP server will continue with limited functionality');
         throw new Error(`Database initialization failed: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
       }
 
       this.vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
-      console.error('Vector database initialized');
+      Logger.info('Vector database initialized');
 
       // Initialize engines
       this.semanticEngine = new SemanticEngine(this.database, this.vectorDB);
       this.patternEngine = new PatternEngine(this.database);
-      console.error('Analysis engines initialized');
+      Logger.info('Analysis engines initialized');
 
       // Initialize tool collections
       this.coreTools = new CoreAnalysisTools(this.semanticEngine, this.patternEngine, this.database);
@@ -90,12 +91,12 @@ export class CodeCartographerMCP {
         this.patternEngine,
         this.database
       );
-      console.error('Tool collections initialized');
+      Logger.info('Tool collections initialized');
 
-      console.error('In Memoria components initialized successfully');
+      Logger.info('In Memoria components initialized successfully');
     } catch (error: unknown) {
-      console.error('Failed to initialize In Memoria components:', error);
-      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
+      Logger.error('Failed to initialize In Memoria components:', error);
+      Logger.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
       throw error;
     }
   }
@@ -233,7 +234,7 @@ export class CodeCartographerMCP {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
 
-    console.error('In Memoria MCP Server started');
+    Logger.info('In Memoria MCP Server started');
   }
 
   /**

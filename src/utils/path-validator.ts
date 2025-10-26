@@ -1,5 +1,6 @@
 import { existsSync } from 'fs';
 import { resolve, isAbsolute } from 'path';
+import { Logger } from './logger.js';
 
 /**
  * Utility class for validating and resolving project paths
@@ -17,7 +18,7 @@ export class PathValidator {
     // If no path provided, use cwd but warn
     if (!path) {
       const cwd = process.cwd();
-      console.warn(
+      Logger.warn(
         `⚠️  Warning: No path provided to ${context}.\n` +
         `   Using current directory: ${cwd}\n` +
         '   This may not be the intended project directory in MCP context.\n' +
@@ -81,7 +82,7 @@ export class PathValidator {
     const validatedPath = this.validateProjectPath(path, context);
 
     if (!this.looksLikeProjectRoot(validatedPath)) {
-      console.warn(
+      Logger.warn(
         `⚠️  Warning: ${validatedPath} doesn't look like a project root.\n` +
         '   No package.json, Cargo.toml, .git, or other project markers found.\n' +
         '   Make sure you\'re pointing to the correct directory.\n' +

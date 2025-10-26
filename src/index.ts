@@ -16,6 +16,8 @@ import { config } from './config/config.js';
 import { ProgressTracker } from './utils/progress-tracker.js';
 import { ConsoleProgressRenderer } from './utils/console-progress.js';
 
+import { Logger } from './utils/logger.js';
+
 function getVersion(): string {
   try {
     const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -52,6 +54,9 @@ async function main() {
       break;
       
     case 'server':
+      // Set MCP server mode BEFORE any logging
+      process.env.MCP_SERVER = 'true';
+      
       // Accept optional path argument to set working directory
       const serverPath = args[1];
       if (serverPath) {
@@ -60,16 +65,17 @@ async function main() {
         const resolvedPath = resolve(serverPath);
         
         if (!existsSync(resolvedPath)) {
+          // Use stderr for errors before server starts
           console.error(`❌ Error: Path does not exist: ${resolvedPath}`);
           console.error('   Please provide a valid project directory path.');
           process.exit(1);
         }
         
-        console.log(`📂 Setting working directory to: ${resolvedPath}`);
+        Logger.info(`📂 Setting working directory to: ${resolvedPath}`);
         process.chdir(resolvedPath);
       }
       
-      console.log(`🚀 Starting In Memoria MCP Server from: ${process.cwd()}`);
+      Logger.info(`🚀 Starting In Memoria MCP Server from: ${process.cwd()}`);
       await runServer();
       break;
 
