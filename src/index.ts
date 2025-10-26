@@ -58,24 +58,26 @@ async function main() {
       process.env.MCP_SERVER = 'true';
       
       // Accept optional path argument to set working directory
+      // If no path provided, server runs globally and tools receive project paths
       const serverPath = args[1];
+      
       if (serverPath) {
         const { resolve } = await import('path');
         const { existsSync } = await import('fs');
         const resolvedPath = resolve(serverPath);
         
         if (!existsSync(resolvedPath)) {
-          // Use stderr for errors before server starts
           console.error(`❌ Error: Path does not exist: ${resolvedPath}`);
-          console.error('   Please provide a valid project directory path.');
+          console.error(`   Tried: ${serverPath}`);
+          console.error('   Please provide a valid project directory path as argument.');
           process.exit(1);
         }
         
-        Logger.info(`📂 Setting working directory to: ${resolvedPath}`);
+        Logger.info(`📂 Working directory: ${resolvedPath}`);
         process.chdir(resolvedPath);
       }
       
-      Logger.info(`🚀 Starting In Memoria MCP Server from: ${process.cwd()}`);
+      Logger.info(`🚀 Starting In Memoria MCP Server`);
       await runServer();
       break;
 
