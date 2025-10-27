@@ -1,6 +1,6 @@
 {
   "name": "in-memoria",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "Persistent intelligence infrastructure for agentic development",
   "main": "dist/index.js",
   "type": "module",
@@ -63,10 +63,10 @@
     "zod": "^3.25.76"
   },
   "optionalDependencies": {
-    "@in-memoria/darwin-arm64": "0.5.4",
-    "@in-memoria/darwin-x64": "0.5.4",
-    "@in-memoria/linux-x64": "0.5.4",
-    "@in-memoria/win32-x64": "0.5.4"
+    "@in-memoria/darwin-arm64": "0.5.5",
+    "@in-memoria/darwin-x64": "0.5.5",
+    "@in-memoria/linux-x64": "0.5.5",
+    "@in-memoria/win32-x64": "0.5.5"
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.4.1",

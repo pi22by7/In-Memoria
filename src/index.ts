@@ -52,31 +52,31 @@ async function main() {
     case '-v':
       showVersion();
       break;
-      
+
     case 'server':
       // Set MCP server mode BEFORE any logging
       process.env.MCP_SERVER = 'true';
-      
+
       // Accept optional path argument to set working directory
       // If no path provided, server runs globally and tools receive project paths
       const serverPath = args[1];
-      
+
       if (serverPath) {
         const { resolve } = await import('path');
         const { existsSync } = await import('fs');
         const resolvedPath = resolve(serverPath);
-        
+
         if (!existsSync(resolvedPath)) {
           console.error(`❌ Error: Path does not exist: ${resolvedPath}`);
           console.error(`   Tried: ${serverPath}`);
           console.error('   Please provide a valid project directory path as argument.');
           process.exit(1);
         }
-        
+
         Logger.info(`📂 Working directory: ${resolvedPath}`);
         process.chdir(resolvedPath);
       }
-      
+
       Logger.info(`🚀 Starting In Memoria MCP Server`);
       await runServer();
       break;
@@ -352,7 +352,7 @@ async function initializeProject(path: string): Promise<void> {
 
   // Create default configuration
   const defaultConfig = {
-    version: "0.5.4",
+    version: "0.5.5",
     intelligence: {
       enableRealTimeAnalysis: true,
       enablePatternLearning: true,

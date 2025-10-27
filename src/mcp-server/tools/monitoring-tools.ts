@@ -91,7 +91,7 @@ export class MonitoringTools {
 
     const status = {
       timestamp: new Date().toISOString(),
-      version: '0.5.4',
+      version: '0.5.5',
       status: 'operational',
       components: {} as any,
       intelligence: {} as any,
@@ -499,7 +499,7 @@ export class MonitoringTools {
       checks.push({
         name: 'Project Path',
         status: pathExists ? 'pass' : 'fail',
-        message: pathExists 
+        message: pathExists
           ? `Path exists: ${projectPath}`
           : `Path does not exist: ${projectPath}`
       });
@@ -538,7 +538,7 @@ export class MonitoringTools {
       checks.push({
         name: 'Database Directory',
         status: dirExists ? 'pass' : 'warning',
-        message: dirExists 
+        message: dirExists
           ? `Directory exists and accessible: ${dbDir}`
           : `Directory will be created on first use: ${dbDir}`
       });
@@ -571,7 +571,7 @@ export class MonitoringTools {
     checks.push({
       name: 'OpenAI API Key',
       status: process.env.OPENAI_API_KEY ? 'pass' : 'warning',
-      message: process.env.OPENAI_API_KEY 
+      message: process.env.OPENAI_API_KEY
         ? 'API key configured (vector embeddings enabled)'
         : 'No API key - vector embeddings disabled (optional feature)'
     });
@@ -585,7 +585,7 @@ export class MonitoringTools {
           const concepts = tempDb.getSemanticConcepts();
           const patterns = tempDb.getDeveloperPatterns();
           const hasIntelligence = concepts.length > 0 || patterns.length > 0;
-          
+
           checks.push({
             name: 'Intelligence Data',
             status: hasIntelligence ? 'pass' : 'warning',
@@ -614,7 +614,7 @@ export class MonitoringTools {
     // Determine overall status
     const hasFailures = checks.some(c => c.status === 'fail');
     const hasWarnings = checks.some(c => c.status === 'warning');
-    const overallStatus: 'healthy' | 'warning' | 'error' = 
+    const overallStatus: 'healthy' | 'warning' | 'error' =
       hasFailures ? 'error' : hasWarnings ? 'warning' : 'healthy';
 
     // Generate summary
