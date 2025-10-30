@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ **Added**
 
+- **Test infrastructure** - Formalized and consolidated testing (Issue #1)
+  - Added Vitest configuration with coverage reporting
+  - Created test utilities and helpers (`test-utils.ts`, `mock-data.ts`, `test-reporter.ts`)
+  - Enhanced test runner with filtering support (integration/manual)
+  - Added GitHub Actions workflow for manual test triggers
+  - Created comprehensive testing documentation (`TESTING.md`)
+  - Clear separation: `src/__tests__/` (unit tests) vs `tests/` (integration/manual)
 - **Simplified progress tracking** - Replaced fancy progress bars with milestone-based logging (0%, 25%, 50%, 75%, 100%)
   - Eliminates log pollution when output is piped or observed by AI agents
   - Progress bars were causing 1000+ line output when piped due to ANSI escape codes
@@ -29,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 📝 **Documentation**
 
 - Updated `predict_coding_approach` tool description to clarify `includeFileRouting` defaults to `true`
+- Added `TESTING.md` with clear explanation of test structure and usage
+- Simplified `tests/README.md` to focus on essentials
 
 ## [0.5.5] - 2025-10-27
 
