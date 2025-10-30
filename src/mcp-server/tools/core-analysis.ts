@@ -30,13 +30,13 @@ export class CoreAnalysisTools {
     return [
       {
         name: 'analyze_codebase',
-        description: 'Analyze a codebase directory or single file - provides comprehensive analysis including semantic concepts, patterns, complexity metrics, and file content',
+        description: 'One-time analysis of a specific file or directory. Returns AST structure, complexity metrics, and detected patterns for that path only. For project-wide understanding, use get_project_blueprint instead (faster, uses learned intelligence). Use this for deep-dive analysis of a specific file you\'re currently working on.',
         inputSchema: {
           type: 'object',
           properties: {
             path: {
               type: 'string',
-              description: 'Path to codebase directory or specific file to analyze'
+              description: 'Path to specific file or directory to analyze in detail'
             },
             includeFileContent: {
               type: 'boolean',
@@ -48,22 +48,22 @@ export class CoreAnalysisTools {
       },
       {
         name: 'search_codebase',
-        description: 'Search the codebase using semantic, text, or pattern-based queries',
+        description: 'Search for code by text matching or patterns. Use "text" type for finding specific strings/keywords in code. Use "pattern" type for regex/AST patterns. Note: For "where should I work?" or "what files to modify?" questions, use predict_coding_approach instead - it provides intelligent file routing without exploration.',
         inputSchema: {
           type: 'object',
           properties: {
             query: {
               type: 'string',
-              description: 'Search query string'
+              description: 'Search query - literal text string or regex pattern depending on type'
             },
             type: {
               type: 'string',
               enum: ['semantic', 'text', 'pattern'],
-              description: 'Type of search to perform'
+              description: 'Type of search: "text" for literal string matching, "pattern" for regex/AST patterns, "semantic" for concept-based search'
             },
             language: {
               type: 'string',
-              description: 'Filter by programming language'
+              description: 'Filter results by programming language (e.g., "typescript", "rust", "python")'
             },
             limit: {
               type: 'number',

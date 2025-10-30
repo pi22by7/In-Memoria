@@ -44,6 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Ensures project metadata exists before creating feature maps (required for foreign key constraints)
   - Phase 6.5 in learning pipeline now creates project metadata automatically
 
+### 🎯 **Improved**
+
+- **MCP tool descriptions** - Enhanced all tool descriptions with explicit trigger phrases and usage guidance to help Claude automatically select the right tools for each task
+
 ### 📝 **Documentation**
 
 - Updated `predict_coding_approach` tool description to clarify `includeFileRouting` defaults to `true`

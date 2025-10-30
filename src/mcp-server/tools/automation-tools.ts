@@ -19,7 +19,7 @@ export class AutomationTools {
     return [
       {
         name: 'auto_learn_if_needed',
-        description: 'Automatically learn from codebase if intelligence data is missing or stale. Includes project setup and verification. Perfect for seamless agent integration.',
+        description: 'Automatically learn from codebase if intelligence data is missing or stale. Call this first before using other In-Memoria tools - it\'s a no-op if data already exists. Includes project setup and verification. Perfect for seamless agent integration.',
         inputSchema: {
           type: 'object',
           properties: {

@@ -28,7 +28,7 @@ export class IntelligenceTools {
     return [
       {
         name: 'learn_codebase_intelligence',
-        description: 'Learn and extract intelligence from a codebase, building persistent knowledge',
+        description: 'Build intelligence database from codebase (one-time setup, ~30-60s). Required before using predict_coding_approach, get_project_blueprint, or get_pattern_recommendations. Re-run with force=true if codebase has significant changes. Most users should use auto_learn_if_needed instead - it runs this automatically when needed.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -38,7 +38,7 @@ export class IntelligenceTools {
             },
             force: {
               type: 'boolean',
-              description: 'Force re-learning even if codebase was previously analyzed'
+              description: 'Force re-learning even if codebase was previously analyzed (use when codebase has significant changes)'
             }
           },
           required: ['path']
@@ -46,17 +46,17 @@ export class IntelligenceTools {
       },
       {
         name: 'get_semantic_insights',
-        description: 'Retrieve semantic insights about code concepts and relationships',
+        description: 'Search for code-level symbols (variables, functions, classes) by name and see their relationships, usage patterns, and evolution. Use this to find where a specific function/class is defined, how it\'s used, or what it depends on. Searches actual code identifiers (e.g., "DatabaseConnection", "processRequest"), NOT business concepts or natural language descriptions.',
         inputSchema: {
           type: 'object',
           properties: {
             query: {
               type: 'string',
-              description: 'Optional query to filter insights'
+              description: 'Code identifier to search for (e.g., "DatabaseConnection", "processRequest"). Matches against function/class/variable names, not descriptions.'
             },
             conceptType: {
               type: 'string',
-              description: 'Filter by concept type (class, function, interface, etc.)'
+              description: 'Filter by concept type (class, function, interface, variable, etc.)'
             },
             limit: {
               type: 'number',
@@ -69,7 +69,7 @@ export class IntelligenceTools {
       },
       {
         name: 'get_pattern_recommendations',
-        description: 'Get intelligent pattern recommendations based on coding context, with optional related file suggestions',
+        description: 'Get coding pattern recommendations learned from this codebase. Use this when implementing new features to follow existing patterns (e.g., "create a new service class", "add API endpoint"). Returns patterns like Factory, Singleton, DependencyInjection with confidence scores and actual examples from your code. These patterns are learned from the codebase, not hardcoded - they reflect how THIS project does things.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -83,7 +83,7 @@ export class IntelligenceTools {
             },
             problemDescription: {
               type: 'string',
-              description: 'Description of the problem being solved'
+              description: 'What you want to implement (e.g., "create a new service", "add database repository", "implement API handler")'
             },
             preferences: {
               type: 'object',
@@ -99,13 +99,13 @@ export class IntelligenceTools {
       },
       {
         name: 'predict_coding_approach',
-        description: 'Predict the likely coding approach based on developer patterns and context, with optional file routing for direct navigation',
+        description: 'Find which files to modify for a task using intelligent file routing. Use this when the user asks "where should I...", "what files...", or "how do I add/implement..." to route them directly to the relevant files without exploration. Returns target files, suggested starting point, and reasoning based on feature mapping and codebase intelligence.',
         inputSchema: {
           type: 'object',
           properties: {
             problemDescription: {
               type: 'string',
-              description: 'Description of the coding problem'
+              description: 'Description of what the user wants to add, modify, or implement (e.g., "add Ruby language support", "implement database caching", "fix authentication bug")'
             },
             context: {
               type: 'object',
@@ -122,13 +122,13 @@ export class IntelligenceTools {
       },
       {
         name: 'get_developer_profile',
-        description: 'Get the learned developer profile including patterns, preferences, and expertise',
+        description: 'Get patterns and conventions learned from this codebase\'s code style. Shows frequently-used patterns (DI, Factory, etc.), naming conventions, and architectural preferences. Use this to understand "how we do things here" before writing new code. Note: This is about the codebase\'s style, not individual developers.',
         inputSchema: {
           type: 'object',
           properties: {
             includeRecentActivity: {
               type: 'boolean',
-              description: 'Include recent coding activity in the profile'
+              description: 'Include recent coding activity in the profile (patterns used in last 30 days)'
             },
             includeWorkContext: {
               type: 'boolean',
@@ -139,25 +139,25 @@ export class IntelligenceTools {
       },
       {
         name: 'contribute_insights',
-        description: 'Allow AI agents to contribute insights back to the knowledge base. IMPORTANT: The `content` field is REQUIRED and must contain the actual insight details as a structured object.',
+        description: 'Let AI agents save discovered insights (bug patterns, optimizations, best practices) back to In-Memoria for future reference. Use this when you discover a recurring pattern, potential bug, or refactoring opportunity that other agents/sessions should know about. Creates organizational memory across conversations.',
         inputSchema: {
           type: 'object',
           properties: {
             type: {
               type: 'string',
               enum: ['bug_pattern', 'optimization', 'refactor_suggestion', 'best_practice'],
-              description: 'Type of insight being contributed'
+              description: 'Type of insight: bug_pattern (recurring bugs), optimization (performance improvements), refactor_suggestion (code improvements), best_practice (recommended approaches)'
             },
             content: {
               type: 'object',
-              description: 'The insight content and details. REQUIRED. Must be a structured object describing the insight. Examples: {practice: "...", reasoning: "..."} for best_practice, or {bugPattern: "...", fix: "..."} for bug_pattern.',
+              description: 'The insight details as a structured object. For best_practice: {practice: "...", reasoning: "..."}. For bug_pattern: {bugPattern: "...", fix: "..."}, etc.',
               additionalProperties: true
             },
             confidence: {
               type: 'number',
               minimum: 0,
               maximum: 1,
-              description: 'Confidence score for this insight'
+              description: 'Confidence score for this insight (0.0 to 1.0)'
             },
             sourceAgent: {
               type: 'string',
