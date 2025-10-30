@@ -432,11 +432,24 @@ export class SQLiteDatabase {
   }
 
   getEntryPoints(projectPath: string): EntryPoint[] {
-    const stmt = this.db.prepare(`
-      SELECT * FROM entry_points WHERE project_path = ?
-      ORDER BY entry_type, file_path
-    `);
-    const rows = stmt.all(projectPath) as any[];
+    // Normalize path - try both absolute and relative (.) paths
+    const paths = [projectPath];
+
+    // If absolute path, also try relative "."
+    if (isAbsolute(projectPath)) {
+      paths.push('.');
+    }
+
+    // Try to find entry points with any of the path variants
+    let rows: any[] = [];
+    for (const path of paths) {
+      const stmt = this.db.prepare(`
+        SELECT * FROM entry_points WHERE project_path = ?
+        ORDER BY entry_type, file_path
+      `);
+      rows = stmt.all(path) as any[];
+      if (rows.length > 0) break;
+    }
 
     return rows.map(row => ({
       id: row.id,
@@ -467,11 +480,24 @@ export class SQLiteDatabase {
   }
 
   getKeyDirectories(projectPath: string): KeyDirectory[] {
-    const stmt = this.db.prepare(`
-      SELECT * FROM key_directories WHERE project_path = ?
-      ORDER BY directory_type, directory_path
-    `);
-    const rows = stmt.all(projectPath) as any[];
+    // Normalize path - try both absolute and relative (.) paths
+    const paths = [projectPath];
+
+    // If absolute path, also try relative "."
+    if (isAbsolute(projectPath)) {
+      paths.push('.');
+    }
+
+    // Try to find key directories with any of the path variants
+    let rows: any[] = [];
+    for (const path of paths) {
+      const stmt = this.db.prepare(`
+        SELECT * FROM key_directories WHERE project_path = ?
+        ORDER BY directory_type, directory_path
+      `);
+      rows = stmt.all(path) as any[];
+      if (rows.length > 0) break;
+    }
 
     return rows.map(row => ({
       id: row.id,

@@ -15,6 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed ES module import: Replaced `require('path')` with proper ES6 import in `sqlite-db.ts`
   - Added Migration v7: Added UNIQUE constraint to `project_metadata.project_path` for foreign key support
   - Worked around Claude Code MCP client bug where optional boolean parameters aren't passed by defaulting `includeFileRouting` to `true`
+- **Project blueprint tool** - Fixed `get_project_blueprint` returning empty data
+  - Fixed NAPI field name conversion in `detectEntryPoints` and `mapKeyDirectories` (semantic-engine.ts)
+  - Fixed path normalization in database queries to handle both absolute and relative paths (sqlite-db.ts)
+- **Pattern recommendations** - Fixed `get_pattern_recommendations` returning empty results
+  - Replaced Rust in-memory HashMap approach with database-backed implementation (pattern-engine.ts)
+  - Added keyword extraction and intelligent scoring algorithm (matches pattern type/content, confidence, frequency)
+  - Now returns top 10 relevant patterns based on problem description
+- **Feature mapping coverage** - Enhanced feature maps to include Rust code and language-specific patterns
+  - Added 4 new feature categories: language-support, rust-core, mcp-server, cli (blueprint.rs)
+  - Added nested directory search for mono-repo structures (checks rust-core/src/* paths)
+  - Feature maps now cover both TypeScript and Rust code
 
 ### ✨ **Added**
 

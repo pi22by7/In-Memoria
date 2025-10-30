@@ -271,6 +271,11 @@ impl BlueprintAnalyzer {
             ("testing", vec!["tests", "__tests__", "test"]),
             ("configuration", vec!["config", ".config", "settings"]),
             ("middleware", vec!["middleware", "middlewares"]),
+            // Language/compiler-specific features for In-Memoria
+            ("language-support", vec!["parsing", "parser", "ast", "tree-sitter", "compiler"]),
+            ("rust-core", vec!["rust-core", "native", "bindings"]),
+            ("mcp-server", vec!["mcp-server", "server", "mcp"]),
+            ("cli", vec!["cli", "bin", "commands"]),
         ];
 
         for (feature_name, directories) in feature_patterns {
@@ -278,10 +283,15 @@ impl BlueprintAnalyzer {
             let mut related_files = Vec::new();
 
             for dir in &directories {
+                // Standard paths
                 let src_path = project_path.join("src").join(dir);
                 let alt_path = project_path.join(dir);
 
-                for check_path in &[src_path, alt_path] {
+                // Nested paths for mono-repo/multi-module projects
+                let rust_core_src_path = project_path.join("rust-core").join("src").join(dir);
+                let rust_core_path = project_path.join("rust-core").join(dir);
+
+                for check_path in &[src_path, alt_path, rust_core_src_path, rust_core_path] {
                     if check_path.exists() && check_path.is_dir() {
                         let files = Self::collect_files_in_directory(check_path, project_path, 5, 0)?;
                         if !files.is_empty() {

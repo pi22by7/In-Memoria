@@ -452,11 +452,21 @@ export class LearningService {
     codebaseAnalysis: any,
     database: SQLiteDatabase
   ): Promise<void> {
+    // Debug logging to track what's being received
+    // console.error(`\n🔍 storeProjectBlueprint called for project: ${projectPath}`);
+    // console.error(`   codebaseAnalysis.entryPoints: ${codebaseAnalysis.entryPoints ? `Array(${codebaseAnalysis.entryPoints.length})` : 'undefined'}`);
+    // console.error(`   codebaseAnalysis.keyDirectories: ${codebaseAnalysis.keyDirectories ? `Array(${codebaseAnalysis.keyDirectories.length})` : 'undefined'}`);
+
     // Store entry points (filter out invalid ones)
     if (codebaseAnalysis.entryPoints && Array.isArray(codebaseAnalysis.entryPoints)) {
+      // let stored = 0;
+      // let skipped = 0;
+
       for (const entryPoint of codebaseAnalysis.entryPoints) {
         // Skip entry points with missing required fields
         if (!entryPoint.type || !entryPoint.filePath) {
+          // skipped++;
+          // console.error(`   ⚠️  Skipping invalid entry point: type=${entryPoint.type}, filePath=${entryPoint.filePath}`);
           continue;
         }
 
@@ -468,14 +478,24 @@ export class LearningService {
           description: entryPoint.description,
           framework: entryPoint.framework
         });
+        // stored++;
       }
-    }
+
+      // console.error(`   ✅ Stored ${stored} entry points (${skipped} skipped)`);
+    } // else {
+      // console.error(`   ⚠️  No entry points to store (not an array or undefined)`);
+    // }
 
     // Store key directories (filter out invalid ones)
     if (codebaseAnalysis.keyDirectories && Array.isArray(codebaseAnalysis.keyDirectories)) {
+      // let stored = 0;
+      // let skipped = 0;
+
       for (const directory of codebaseAnalysis.keyDirectories) {
         // Skip directories with missing required fields
         if (!directory.path || !directory.type) {
+          // skipped++;
+          // console.error(`   ⚠️  Skipping invalid directory: path=${directory.path}, type=${directory.type}`);
           continue;
         }
 
@@ -487,8 +507,13 @@ export class LearningService {
           fileCount: directory.fileCount || 0,
           description: directory.description
         });
+        // stored++;
       }
-    }
+
+      // console.error(`   ✅ Stored ${stored} key directories (${skipped} skipped)\n`);
+    } // else {
+      // console.error(`   ⚠️  No key directories to store (not an array or undefined)\n`);
+    // }
   }
 
   private static inferArchitecturePattern(codebaseAnalysis: any): string {

@@ -237,20 +237,25 @@ export class IntelligenceTools {
     });
   }
 
-  async getSemanticInsights(args: { 
-    query?: string; 
-    conceptType?: string; 
-    limit?: number 
+  async getSemanticInsights(args: {
+    query?: string;
+    conceptType?: string;
+    limit?: number
   }): Promise<{
     insights: SemanticInsight[];
     totalAvailable: number;
   }> {
     const concepts = this.database.getSemanticConcepts();
+    // console.error(`🔍 getSemanticInsights: Retrieved ${concepts.length} concepts from database`);
+    // console.error(`   Query: "${args.query}", ConceptType: ${args.conceptType}`);
+
     const filtered = concepts.filter(concept => {
       if (args.conceptType && concept.conceptType !== args.conceptType) return false;
       if (args.query && !concept.conceptName.toLowerCase().includes(args.query.toLowerCase())) return false;
       return true;
     });
+
+    // console.error(`   Filtered to ${filtered.length} concepts`);
 
     const limit = args.limit || 10;
     const limited = filtered.slice(0, limit);

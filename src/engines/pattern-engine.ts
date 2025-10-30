@@ -311,26 +311,77 @@ export class PatternEngine {
     currentFile?: string,
     selectedCode?: string
   ): Promise<RelevantPattern[]> {
-    try {
-      const patterns = await this.rustLearner.findRelevantPatterns(
-        problemDescription,
-        currentFile || null,
-        selectedCode || null
-      );
+    // console.error(`\n🔍 findRelevantPatterns called`);
+    // console.error(`   problemDescription: "${problemDescription}"`);
+    // console.error(`   currentFile: ${currentFile || 'undefined'}`);
+    // console.error(`   selectedCode: ${selectedCode ? `${selectedCode.length} chars` : 'undefined'}`);
 
-      return patterns.map((p: any) => ({
-        patternId: p.id,
-        patternType: p.patternType,
-        patternContent: { description: p.description },
-        frequency: p.frequency,
-        contexts: p.contexts,
-        examples: p.examples.map((ex: any) => ({ code: ex.code })),
-        confidence: p.confidence
-      }));
-    } catch (error) {
-      console.error('Pattern finding error:', error);
-      return this.fallbackRelevantPatterns(problemDescription);
+    // Get all patterns from database
+    const dbPatterns = this.database.getDeveloperPatterns();
+    // console.error(`   Retrieved ${dbPatterns.length} patterns from database`);
+
+    if (dbPatterns.length === 0) {
+      // console.error(`   ⚠️  No patterns in database, returning empty array`);
+      return [];
     }
+
+    // Extract keywords from problem description
+    const keywords = this.extractKeywords(problemDescription.toLowerCase());
+    // console.error(`   Extracted keywords: ${keywords.join(', ')}`);
+
+    // Score each pattern based on relevance
+    const scoredPatterns = dbPatterns.map(pattern => {
+      let score = 0;
+      const patternContent = JSON.stringify(pattern.patternContent).toLowerCase();
+      const patternType = pattern.patternType.toLowerCase();
+
+      // Match keywords in pattern content and type
+      for (const keyword of keywords) {
+        if (patternType.includes(keyword)) score += 0.3;
+        if (patternContent.includes(keyword)) score += 0.2;
+      }
+
+      // Boost score based on pattern confidence and frequency
+      score += pattern.confidence * 0.3;
+      score += Math.min(pattern.frequency / 10, 1.0) * 0.2;
+
+      return { pattern, score };
+    });
+
+    // Filter patterns with score above threshold and sort by score
+    const relevantPatterns = scoredPatterns
+      .filter(({ score }) => score > 0.3)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10) // Limit to top 10 patterns
+      .map(({ pattern, score }) => {
+        // console.error(`   ✓ Pattern "${pattern.patternType}" scored ${score.toFixed(2)}`);
+
+        return {
+          patternId: pattern.patternId,
+          patternType: pattern.patternType,
+          patternContent: pattern.patternContent,
+          frequency: pattern.frequency,
+          contexts: pattern.contexts,
+          examples: pattern.examples.map(ex => ({ code: ex.code })),
+          confidence: pattern.confidence
+        };
+      });
+
+    // console.error(`   Found ${relevantPatterns.length} relevant patterns\n`);
+    return relevantPatterns;
+  }
+
+  private extractKeywords(text: string): string[] {
+    // Remove common stop words and extract meaningful keywords
+    const stopWords = new Set(['a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+      'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could',
+      'to', 'from', 'in', 'on', 'at', 'by', 'for', 'with', 'about', 'as', 'of', 'and', 'or', 'but']);
+
+    return text
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ') // Remove punctuation
+      .split(/\s+/)
+      .filter(word => word.length > 2 && !stopWords.has(word));
   }
 
   async predictApproach(

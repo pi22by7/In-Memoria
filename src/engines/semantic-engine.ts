@@ -556,8 +556,8 @@ export class SemanticEngine {
       const entryPoints = await BlueprintAnalyzer.detectEntryPoints(projectPath, frameworkInfo);
 
       return entryPoints.map((ep: any) => ({
-        type: ep.entry_type,
-        filePath: ep.file_path,
+        type: ep.entryType || ep.entry_type,  // Try camelCase first (NAPI conversion), fallback to snake_case
+        filePath: ep.filePath || ep.file_path,
         framework: ep.framework || undefined,
       }));
     };
@@ -673,8 +673,8 @@ export class SemanticEngine {
 
       return keyDirs.map((dir: any) => ({
         path: dir.path,
-        type: dir.dir_type,
-        fileCount: dir.file_count,
+        type: dir.dirType || dir.dir_type,  // Try camelCase first (NAPI conversion), fallback to snake_case
+        fileCount: dir.fileCount || dir.file_count,
       }));
     };
 
