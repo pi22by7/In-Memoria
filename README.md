@@ -7,6 +7,12 @@
 
 **Giving AI coding assistants a memory that actually persists.**
 
+## Quick Demo
+
+[![asciicast](https://asciinema.org/a/ZyD2bAZs1cURnqoFc3VHXemJx.svg)](https://asciinema.org/a/ZyD2bAZs1cURnqoFc3VHXemJx)
+
+*Watch In Memoria in action: learning a codebase, providing instant context, and routing features to files.*
+
 ---
 
 ## The Problem: Session Amnesia
