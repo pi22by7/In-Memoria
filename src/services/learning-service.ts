@@ -138,7 +138,7 @@ export class LearningService {
           languagePrimary: codebaseAnalysis.languages?.[0],
           languagesDetected: codebaseAnalysis.languages || [],
           frameworkDetected: codebaseAnalysis.frameworks || [],
-          intelligenceVersion: '0.5.5',
+          intelligenceVersion: '0.5.6',
           lastFullScan: new Date()
         });
         insights.push(`   ✅ Created project metadata for ${path}`);
@@ -483,7 +483,7 @@ export class LearningService {
 
       // console.error(`   ✅ Stored ${stored} entry points (${skipped} skipped)`);
     } // else {
-      // console.error(`   ⚠️  No entry points to store (not an array or undefined)`);
+    // console.error(`   ⚠️  No entry points to store (not an array or undefined)`);
     // }
 
     // Store key directories (filter out invalid ones)
@@ -512,7 +512,7 @@ export class LearningService {
 
       // console.error(`   ✅ Stored ${stored} key directories (${skipped} skipped)\n`);
     } // else {
-      // console.error(`   ⚠️  No key directories to store (not an array or undefined)\n`);
+    // console.error(`   ⚠️  No key directories to store (not an array or undefined)\n`);
     // }
   }
 

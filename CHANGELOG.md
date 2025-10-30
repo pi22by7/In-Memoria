@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.6] - 2025-10-30
+
 ### 🐛 **Fixed**
 
 - **Feature map file routing** - Fixed file routing functionality in `predict_coding_approach` MCP tool

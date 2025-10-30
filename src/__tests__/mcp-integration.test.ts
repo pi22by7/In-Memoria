@@ -163,7 +163,7 @@ export function formatMessage(message: string): string {
       });
 
       expect(result.success).toBe(true);
-      expect(result.status.version).toBe('0.5.5');
+      expect(result.status.version).toBe('0.5.6');
       expect(result.status.components.database).toBeDefined();
       expect(result.status.intelligence).toBeDefined();
       expect(result.status.status).toMatch(/operational|ready_for_learning|degraded|critical/);
