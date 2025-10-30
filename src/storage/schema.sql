@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS ai_insights (
 -- Project metadata and configuration
 CREATE TABLE IF NOT EXISTS project_metadata (
   project_id TEXT PRIMARY KEY,
-  project_path TEXT NOT NULL,
+  project_path TEXT NOT NULL UNIQUE,
   project_name TEXT,
   language_primary TEXT,
   languages_detected TEXT, -- JSON: all detected languages

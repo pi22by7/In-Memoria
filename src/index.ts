@@ -13,9 +13,6 @@ import { SemanticVectorDB } from './storage/vector-db.js';
 import { InteractiveSetup } from './cli/interactive-setup.js';
 import { DebugTools } from './cli/debug-tools.js';
 import { config } from './config/config.js';
-import { ProgressTracker } from './utils/progress-tracker.js';
-import { ConsoleProgressRenderer } from './utils/console-progress.js';
-
 import { Logger } from './utils/logger.js';
 
 function getVersion(): string {
@@ -188,17 +185,8 @@ async function startWatcher(path: string): Promise<void> {
 async function learnCodebase(path: string): Promise<void> {
   console.log(`🧠 Starting intelligent learning from: ${path}\n`);
 
-  const database = new SQLiteDatabase(config.getDatabasePath(path));
-  const vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
-  const semanticEngine = new SemanticEngine(database, vectorDB);
-  const patternEngine = new PatternEngine(database);
-
-  // Setup progress tracking
-  const tracker = new ProgressTracker();
-  const renderer = new ConsoleProgressRenderer(tracker);
-
   try {
-    // Estimate file count for progress tracking
+    // Estimate file count for summary
     const glob = (await import('glob')).glob;
     const files = await glob('**/*.{ts,tsx,js,jsx,py,rs,go,java,c,cpp,svelte,vue}', {
       cwd: path,
@@ -207,56 +195,50 @@ async function learnCodebase(path: string): Promise<void> {
     });
     const fileCount = files.length;
 
-    // Setup progress phases
-    tracker.addPhase('semantic_analysis', fileCount, 3);
-    tracker.addPhase('pattern_learning', fileCount, 2);
+    // Use shared learning service
+    const { LearningService } = await import('./services/learning-service.js');
+    const force = process.argv.includes('--force');
 
-    renderer.start();
+    // Simple milestone-based progress tracking
+    let lastLoggedPercent = -1;
+    const result = await LearningService.learnFromCodebase(path, {
+      force,
+      progressCallback: (current: number, total: number, message: string) => {
+        // Log at 0%, 25%, 50%, 75%, 100% milestones only
+        const percent = Math.floor((current / total) * 100);
+        const milestone = Math.floor(percent / 25) * 25;
 
-    // Phase 1: Semantic analysis
-    tracker.startPhase('semantic_analysis');
-    const concepts = await semanticEngine.learnFromCodebase(path,
-      (current: number, total: number, message: string) => {
-        tracker.updateProgress('semantic_analysis', current, message);
+        if (milestone !== lastLoggedPercent && (milestone === 0 || milestone === 25 || milestone === 50 || milestone === 75 || milestone === 100)) {
+          console.log(`   ${milestone}% - ${message}`);
+          lastLoggedPercent = milestone;
+        }
       }
-    );
-    tracker.complete('semantic_analysis');
+    });
 
-    // Phase 2: Pattern learning
-    tracker.startPhase('pattern_learning');
-    const patterns = await patternEngine.learnFromCodebase(path,
-      (current: number, total: number, message: string) => {
-        const mapped = Math.floor((current / 100) * fileCount);
-        tracker.updateProgress('pattern_learning', Math.max(1, mapped), message);
-      }
-    );
-    tracker.complete('pattern_learning');
+    // Print insights (including any errors)
+    if (result.insights && result.insights.length > 0) {
+      console.log('\n📝 Learning Details:');
+      result.insights.forEach(insight => console.log(insight));
+      console.log('');
+    }
 
-    renderer.stop();
+    // Check if learning failed
+    if (!result.success) {
+      console.error('❌ Learning failed - see details above');
+      process.exit(1);
+    }
 
     // Print summary
     const separator = '━'.repeat(60);
     console.log(`${separator}`);
-    console.log(`📊 Concepts:  ${concepts.length}`);
-    console.log(`🔍 Patterns:  ${patterns.length}`);
+    console.log(`📊 Concepts:  ${result.conceptsLearned}`);
+    console.log(`🔍 Patterns:  ${result.patternsLearned}`);
+    console.log(`🗺️  Features:  ${result.featuresLearned}`);
     console.log(`📁 Files:     ${fileCount}`);
     console.log(`${separator}\n`);
   } catch (error) {
     console.error(`❌ Learning failed: ${error}`);
   } finally {
-    // Clean up all resources to prevent hanging
-    try {
-      await vectorDB.close();
-    } catch (error) {
-      console.warn('Warning: Failed to close vector database:', error);
-    }
-
-    // Clean up semantic engine resources
-    semanticEngine.cleanup();
-
-    database.close();
-    // console.debug("database closed");
-
     // Force process exit to ensure cleanup of any remaining resources
     process.exit(0);
   }

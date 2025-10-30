@@ -113,7 +113,8 @@ export class IntelligenceTools {
             },
             includeFileRouting: {
               type: 'boolean',
-              description: 'Include smart file routing to identify target files for the task'
+              description: 'Include smart file routing to identify target files for the task. Defaults to true. Set to false to disable.',
+              default: true
             }
           },
           required: ['problemDescription']
@@ -219,6 +220,7 @@ export class IntelligenceTools {
     success: boolean;
     conceptsLearned: number;
     patternsLearned: number;
+    featuresLearned?: number;
     insights: string[];
     timeElapsed: number;
     blueprint?: {
@@ -228,151 +230,11 @@ export class IntelligenceTools {
       architecture: string;
     };
   }> {
-    const startTime = Date.now();
-    let projectDatabase: SQLiteDatabase | null = null;
-    let projectVectorDB: SemanticVectorDB | null = null;
-    let projectSemanticEngine: SemanticEngine | null = null;
-    let projectPatternEngine: PatternEngine | null = null;
-    
-    try {
-      // Create project-specific database and engines for learning
-      const projectDbPath = config.getDatabasePath(args.path);
-      projectDatabase = new SQLiteDatabase(projectDbPath);
-      projectVectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
-      projectSemanticEngine = new SemanticEngine(projectDatabase, projectVectorDB);
-      projectPatternEngine = new PatternEngine(projectDatabase);
-      
-      console.error(`🗄️ Using project database: ${projectDbPath}`);
-      
-      // Check if already learned and not forcing re-learn
-      if (!args.force) {
-        const existingIntelligence = await this.checkExistingIntelligenceInDatabase(projectDatabase, args.path);
-        if (existingIntelligence && existingIntelligence.concepts > 0) {
-          return {
-            success: true,
-            conceptsLearned: existingIntelligence.concepts,
-            patternsLearned: existingIntelligence.patterns,
-            insights: ['Using existing intelligence (use force: true to re-learn)'],
-            timeElapsed: Date.now() - startTime
-          };
-        }
-      }
-
-      const insights: string[] = [];
-      
-      // Phase 1: Comprehensive codebase analysis
-      insights.push('🔍 Phase 1: Analyzing codebase structure...');
-      const codebaseAnalysis = await projectSemanticEngine.analyzeCodebase(args.path);
-      insights.push(`   ✅ Detected languages: ${codebaseAnalysis.languages.join(', ')}`);
-      insights.push(`   ✅ Found frameworks: ${codebaseAnalysis.frameworks.join(', ') || 'none detected'}`);
-      insights.push(`   ✅ Complexity: ${codebaseAnalysis.complexity.cyclomatic.toFixed(1)} cyclomatic, ${codebaseAnalysis.complexity.cognitive.toFixed(1)} cognitive`);
-
-      // Phase 2: Deep semantic learning
-      insights.push('🧠 Phase 2: Learning semantic concepts...');
-      const concepts = await projectSemanticEngine.learnFromCodebase(args.path);
-      
-      // Analyze concept distribution
-      const conceptTypes = concepts.reduce((acc, concept) => {
-        const type = concept.type || 'unknown';
-        acc[type] = (acc[type] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      
-      insights.push(`   ✅ Extracted ${concepts.length} semantic concepts:`);
-      Object.entries(conceptTypes).forEach(([type, count]) => {
-        insights.push(`     - ${count} ${type}${count > 1 ? 's' : ''}`);
-      });
-
-      // Phase 3: Pattern discovery and learning
-      insights.push('🔄 Phase 3: Discovering coding patterns...');
-      const patterns = await projectPatternEngine.learnFromCodebase(args.path);
-      
-      // Analyze pattern distribution
-      const patternTypes = patterns.reduce((acc, pattern) => {
-        const patternType = pattern.type || 'unknown';
-        const category = patternType.split('_')[0]; // Get category from pattern type
-        acc[category] = (acc[category] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      
-      insights.push(`   ✅ Identified ${patterns.length} coding patterns:`);
-      Object.entries(patternTypes).forEach(([category, count]) => {
-        insights.push(`     - ${count} ${category} pattern${count > 1 ? 's' : ''}`);
-      });
-
-      // Phase 4: Relationship and dependency analysis
-      insights.push('🔗 Phase 4: Analyzing relationships and dependencies...');
-      const relationships = await this.analyzeCodebaseRelationships(concepts, patterns);
-      insights.push(`   ✅ Built ${relationships.conceptRelationships} concept relationships`);
-      insights.push(`   ✅ Identified ${relationships.dependencyPatterns} dependency patterns`);
-      
-      // Phase 5: Intelligence synthesis and storage
-      insights.push('💾 Phase 5: Synthesizing and storing intelligence...');
-      await this.storeIntelligence(args.path, concepts, patterns);
-      
-      // Generate learning insights based on discovered patterns
-      const learningInsights = await this.generateLearningInsights(concepts, patterns, codebaseAnalysis);
-      insights.push('🎯 Learning Summary:');
-      learningInsights.forEach(insight => insights.push(`   ${insight}`));
-      
-      // Phase 6: Vector embeddings for semantic search
-      insights.push('🔍 Phase 6: Building semantic search index...');
-      const vectorCount = await this.buildSemanticIndex(concepts, patterns);
-      insights.push(`   ✅ Created ${vectorCount} vector embeddings for semantic search`);
-      
-      // Store blueprint data in database
-      insights.push('🗺️  Storing project blueprint...');
-      await this.storeProjectBlueprint(args.path, codebaseAnalysis, projectDatabase);
-
-      const timeElapsed = Date.now() - startTime;
-      insights.push(`⚡ Learning completed in ${timeElapsed}ms`);
-
-      // Build blueprint summary for response
-      const blueprint = {
-        techStack: codebaseAnalysis.frameworks || [],
-        entryPoints: (codebaseAnalysis.entryPoints || []).reduce((acc, ep) => {
-          acc[ep.type] = ep.filePath;
-          return acc;
-        }, {} as Record<string, string>),
-        keyDirectories: (codebaseAnalysis.keyDirectories || []).reduce((acc, dir) => {
-          acc[dir.type] = dir.path;
-          return acc;
-        }, {} as Record<string, string>),
-        architecture: this.inferArchitecturePattern(codebaseAnalysis)
-      };
-
-      return {
-        success: true,
-        conceptsLearned: concepts.length,
-        patternsLearned: patterns.length,
-        insights,
-        timeElapsed,
-        blueprint
-      };
-    } catch (error) {
-      return {
-        success: false,
-        conceptsLearned: 0,
-        patternsLearned: 0,
-        insights: [`❌ Learning failed: ${error instanceof Error ? error.message : error}`],
-        timeElapsed: Date.now() - startTime
-      };
-    } finally {
-      // Clean up project-specific resources
-      if (projectSemanticEngine) {
-        projectSemanticEngine.cleanup();
-      }
-      if (projectVectorDB) {
-        try {
-          await projectVectorDB.close();
-        } catch (error) {
-          console.warn('Warning: Failed to close project vector database:', error);
-        }
-      }
-      if (projectDatabase) {
-        projectDatabase.close();
-      }
-    }
+    // Use shared learning service to ensure consistency between CLI and MCP
+    const { LearningService } = await import('../../services/learning-service.js');
+    return await LearningService.learnFromCodebase(args.path, {
+      force: args.force
+    });
   }
 
   async getSemanticInsights(args: { 
@@ -470,6 +332,8 @@ export class IntelligenceTools {
       reasoning: string;
     }
   }> {
+    // console.error(`🔍 MCP predictCodingApproach called with args: ${JSON.stringify(args)}`);
+
     const prediction = await this.patternEngine.predictApproach(
       args.problemDescription,
       args.context || {}
@@ -492,10 +356,17 @@ export class IntelligenceTools {
       estimatedComplexity: prediction.complexity
     };
 
-    if (args.includeFileRouting) {
+    // Default to true for file routing (workaround for Claude Code not passing boolean params)
+    // Other MCP clients can explicitly set to false if they don't want routing
+    const includeRouting = args.includeFileRouting !== false;
+
+    if (includeRouting) {
       const projectPath = process.cwd();
+      // console.error(`🔍 MCP predictCodingApproach: includeFileRouting=${includeRouting}, projectPath=${projectPath}`);
       const routing = await this.patternEngine.routeRequestToFiles(args.problemDescription, projectPath);
+      // console.error(`🔍 MCP routing result: ${routing ? 'found' : 'null'}`);
       if (routing) {
+        // console.error(`🔍 MCP routing feature: ${routing.intendedFeature}, files: ${routing.targetFiles.length}`);
         result.fileRouting = {
           intendedFeature: routing.intendedFeature,
           targetFiles: routing.targetFiles,
@@ -507,6 +378,7 @@ export class IntelligenceTools {
       }
     }
 
+    // console.error(`🔍 MCP returning result with fileRouting: ${!!result.fileRouting}`);
     return result;
   }
 

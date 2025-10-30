@@ -603,9 +603,9 @@ export class PatternEngine {
 
       return featureMaps.map((fm: any) => ({
         id: fm.id,
-        featureName: fm.feature_name,
-        primaryFiles: fm.primary_files,
-        relatedFiles: fm.related_files,
+        featureName: fm.featureName || fm.feature_name, // Try camelCase first, fallback to snake_case
+        primaryFiles: fm.primaryFiles || fm.primary_files,
+        relatedFiles: fm.relatedFiles || fm.related_files,
         dependencies: fm.dependencies,
       }));
     };
@@ -798,8 +798,14 @@ export class PatternEngine {
     try {
       const featureMaps = this.database.getFeatureMaps(projectPath);
 
+      // Debug to stderr (visible in MCP logs)
+      // console.error(`🔍 Debug routeRequestToFiles: projectPath=${projectPath}, featureMaps=${featureMaps.length}`);
+      // if (featureMaps.length > 0) {
+      //   console.error(`🔍 Feature names: ${featureMaps.map(f => f.featureName).join(', ')}`);
+      // }
+
       if (featureMaps.length === 0) {
-        console.warn('⚠️  No feature maps found - run learning first');
+        // console.error('⚠️  No feature maps found - run learning first');
         return null;
       }
 

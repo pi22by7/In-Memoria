@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { mkdirSync, existsSync } from 'fs';
-import { dirname } from 'path';
+import { dirname, isAbsolute } from 'path';
 import { DatabaseMigrator } from './migrations.js';
 import { Logger } from '../utils/logger.js';
 
@@ -336,11 +336,24 @@ export class SQLiteDatabase {
   }
 
   getFeatureMaps(projectPath: string): FeatureMap[] {
-    const stmt = this.db.prepare(`
-      SELECT * FROM feature_map WHERE project_path = ? AND status = 'active'
-      ORDER BY feature_name
-    `);
-    const rows = stmt.all(projectPath) as any[];
+    // Normalize path - try both absolute and relative (.) paths
+    const paths = [projectPath];
+
+    // If absolute path, also try relative "."
+    if (isAbsolute(projectPath)) {
+      paths.push('.');
+    }
+
+    // Try to find feature maps with any of the path variants
+    let rows: any[] = [];
+    for (const path of paths) {
+      const stmt = this.db.prepare(`
+        SELECT * FROM feature_map WHERE project_path = ? AND status = 'active'
+        ORDER BY feature_name
+      `);
+      rows = stmt.all(path) as any[];
+      if (rows.length > 0) break;
+    }
 
     return rows.map(row => ({
       id: row.id,
@@ -469,6 +482,68 @@ export class SQLiteDatabase {
       description: row.description,
       createdAt: new Date(row.created_at + ' UTC')
     }));
+  }
+
+  insertProjectMetadata(metadata: {
+    projectId: string;
+    projectPath: string;
+    projectName?: string;
+    languagePrimary?: string;
+    languagesDetected?: string[];
+    frameworkDetected?: string[];
+    intelligenceVersion?: string;
+    lastFullScan?: Date;
+  }): void {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO project_metadata (
+        project_id, project_path, project_name, language_primary,
+        languages_detected, framework_detected, intelligence_version, last_full_scan
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      metadata.projectId,
+      metadata.projectPath,
+      metadata.projectName || null,
+      metadata.languagePrimary || null,
+      metadata.languagesDetected ? JSON.stringify(metadata.languagesDetected) : null,
+      metadata.frameworkDetected ? JSON.stringify(metadata.frameworkDetected) : null,
+      metadata.intelligenceVersion || null,
+      metadata.lastFullScan ? metadata.lastFullScan.toISOString() : null
+    );
+  }
+
+  getProjectMetadata(projectPath: string): {
+    projectId: string;
+    projectPath: string;
+    projectName?: string;
+    languagePrimary?: string;
+    languagesDetected: string[];
+    frameworkDetected: string[];
+    intelligenceVersion?: string;
+    lastFullScan?: Date;
+    createdAt: Date;
+    updatedAt: Date;
+  } | null {
+    const stmt = this.db.prepare(`
+      SELECT * FROM project_metadata WHERE project_path = ? LIMIT 1
+    `);
+    const row = stmt.get(projectPath) as any;
+
+    if (!row) return null;
+
+    return {
+      projectId: row.project_id,
+      projectPath: row.project_path,
+      projectName: row.project_name,
+      languagePrimary: row.language_primary,
+      languagesDetected: JSON.parse(row.languages_detected || '[]'),
+      frameworkDetected: JSON.parse(row.framework_detected || '[]'),
+      intelligenceVersion: row.intelligence_version,
+      lastFullScan: row.last_full_scan ? new Date(row.last_full_scan + ' UTC') : undefined,
+      createdAt: new Date(row.created_at + ' UTC'),
+      updatedAt: new Date(row.updated_at + ' UTC')
+    };
   }
 
   createWorkSession(session: Omit<WorkSession, 'sessionStart' | 'lastUpdated'>): void {

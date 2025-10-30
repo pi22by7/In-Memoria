@@ -357,6 +357,58 @@ export class DatabaseMigrator {
         DROP INDEX IF EXISTS idx_project_decisions_key;
       `
     });
+
+    // Migration 7: Add UNIQUE constraint to project_metadata.project_path for foreign keys
+    this.migrations.push({
+      version: 7,
+      name: 'add_unique_constraint_to_project_path',
+      up: `
+        -- SQLite doesn't support ADD CONSTRAINT, so we need to recreate the table
+        CREATE TABLE project_metadata_new (
+          project_id TEXT PRIMARY KEY,
+          project_path TEXT NOT NULL UNIQUE,
+          project_name TEXT,
+          language_primary TEXT,
+          languages_detected TEXT,
+          framework_detected TEXT,
+          intelligence_version TEXT,
+          last_full_scan DATETIME,
+          created_at DATETIME DEFAULT (datetime('now', 'utc')),
+          updated_at DATETIME DEFAULT (datetime('now', 'utc'))
+        );
+
+        -- Copy existing data
+        INSERT INTO project_metadata_new
+        SELECT * FROM project_metadata;
+
+        -- Drop old table
+        DROP TABLE project_metadata;
+
+        -- Rename new table
+        ALTER TABLE project_metadata_new RENAME TO project_metadata;
+      `,
+      down: `
+        -- Reverse migration: remove UNIQUE constraint
+        CREATE TABLE project_metadata_old (
+          project_id TEXT PRIMARY KEY,
+          project_path TEXT NOT NULL,
+          project_name TEXT,
+          language_primary TEXT,
+          languages_detected TEXT,
+          framework_detected TEXT,
+          intelligence_version TEXT,
+          last_full_scan DATETIME,
+          created_at DATETIME DEFAULT (datetime('now', 'utc')),
+          updated_at DATETIME DEFAULT (datetime('now', 'utc'))
+        );
+
+        INSERT INTO project_metadata_old
+        SELECT * FROM project_metadata;
+
+        DROP TABLE project_metadata;
+        ALTER TABLE project_metadata_old RENAME TO project_metadata;
+      `
+    });
   }
 
   private loadMigrationFile(filename: string): string {

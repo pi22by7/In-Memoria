@@ -5,6 +5,31 @@ All notable changes to In Memoria will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### 🐛 **Fixed**
+
+- **Feature map file routing** - Fixed file routing functionality in `predict_coding_approach` MCP tool
+  - Fixed NAPI field name conversion: Rust `feature_name` now correctly maps to JavaScript `featureName` (camelCase)
+  - Fixed path matching: Database queries now handle both absolute paths and relative "." paths correctly
+  - Fixed ES module import: Replaced `require('path')` with proper ES6 import in `sqlite-db.ts`
+  - Added Migration v7: Added UNIQUE constraint to `project_metadata.project_path` for foreign key support
+  - Worked around Claude Code MCP client bug where optional boolean parameters aren't passed by defaulting `includeFileRouting` to `true`
+
+### ✨ **Added**
+
+- **Simplified progress tracking** - Replaced fancy progress bars with milestone-based logging (0%, 25%, 50%, 75%, 100%)
+  - Eliminates log pollution when output is piped or observed by AI agents
+  - Progress bars were causing 1000+ line output when piped due to ANSI escape codes
+  - New approach logs only at key milestones for cleaner, more reliable progress tracking
+- **Project metadata management** - Added `insertProjectMetadata()` and `getProjectMetadata()` methods to `sqlite-db.ts`
+  - Ensures project metadata exists before creating feature maps (required for foreign key constraints)
+  - Phase 6.5 in learning pipeline now creates project metadata automatically
+
+### 📝 **Documentation**
+
+- Updated `predict_coding_approach` tool description to clarify `includeFileRouting` defaults to `true`
+
 ## [0.5.5] - 2025-10-27
 
 ### 🐛 **Fixed**
