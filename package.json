@@ -1,7 +1,7 @@
 {
   "name": "in-memoria",
   "version": "0.5.7",
-  "mcpName": "io.github.pi22by7/in-memoria",
+  "mcpName": "me.pi22by7/in-memoria",
   "description": "Persistent intelligence infrastructure for agentic development",
   "main": "dist/index.js",
   "type": "module",
