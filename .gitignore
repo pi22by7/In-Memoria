@@ -131,6 +131,10 @@ docs/GENERATED_*.md
 .claude/
 GEMINI.md
 
+# MCP Registry tokens (do not commit)
+.mcpregistry_github_token
+.mcpregistry_registry_token
+
 wiki/
 lang_tests/
 

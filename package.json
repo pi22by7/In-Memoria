@@ -1,6 +1,7 @@
 {
   "name": "in-memoria",
   "version": "0.5.6",
+  "mcpName": "io.github.pi22by7/in-memoria",
   "description": "Persistent intelligence infrastructure for agentic development",
   "main": "dist/index.js",
   "type": "module",
@@ -42,11 +43,18 @@
     "debug": "npx @modelcontextprotocol/inspector node dist/index.js server"
   },
   "keywords": [
-    "ai",
-    "code-analysis",
     "mcp",
-    "intelligent-tools",
-    "developer-assistant"
+    "mcp-server",
+    "model-context-protocol",
+    "ai",
+    "ai-assistant",
+    "codebase-intelligence",
+    "code-analysis",
+    "semantic-search",
+    "pattern-learning",
+    "developer-tools",
+    "claude",
+    "copilot"
   ],
   "author": "Piyush Airani",
   "license": "MIT",
