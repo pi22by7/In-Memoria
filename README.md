@@ -33,7 +33,7 @@ In Memoria is an MCP server that learns from your actual codebase and remembers 
 
 Think of it as giving your AI pair programmer a notepad that doesn't get wiped clean every time you restart the session.
 
-**Current version: 0.5.6** - [See what's changed](CHANGELOG.md)
+**Current version: 0.5.7** - [See what's changed](CHANGELOG.md)
 
 ### What It Does
 
@@ -444,7 +444,7 @@ Built with ❤️ by [@pi22by7](https://github.com/pi22by7) for the AI-assisted 
 
 **Try it**: `npx in-memoria server`
 
-**Latest release**: [v0.5.6](CHANGELOG.md) - Smooth progress tracking and Phase 1-4 complete
+**Latest release**: [v0.5.7](CHANGELOG.md) - Smooth progress tracking and Phase 1-4 complete
 
 _In memoria: in memory. Because your AI assistant should remember._
 

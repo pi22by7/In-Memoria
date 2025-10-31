@@ -2,14 +2,14 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
   "name": "io.github.pi22by7/in-memoria",
   "description": "Persistent codebase intelligence that gives AI assistants memory across sessions",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "homepage": "https://github.com/pi22by7/in-memoria#readme",
   "license": "MIT",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "in-memoria",
-      "version": "0.5.6",
+      "version": "0.5.7",
       "transport": {
         "type": "stdio"
       },
