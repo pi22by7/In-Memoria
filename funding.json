@@ -5,7 +5,7 @@
         "role": "owner",
         "name": "Piyush Airani",
         "email": "talk@pi22by7.me",
-        "description": "Open-source developer building persistent intelligence infrastructure for AI-assisted development. Creator and maintainer of In-Memoria, an MCP server that provides AI coding assistants with memory that persists across sessions.",
+        "description": "Open-source developer building tools for AI-assisted development and creative workflows. Creator and maintainer of In-Memoria (MCP server for persistent AI intelligence), Flowrite (cross-platform songwriting app), and HQLint (VS Code extension). Currently working as a Big Data Engineer and Co-founder of a technology startup. Bachelor of Engineering in Computer Science. Building infrastructure to solve real problems.",
         "webpageUrl": {
             "url": "https://pi22by7.me",
             "wellKnown": "https://pi22by7.me/.well-known/funding-manifest-urls"
@@ -42,6 +42,12 @@
     "funding": {
         "channels": [
             {
+                "guid": "github-sponsors",
+                "type": "payment-provider",
+                "address": "https://github.com/sponsors/pi22by7",
+                "description": "GitHub Sponsors for recurring monthly support with sponsor benefits"
+            },
+            {
                 "guid": "paypal-channel",
                 "type": "payment-provider",
                 "address": "https://paypal.me/piyushairani",
@@ -59,8 +65,8 @@
                 "guid": "annual-sustainability",
                 "status": "active",
                 "name": "Annual Sustainability Grant",
-                "description": "Full-time development for one year to accelerate In-Memoria as economic infrastructure for sustainable AI development. Enables: (1) v1.0 stable release with enterprise optimization, (2) Enhanced vector search and multi-project intelligence, (3) Documentation and token efficiency evangelism, (4) Community support and AI provider partnerships, (5) Performance optimization for large codebases, (6) Team collaboration features, (7) Integration with additional AI platforms.",
-                "amount": 100000,
+                "description": "Part-to-full-time development funding for one year. Enables: (1) v1.0 stable release, (2) Enhanced vector search and multi-project intelligence, (3) Comprehensive documentation, (4) Active community support, (5) Performance optimization for enterprise codebases, (6) Team collaboration features. Accelerates In-Memoria as sustainable AI infrastructure while maintaining solo maintainer focus.",
+                "amount": 50000,
                 "currency": "USD",
                 "frequency": "yearly",
                 "channels": [
@@ -81,6 +87,20 @@
                 ]
             },
             {
+                "guid": "strategic-contribution",
+                "status": "active",
+                "name": "Strategic Contribution",
+                "description": "Substantial one-time contribution for accelerated feature development or specific roadmap priorities. Suitable for organizations benefiting from In-Memoria's token efficiency.",
+                "amount": 1000,
+                "currency": "USD",
+                "frequency": "one-time",
+                "channels": [
+                    "github-sponsors",
+                    "paypal-channel",
+                    "bank-transfer"
+                ]
+            },
+            {
                 "guid": "one-time-contribution",
                 "status": "active",
                 "name": "One-Time Contribution",
@@ -89,6 +109,7 @@
                 "currency": "USD",
                 "frequency": "one-time",
                 "channels": [
+                    "github-sponsors",
                     "paypal-channel",
                     "bank-transfer"
                 ]
