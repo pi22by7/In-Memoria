@@ -149,7 +149,8 @@ async function startWatcher(path: string): Promise<void> {
       `${path}/**/*.py`,
       `${path}/**/*.rs`,
       `${path}/**/*.go`,
-      `${path}/**/*.java`
+      `${path}/**/*.java`,
+      `${path}/**/*.php`
     ],
     includeContent: true
   });
@@ -349,7 +350,8 @@ async function initializeProject(path: string): Promise<void> {
         "**/*.py",
         "**/*.rs",
         "**/*.go",
-        "**/*.java"
+        "**/*.java",
+        "**/*.php"
       ],
       ignored: [
         "**/node_modules/**",

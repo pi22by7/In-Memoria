@@ -110,7 +110,7 @@ export class CoreAnalysisTools {
     ];
   }
 
-  async analyzeCodebase(args: { path: string }): Promise<any> {
+  async analyzeCodebase(args: { path: string; includeFileContent?: boolean }): Promise<any> {
     // Input validation
     if (!args.path || typeof args.path !== 'string') {
       throw new Error('Path parameter is required and must be a string');
@@ -137,7 +137,7 @@ export class CoreAnalysisTools {
         const patterns = await this.patternEngine.analyzeFilePatterns(args.path, content);
         const complexity = this.calculateDetailedComplexity(content, semanticConcepts);
 
-        return {
+        const result: any = {
           type: 'file',
           path: args.path,
           language,
@@ -163,6 +163,13 @@ export class CoreAnalysisTools {
           },
           note: 'For full file content, use a file reading tool. For all concepts, use get_semantic_insights.'
         };
+
+        // Include file content if requested
+        if (args.includeFileContent) {
+          result.content = content;
+        }
+
+        return result;
       } else {
         // DIRECTORY ANALYSIS - Token-efficient codebase summary
         const analysis = await this.semanticEngine.analyzeCodebase(args.path);
@@ -175,13 +182,13 @@ export class CoreAnalysisTools {
           frameworks: analysis.frameworks,
           complexity: analysis.complexity,
           // Token-efficient: Top 15 concepts only
-          topConcepts: analysis.concepts.slice(0, 15).map((concept: any) => ({
+          concepts: analysis.concepts.slice(0, 15).map((concept: any) => ({
             name: concept.name,
             type: concept.type,
             confidence: concept.confidence
           })),
           // Token-efficient: Top 10 patterns only
-          topPatterns: patterns.slice(0, 10).map((p: any) => ({
+          patterns: patterns.slice(0, 10).map((p: any) => ({
             type: p.type,
             description: p.description,
             frequency: p.frequency

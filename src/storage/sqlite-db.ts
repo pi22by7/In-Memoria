@@ -109,8 +109,10 @@ export interface ProjectDecision {
 export class SQLiteDatabase {
   private db: Database.Database;
   private migrator: DatabaseMigrator;
+  public readonly dbPath: string;
 
   constructor(dbPath: string = ':memory:') {
+    this.dbPath = dbPath;
     // Ensure parent directory exists for file-based databases
     if (dbPath !== ':memory:') {
       const dir = dirname(dbPath);

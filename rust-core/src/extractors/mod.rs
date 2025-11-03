@@ -7,6 +7,7 @@ pub mod java;
 pub mod cpp;
 pub mod csharp;
 pub mod svelte;
+pub mod php;
 pub mod generic;
 
 pub use typescript::*;
@@ -18,4 +19,5 @@ pub use java::*;
 pub use cpp::*;
 pub use csharp::*;
 pub use svelte::*;
+pub use php::*;
 pub use generic::*;

@@ -141,7 +141,7 @@ export class InteractiveSetup {
     }
 
     // Validate languages
-    const supportedLanguages = ['typescript', 'javascript', 'python', 'rust', 'go', 'java', 'c', 'cpp'];
+    const supportedLanguages = ['typescript', 'javascript', 'python', 'rust', 'go', 'java', 'c', 'cpp', 'csharp', 'svelte', 'sql', 'php'];
     const unsupported = config.languages.filter(lang => !supportedLanguages.includes(lang.toLowerCase()));
     if (unsupported.length > 0) {
       console.log(`⚠️  Warning: Unsupported languages detected: ${unsupported.join(', ')}`);
@@ -399,6 +399,9 @@ export class InteractiveSetup {
           break;
         case 'cpp':
           patterns.push('**/*.cpp', '**/*.cc', '**/*.cxx', '**/*.hpp');
+          break;
+        case 'php':
+          patterns.push('**/*.php');
           break;
       }
     }

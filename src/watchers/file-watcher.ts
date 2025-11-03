@@ -354,6 +354,9 @@ export class FileWatcher extends EventEmitter {
       } else if (pattern.includes('*.rs')) {
         stats.byLanguage['rust'] = (stats.byLanguage['rust'] || 0) + 1;
         stats.byType['source'] = (stats.byType['source'] || 0) + 1;
+      } else if (pattern.includes('*.php')) {
+        stats.byLanguage['php'] = (stats.byLanguage['php'] || 0) + 1;
+        stats.byType['source'] = (stats.byType['source'] || 0) + 1;
       } else {
         stats.byType['other'] = (stats.byType['other'] || 0) + 1;
       }

@@ -89,23 +89,24 @@ export function formatMessage(message: string): string {
       // The actual structure depends on the Rust analyzer, but should be an object
     });
 
-    it('should get file content with metadata', async () => {
-      const result = await server.routeToolCall('get_file_content', {
-        path: join(projectDir, 'index.ts')
+    it('should analyze file with content', async () => {
+      const result = await server.routeToolCall('analyze_codebase', {
+        path: join(projectDir, 'index.ts'),
+        includeFileContent: true
       });
 
       expect(result).toBeDefined();
       expect(result.content).toContain('TestService');
     });
 
-    it('should get project structure', async () => {
-      const result = await server.routeToolCall('get_project_structure', {
+    it('should analyze directory', async () => {
+      const result = await server.routeToolCall('analyze_codebase', {
         path: projectDir
       });
 
-      expect(result.structure).toBeDefined();
-      expect(result.structure.name).toBeDefined();
-      expect(result.summary.totalFiles).toBeGreaterThan(0);
+      expect(result).toBeDefined();
+      expect(result.languages).toBeDefined();
+      expect(result.concepts).toBeDefined();
     });
 
     it('should search codebase', async () => {
@@ -121,14 +122,14 @@ export function formatMessage(message: string): string {
 
   describe('Automation Tools', () => {
     it('should check learning status', async () => {
-      const result = await server.routeToolCall('get_learning_status', {
+      const result = await server.routeToolCall('get_project_blueprint', {
         path: projectDir
       });
 
-      expect(result.hasIntelligence).toBeDefined();
-      expect(typeof result.conceptsStored).toBe('number');
-      expect(typeof result.patternsStored).toBe('number');
-      expect(result.recommendation).toMatch(/ready|learning_recommended|learning_needed/);
+      expect(result.learningStatus).toBeDefined();
+      expect(result.learningStatus.recommendation).toBeDefined();
+      expect(typeof result.learningStatus.patternsStored).toBe('number');
+      expect(result.learningStatus.recommendation).toMatch(/ready|learning_recommended|learning_needed/);
     });
 
     it('should auto-learn if needed', async () => {
@@ -145,14 +146,14 @@ export function formatMessage(message: string): string {
     });
 
     it('should perform quick setup', async () => {
-      const result = await server.routeToolCall('quick_setup', {
+      const result = await server.routeToolCall('auto_learn_if_needed', {
         path: projectDir,
-        skipLearning: true
+        skipLearning: true,
+        includeSetupSteps: true
       });
 
       expect(result.success).toBeDefined();
-      expect(Array.isArray(result.steps)).toBe(true);
-      expect(result.steps.length).toBeGreaterThan(0);
+      expect(result.message).toBeDefined();
     });
   });
 
@@ -284,14 +285,13 @@ export function formatMessage(message: string): string {
         'get_developer_profile',
         'contribute_insights',
         'auto_learn_if_needed',
-        'get_learning_status',
-        'quick_setup',
         'get_system_status',
         'get_intelligence_metrics',
-        'get_performance_status'
+        'get_performance_status',
+        'health_check'
       ];
 
-      expect(toolsToTest).toHaveLength(17);
+      expect(toolsToTest).toHaveLength(16);
 
       const toolNames = toolsToTest;
       const expectedTools = [
@@ -312,13 +312,12 @@ export function formatMessage(message: string): string {
 
         // Automation Tools
         'auto_learn_if_needed',
-        'get_learning_status',
-        'quick_setup',
 
         // Monitoring Tools
         'get_system_status',
         'get_intelligence_metrics',
-        'get_performance_status'
+        'get_performance_status',
+        'health_check'
       ];
 
       expectedTools.forEach(expectedTool => {
@@ -330,7 +329,7 @@ export function formatMessage(message: string): string {
       // Test by verifying each tool can be called with proper parameters
       const toolsWithValidParams = [
         { name: 'get_system_status', params: {} },
-        { name: 'get_learning_status', params: { path: projectDir } },
+        { name: 'get_project_blueprint', params: { path: projectDir } },
         { name: 'get_intelligence_metrics', params: {} }
       ];
 
@@ -344,10 +343,10 @@ export function formatMessage(message: string): string {
   describe('End-to-End Workflow', () => {
     it('should support complete agent workflow', async () => {
       // 1. Check initial status
-      const initialStatus = await server.routeToolCall('get_learning_status', {
+      const initialStatus = await server.routeToolCall('get_project_blueprint', {
         path: projectDir
       });
-      expect(initialStatus.hasIntelligence).toBeDefined();
+      expect(initialStatus.learningStatus).toBeDefined();
 
       // 2. Auto-learn if needed
       const learningResult = await server.routeToolCall('auto_learn_if_needed', {

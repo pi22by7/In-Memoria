@@ -3,7 +3,8 @@ import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 
 // Input validation schemas for all MCP tools
 export const AnalyzeCodebaseSchema = z.object({
-  path: z.string().min(1, 'Path is required')
+  path: z.string().min(1, 'Path is required'),
+  includeFileContent: z.boolean().optional()
 });
 
 export const GetFileContentSchema = z.object({

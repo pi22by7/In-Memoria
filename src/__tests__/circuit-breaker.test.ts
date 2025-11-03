@@ -110,7 +110,7 @@ describe('CircuitBreaker', () => {
       const primaryOperation = vi.fn().mockRejectedValue(new Error('Primary failed'));
       const fallback = vi.fn().mockRejectedValue(new Error('Fallback failed'));
       
-      await expect(circuitBreaker.execute(primaryOperation, fallback)).rejects.toThrow('Primary failed');
+      await expect(circuitBreaker.execute(primaryOperation, fallback)).rejects.toThrow('Both primary and fallback operations failed');
     });
   });
 

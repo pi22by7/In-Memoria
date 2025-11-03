@@ -179,11 +179,9 @@ describe('AutomationTools', () => {
     it('should expose correct tool definitions', () => {
       const tools = automationTools.tools;
 
-      expect(tools).toHaveLength(3);
+      expect(tools).toHaveLength(1);
       expect(tools.map(t => t.name)).toEqual([
-        'auto_learn_if_needed',
-        'get_learning_status',
-        'quick_setup'
+        'auto_learn_if_needed'
       ]);
 
       // Check tool schemas

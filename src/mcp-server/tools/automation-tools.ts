@@ -772,7 +772,8 @@ export class AutomationTools {
         '**/*.java',
         '**/*.c',
         '**/*.cpp',
-        '**/*.cs'
+        '**/*.cs',
+        '**/*.php'
       ];
 
       let mostRecentTime = 0;

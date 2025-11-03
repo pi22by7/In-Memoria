@@ -421,8 +421,8 @@ export class MonitoringTools {
   }
 
   private getDatabasePath(): string {
-    // This is a simplified version - in reality you'd get this from configuration
-    return join(process.cwd(), 'in-memoria.db');
+    // Use the actual database path from the database instance
+    return this.database.dbPath;
   }
 
   private getDatabaseSize(): number {
