@@ -147,6 +147,9 @@ npm test -- sqlite-db.test.ts
 # Run tests with coverage
 npm test -- --coverage
 
+# Run PHP integration harness (synthetic + real-world fixtures)
+npm run test:php-integration
+
 # Run manual integration tests
 npm run test:manual
 

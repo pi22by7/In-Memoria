@@ -1,0 +1,55 @@
+name: PHP Telemetry
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * *'
+
+jobs:
+  telemetry:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build TypeScript bundle
+        run: npm run build
+        env:
+          IN_MEMORIA_FORCE_NPX: '1'
+
+      - name: Set native binding override
+        run: echo "NAPI_RS_NATIVE_LIBRARY_PATH=$(pwd)/rust-core/in-memoria-core.linux-x64-gnu.node" >> "$GITHUB_ENV"
+
+      - name: Warm PHP sandbox fixture
+        run: npm run test:php-integration -- --group synthetic --fixture sandbox-php-sample
+        env:
+          IN_MEMORIA_DEBUG_PHP: '1'
+          IN_MEMORIA_FORCE_NPX: '1'
+
+      - name: Run telemetry checks
+        run: >-
+          npx tsx scripts/run-php-telemetry.ts
+          --project sandbox-php-sample
+          --output tmp/telemetry/php-sandbox.json
+          --max-concepts-ms 10
+          --min-php-concepts 5
+        env:
+          IN_MEMORIA_DEBUG_PHP: '1'
+          IN_MEMORIA_FORCE_NPX: '1'
+
+      - name: Upload telemetry artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-telemetry
+          path: tmp/telemetry/php-sandbox.json

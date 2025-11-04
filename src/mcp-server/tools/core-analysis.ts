@@ -12,6 +12,7 @@ import { PatternEngine } from '../../engines/pattern-engine.js';
 import { IntelligenceTools } from './intelligence-tools.js';
 import { readFileSync, statSync, readdirSync, lstatSync } from 'fs';
 import { join, relative, extname, basename } from 'path';
+import { detectLanguageFromPath } from '../../utils/language-registry.js';
 import { glob } from 'glob';
 import { ErrorFactory, MCPErrorUtils, ErrorUtils, InMemoriaError, MCPErrorCode } from '../../utils/error-types.js';
 
@@ -369,34 +370,7 @@ export class CoreAnalysisTools {
   }
 
   private detectLanguage(filePath: string): string {
-    const ext = filePath.split('.').pop()?.toLowerCase();
-    const languageMap: Record<string, string> = {
-      'ts': 'typescript',
-      'tsx': 'typescript',
-      'js': 'javascript',
-      'jsx': 'javascript',
-      'py': 'python',
-      'rs': 'rust',
-      'go': 'go',
-      'java': 'java',
-      'cpp': 'cpp',
-      'cc': 'cpp',
-      'cxx': 'cpp',
-      'c': 'c',
-      'cs': 'csharp',
-      'php': 'php',
-      'rb': 'ruby',
-      'swift': 'swift',
-      'kt': 'kotlin',
-      'scala': 'scala',
-      'clj': 'clojure',
-      'hs': 'haskell',
-      'elm': 'elm',
-      'vue': 'vue',
-      'svelte': 'svelte'
-    };
-
-    return languageMap[ext || ''] || 'unknown';
+    return detectLanguageFromPath(filePath);
   }
 
   private calculateDetailedComplexity(content: string, semanticConcepts: any[]): {

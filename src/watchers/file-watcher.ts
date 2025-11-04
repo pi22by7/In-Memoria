@@ -3,6 +3,7 @@ import { EventEmitter } from 'eventemitter3';
 import { createHash } from 'crypto';
 import { readFileSync, statSync } from 'fs';
 import { join, extname } from 'path';
+import { detectLanguageFromPath } from '../utils/language-registry.js';
 
 export interface FileChange {
   type: 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir';
@@ -43,6 +44,12 @@ export class FileWatcher extends EventEmitter {
         '**/build/**',
         '**/.next/**',
         '**/target/**',
+        '**/vendor/**',
+        '**/storage/**',
+        '**/var/**',
+        '**/bootstrap/cache/**',
+        '**/composer.lock',
+        '**/*.min.php',
         '**/*.log'
       ],
       debounceMs: options.debounceMs || 500,
@@ -214,7 +221,7 @@ export class FileWatcher extends EventEmitter {
         const actualStats = stats || statSync(path);
         
         if (!actualStats.isDirectory()) {
-          change.language = this.detectLanguage(path);
+          change.language = detectLanguageFromPath(path);
           
           if (this.options.includeContent && this.isTextFile(path)) {
             change.content = readFileSync(path, 'utf-8');
@@ -243,67 +250,10 @@ export class FileWatcher extends EventEmitter {
     return oldHash !== newHash;
   }
 
-  private detectLanguage(filePath: string): string {
-    const ext = extname(filePath).toLowerCase();
-    const languageMap: Record<string, string> = {
-      '.ts': 'typescript',
-      '.tsx': 'typescript',
-      '.js': 'javascript',
-      '.jsx': 'javascript',
-      '.py': 'python',
-      '.rs': 'rust',
-      '.go': 'go',
-      '.java': 'java',
-      '.cpp': 'cpp',
-      '.cc': 'cpp',
-      '.cxx': 'cpp',
-      '.c': 'c',
-      '.h': 'c',
-      '.hpp': 'cpp',
-      '.cs': 'csharp',
-      '.php': 'php',
-      '.rb': 'ruby',
-      '.swift': 'swift',
-      '.kt': 'kotlin',
-      '.scala': 'scala',
-      '.clj': 'clojure',
-      '.hs': 'haskell',
-      '.ml': 'ocaml',
-      '.fs': 'fsharp',
-      '.elm': 'elm',
-      '.dart': 'dart',
-      '.r': 'r',
-      '.jl': 'julia',
-      '.lua': 'lua',
-      '.pl': 'perl',
-      '.sh': 'bash',
-      '.ps1': 'powershell',
-      '.sql': 'sql',
-      '.html': 'html',
-      '.css': 'css',
-      '.scss': 'scss',
-      '.sass': 'sass',
-      '.less': 'less',
-      '.json': 'json',
-      '.xml': 'xml',
-      '.yaml': 'yaml',
-      '.yml': 'yaml',
-      '.toml': 'toml',
-      '.ini': 'ini',
-      '.cfg': 'ini',
-      '.conf': 'conf',
-      '.md': 'markdown',
-      '.rst': 'rst',
-      '.tex': 'latex'
-    };
-
-    return languageMap[ext] || 'unknown';
-  }
-
   private isTextFile(filePath: string): boolean {
     const textExtensions = new Set([
       '.ts', '.tsx', '.js', '.jsx', '.py', '.rs', '.go', '.java',
-      '.cpp', '.cc', '.cxx', '.c', '.h', '.hpp', '.cs', '.php',
+      '.cpp', '.cc', '.cxx', '.c', '.h', '.hpp', '.cs', '.php', '.phtml', '.inc', '.svelte', '.vue',
       '.rb', '.swift', '.kt', '.scala', '.clj', '.hs', '.ml',
       '.fs', '.elm', '.dart', '.r', '.jl', '.lua', '.pl',
       '.sh', '.ps1', '.sql', '.html', '.css', '.scss', '.sass',

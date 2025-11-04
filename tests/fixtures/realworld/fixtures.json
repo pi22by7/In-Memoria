@@ -1,0 +1,37 @@
+[
+  {
+    "name": "symfony-demo",
+    "path": "tests/fixtures/php/symfony-demo",
+    "repo": "https://github.com/symfony/demo",
+    "commit": "b388edaa15a6b41de9ec066b3ced1c878717dd60",
+    "includeTemplates": true
+  },
+  {
+    "name": "koel",
+    "path": "tests/fixtures/php/koel",
+    "repo": "https://github.com/koel/koel",
+    "commit": "6cf7420f52060d668b1747d74b5f319e328f61c9",
+    "includeTemplates": false
+  },
+  {
+    "name": "woocommerce",
+    "path": "tests/fixtures/php/woocommerce",
+    "repo": "https://github.com/woocommerce/woocommerce",
+    "commit": "627c9189ae6553fc4b16d1497904a0c4e0b4c018",
+    "includeTemplates": false
+  },
+  {
+    "name": "elementor",
+    "path": "tests/fixtures/php/elementor",
+    "repo": "https://github.com/elementor/elementor",
+    "commit": "5fb99ad0ba7f44dab437116b0249d63265f2ec3c",
+    "includeTemplates": false
+  },
+  {
+    "name": "phpmyadmin",
+    "path": "tests/fixtures/php/phpmyadmin",
+    "repo": "https://github.com/phpmyadmin/phpmyadmin",
+    "commit": "57aee0f7021fe714b24196416e00e82d4d33c92f",
+    "includeTemplates": true
+  }
+]

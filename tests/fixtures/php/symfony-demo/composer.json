@@ -1,0 +1,12 @@
+{
+  "name": "acme/symfony-demo",
+  "require": {
+    "php": "^8.2",
+    "symfony/framework-bundle": "^6.4"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  }
+}

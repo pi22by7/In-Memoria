@@ -11,6 +11,9 @@ npm run test:coverage
 
 # Run integration tests (slower, end-to-end)
 npm run test:integration
+
+# Run PHP integration harness (synthetic + real-world fixtures)
+npm run test:php-integration
 ```
 
 ## Test Structure: `tests/` vs `src/__tests__/`

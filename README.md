@@ -138,7 +138,7 @@ In Memoria is built on Rust + TypeScript, using the Model Context Protocol to co
 
 **Rust Layer** - Fast, native processing:
 
-- Tree-sitter AST parsing for 11 languages (TypeScript, JavaScript, Python, Rust, Go, Java, C/C++, C#, Svelte, SQL)
+- Tree-sitter AST parsing for 12 languages (TypeScript, JavaScript, Python, PHP, Rust, Go, Java, C/C++, C#, Svelte, SQL)
 - Blueprint analyzer (detects project structure, entry points, architecture patterns)
 - Pattern learner (statistical analysis of your coding style)
 - Semantic engine (understands code relationships and concepts)
@@ -264,6 +264,7 @@ Native AST parsing via tree-sitter for:
 
 - TypeScript & JavaScript (including JSX/TSX)
 - Python
+- PHP
 - Rust
 - Go
 - Java
@@ -372,7 +373,19 @@ npm run build
 npm run dev          # Start in development mode
 npm test            # Run test suite (98.3% pass rate)
 npm run build:rust  # Build Rust components
+npm run test:php-integration   # PHP synthetic + real-world fixture harness
 ```
+
+**Telemetry sanity checks** (recommended before cutting a release):
+
+```bash
+npx tsx scripts/capture-performance-status.ts sandbox-php-sample tmp/metrics/php-smoke.json
+npx tsx scripts/capture-performance-status.ts sandbox-python-sample tmp/metrics/python-smoke.json
+npx tsx scripts/compare-language-metrics.ts tmp/metrics/php-smoke.json tmp/metrics/python-smoke.json 10
+npx tsx scripts/run-php-telemetry.ts --project sandbox-php-sample --max-concepts-ms 10 --min-php-concepts 5
+```
+
+The PHP sandbox fixture now yields **5 concepts** with 1 ms concept/pattern query times, matching the Python baseline and driving nightly telemetry thresholds.
 
 **Quality metrics**:
 

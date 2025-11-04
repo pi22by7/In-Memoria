@@ -20,6 +20,7 @@ use tree_sitter_java::LANGUAGE as tree_sitter_java;
 use tree_sitter_c::LANGUAGE as tree_sitter_c;
 use tree_sitter_cpp::LANGUAGE as tree_sitter_cpp;
 use tree_sitter_c_sharp::LANGUAGE as tree_sitter_csharp;
+use tree_sitter_php::LANGUAGE_PHP as tree_sitter_php;
 use tree_sitter_svelte_ng::LANGUAGE as tree_sitter_svelte;
 
 /// Manages tree-sitter parsers for different programming languages
@@ -133,6 +134,13 @@ impl ParserManager {
         })?;
         self.parsers.insert("svelte".to_string(), svelte_parser);
 
+        // PHP parser
+        let mut php_parser = Parser::new();
+        php_parser.set_language(&tree_sitter_php.into()).map_err(|e| {
+            ParseError::from_reason(format!("Failed to set PHP language: {}", e))
+        })?;
+        self.parsers.insert("php".to_string(), php_parser);
+
         Ok(())
     }
 
@@ -195,6 +203,7 @@ impl ParserManager {
             "cpp" => Ok(tree_sitter_cpp.into()),
             "csharp" => Ok(tree_sitter_csharp.into()),
             "svelte" => Ok(tree_sitter_svelte.into()),
+            "php" => Ok(tree_sitter_php.into()),
             _ => Err(ParseError::from_reason(format!(
                 "Unsupported language: {}",
                 language
@@ -737,6 +746,7 @@ mod tests {
         assert!(manager.get_tree_sitter_language("cpp").is_ok());
         assert!(manager.get_tree_sitter_language("csharp").is_ok());
         assert!(manager.get_tree_sitter_language("svelte").is_ok());
+        assert!(manager.get_tree_sitter_language("php").is_ok());
         
         // Test unsupported language
         assert!(manager.get_tree_sitter_language("unknown").is_err());
@@ -846,7 +856,7 @@ mod tests {
         // Verify all expected languages are present
         let expected_languages = vec![
             "typescript", "javascript", "rust", "python", "sql",
-            "go", "java", "c", "cpp", "csharp", "svelte"
+            "go", "java", "c", "cpp", "csharp", "svelte", "php"
         ];
         
         for lang in expected_languages {
@@ -854,6 +864,6 @@ mod tests {
         }
         
         // Should have exactly these languages
-        assert_eq!(manager.available_languages().len(), 11);
+        assert_eq!(manager.available_languages().len(), 12);
     }
 }

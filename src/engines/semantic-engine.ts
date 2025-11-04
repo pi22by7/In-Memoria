@@ -4,6 +4,7 @@ import { SemanticVectorDB } from '../storage/vector-db.js';
 import { nanoid } from 'nanoid';
 import { CircuitBreaker, createRustAnalyzerCircuitBreaker } from '../utils/circuit-breaker.js';
 import { globalProfiler, PerformanceOptimizer } from '../utils/performance-profiler.js';
+import { detectLanguageFromPath as resolveLanguageFromPath } from '../utils/language-registry.js';
 
 export interface CodebaseAnalysisResult {
   languages: string[];
@@ -203,7 +204,7 @@ export class SemanticEngine {
       let estimatedFiles = 0;
       try {
         const glob = (await import('glob')).glob;
-        const files = await glob('**/*.{ts,tsx,js,jsx,py,rs,go,java,c,cpp,svelte,vue}', {
+        const files = await glob('**/*.{ts,tsx,js,jsx,py,rs,go,java,c,cpp,svelte,vue,php,phtml,inc}', {
           cwd: path,
           ignore: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.git/**'],
           nodir: true
@@ -527,18 +528,7 @@ export class SemanticEngine {
   }
 
   private detectLanguageFromPath(filePath: string): string {
-    const ext = filePath.split('.').pop()?.toLowerCase();
-    const languageMap: Record<string, string> = {
-      'ts': 'typescript',
-      'tsx': 'typescript',
-      'js': 'javascript',
-      'jsx': 'javascript',
-      'py': 'python',
-      'rs': 'rust',
-      'go': 'go',
-      'java': 'java'
-    };
-    return languageMap[ext || ''] || 'unknown';
+    return resolveLanguageFromPath(filePath);
   }
 
   /**
@@ -651,6 +641,11 @@ export class SemanticEngine {
       }
     };
 
+    // When blueprint support is unavailable, skip the Rust path entirely
+    if (!BlueprintAnalyzer || typeof BlueprintAnalyzer.detectEntryPoints !== 'function') {
+      return fallbackImplementation();
+    }
+
     // Use CircuitBreaker to try Rust first, fall back to TypeScript
     return this.rustCircuitBreaker.execute(
       rustImplementation,
@@ -740,6 +735,10 @@ export class SemanticEngine {
         return [];
       }
     };
+
+    if (!BlueprintAnalyzer || typeof BlueprintAnalyzer.mapKeyDirectories !== 'function') {
+      return fallbackImplementation();
+    }
 
     // Use CircuitBreaker to try Rust first, fall back to TypeScript
     return this.rustCircuitBreaker.execute(

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.7] - 2025-11-03
+
+### ✨ **Added**
+
+- **PHP telemetry parity** – Expanded sandbox fixture to five classes and added `npm run test:php-integration` harness command for synthetic/real-world fixtures.
+
+### 🎯 **Improved**
+
+- **Monitoring insights** – `get_performance_status` now reports per-language concept counts plus concept/pattern query timings (`conceptsMs`/`patternsMs`) to support telemetry gating.
+
+### 📝 **Documentation**
+
+- README highlights PHP as first-class, documents telemetry sanity checks, and references the new harness command.
+- Testing guides (`docs/TESTING*.md`) and release checklist include `npm run test:php-integration` and updated telemetry thresholds (≥5 PHP concepts, ≤10 ms concept queries).
+
+
 ## [0.5.6] - 2025-10-30
 
 ### 🐛 **Fixed**

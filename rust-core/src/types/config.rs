@@ -18,8 +18,8 @@ impl Default for AnalysisConfig {
             max_file_size: 1_048_576, // 1MB
             max_files: 1000,
             supported_extensions: vec![
-                "ts", "tsx", "js", "jsx", "rs", "py", "go", "java", 
-                "cpp", "c", "cs", "svelte", "sql"
+                "ts", "tsx", "js", "jsx", "rs", "py", "go", "java",
+                "cpp", "c", "cs", "svelte", "sql", "php", "phtml", "inc"
             ],
         }
     }
@@ -52,7 +52,20 @@ impl AnalysisConfig {
 
         // Check if file extension is supported
         if let Some(extension) = file_path.extension().and_then(|s| s.to_str()) {
-            self.supported_extensions.contains(&extension.to_lowercase().as_str())
+            let ext = extension.to_lowercase();
+            let supported = self.supported_extensions.iter().any(|s| *s == ext);
+
+            if std::env::var("IN_MEMORIA_DEBUG_PHP").is_ok()
+                && matches!(ext.as_str(), "php" | "phtml" | "inc")
+            {
+                eprintln!(
+                    "[PHP DEBUG] should_analyze_file: path={} supported={}",
+                    file_path.display(),
+                    supported
+                );
+            }
+
+            supported
         } else {
             false
         }
@@ -130,6 +143,7 @@ impl AnalysisConfig {
                 "js" | "jsx" => "javascript".to_string(),
                 "rs" => "rust".to_string(),
                 "py" => "python".to_string(),
+                "php" | "phtml" | "inc" => "php".to_string(),
                 "sql" => "sql".to_string(),
                 "go" => "go".to_string(),
                 "java" => "java".to_string(),
@@ -176,6 +190,9 @@ mod tests {
         assert!(config.should_analyze_file(Path::new("test.cs")));
         assert!(config.should_analyze_file(Path::new("test.svelte")));
         assert!(config.should_analyze_file(Path::new("test.sql")));
+        assert!(config.should_analyze_file(Path::new("test.php")));
+        assert!(config.should_analyze_file(Path::new("test.phtml")));
+        assert!(config.should_analyze_file(Path::new("test.inc")));
     }
 
     #[test]
@@ -246,6 +263,9 @@ mod tests {
         assert_eq!(config.detect_language_from_path("test.cxx"), "cpp");
         assert_eq!(config.detect_language_from_path("test.cs"), "csharp");
         assert_eq!(config.detect_language_from_path("test.svelte"), "svelte");
+        assert_eq!(config.detect_language_from_path("test.php"), "php");
+        assert_eq!(config.detect_language_from_path("test.phtml"), "php");
+        assert_eq!(config.detect_language_from_path("test.inc"), "php");
         assert_eq!(config.detect_language_from_path("test.unknown"), "generic");
         assert_eq!(config.detect_language_from_path("noextension"), "generic");
     }

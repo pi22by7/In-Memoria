@@ -18,11 +18,12 @@ describe('MonitoringTools', () => {
 
   beforeEach(() => {
     tempDir = mkdtempSync(join(tmpdir(), 'monitoring-test-'));
-    database = new SQLiteDatabase(join(tempDir, 'test.db'));
+    const dbPath = join(tempDir, 'test.db');
+    database = new SQLiteDatabase(dbPath);
     vectorDB = new SemanticVectorDB();
     semanticEngine = new SemanticEngine(database, vectorDB);
     patternEngine = new PatternEngine(database);
-    monitoringTools = new MonitoringTools(semanticEngine, patternEngine, database);
+    monitoringTools = new MonitoringTools(semanticEngine, patternEngine, database, dbPath);
   });
 
   afterEach(() => {

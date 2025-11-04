@@ -8,6 +8,7 @@ import { SemanticVectorDB } from '../storage/vector-db.js';
 import { ProgressTracker } from '../utils/progress-tracker.js';
 import { ConsoleProgressRenderer } from '../utils/console-progress.js';
 import { glob } from 'glob';
+import { EXTENSION_LANGUAGE_MAP } from '../utils/language-registry.js';
 
 interface SetupConfig {
   projectName: string;
@@ -346,23 +347,8 @@ export class InteractiveSetup {
         if (ext) extensions.add(ext);
       }
 
-      const languageMap: Record<string, string> = {
-        'ts': 'typescript',
-        'tsx': 'typescript',
-        'js': 'javascript',
-        'jsx': 'javascript',
-        'py': 'python',
-        'rs': 'rust',
-        'go': 'go',
-        'java': 'java',
-        'c': 'c',
-        'cpp': 'cpp',
-        'cc': 'cpp',
-        'cxx': 'cpp'
-      };
-
       const languages = Array.from(extensions)
-        .map(ext => languageMap[ext])
+        .map(ext => EXTENSION_LANGUAGE_MAP[ext])
         .filter(Boolean);
 
       return [...new Set(languages)];
