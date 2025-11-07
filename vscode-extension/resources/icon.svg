@@ -1,0 +1,31 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="#007ACC" opacity="0.1"/>
+
+  <!-- Brain icon representing memory/intelligence -->
+  <g transform="translate(24, 24)">
+    <!-- Left hemisphere -->
+    <path d="M40 20 Q30 10, 20 20 T15 40 Q15 50, 20 55 T30 60 L40 60"
+          fill="none" stroke="#007ACC" stroke-width="4" stroke-linecap="round"/>
+
+    <!-- Right hemisphere -->
+    <path d="M40 20 Q50 10, 60 20 T65 40 Q65 50, 60 55 T50 60 L40 60"
+          fill="none" stroke="#007ACC" stroke-width="4" stroke-linecap="round"/>
+
+    <!-- Neural connections -->
+    <circle cx="25" cy="30" r="3" fill="#007ACC"/>
+    <circle cx="40" cy="25" r="3" fill="#007ACC"/>
+    <circle cx="55" cy="30" r="3" fill="#007ACC"/>
+    <circle cx="30" cy="45" r="3" fill="#007ACC"/>
+    <circle cx="50" cy="45" r="3" fill="#007ACC"/>
+
+    <line x1="25" y1="30" x2="40" y2="25" stroke="#007ACC" stroke-width="2" opacity="0.5"/>
+    <line x1="40" y1="25" x2="55" y2="30" stroke="#007ACC" stroke-width="2" opacity="0.5"/>
+    <line x1="25" y1="30" x2="30" y2="45" stroke="#007ACC" stroke-width="2" opacity="0.5"/>
+    <line x1="55" y1="30" x2="50" y2="45" stroke="#007ACC" stroke-width="2" opacity="0.5"/>
+  </g>
+
+  <!-- "IM" text at bottom -->
+  <text x="64" y="105" font-family="Arial, sans-serif" font-size="24" font-weight="bold"
+        text-anchor="middle" fill="#007ACC">IM</text>
+</svg>
