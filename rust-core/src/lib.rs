@@ -1,5 +1,8 @@
 #![deny(clippy::all)]
 
+// Note: napi-bindings are excluded during tests (not(test)) to avoid linker errors
+// when running `cargo test`. NAPI bindings require Node.js runtime which isn't
+// available in the test environment. Integration tests should use the built library.
 #[cfg(all(feature = "napi-bindings", not(test)))]
 use napi_derive::napi;
 // Core modules  

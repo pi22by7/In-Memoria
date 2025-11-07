@@ -8,6 +8,12 @@ use tree_sitter::Node;
 
 pub struct PhpExtractor;
 
+impl Default for PhpExtractor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PhpExtractor {
     pub fn new() -> Self {
         Self
@@ -31,6 +37,11 @@ impl PhpExtractor {
                     concepts.push(concept);
                 }
             }
+            "anonymous_class" => {
+                if let Some(concept) = self.extract_anonymous_class(node, file_path, content)? {
+                    concepts.push(concept);
+                }
+            }
             "function_definition" => {
                 if let Some(concept) =
                     self.build_named_construct(node, file_path, content, "function")?
@@ -42,6 +53,11 @@ impl PhpExtractor {
                 if let Some(concept) =
                     self.build_named_construct(node, file_path, content, "method")?
                 {
+                    concepts.push(concept);
+                }
+            }
+            "arrow_function_expression" => {
+                if let Some(concept) = self.extract_arrow_function(node, file_path, content)? {
                     concepts.push(concept);
                 }
             }
@@ -80,6 +96,11 @@ impl PhpExtractor {
                 if let Some(concept) =
                     self.build_named_construct(node, file_path, content, "namespace")?
                 {
+                    concepts.push(concept);
+                }
+            }
+            "attribute_list" => {
+                if let Some(concept) = self.extract_attribute(node, file_path, content)? {
                     concepts.push(concept);
                 }
             }
@@ -251,7 +272,8 @@ impl PhpExtractor {
         while index > 0 {
             let slice = &content[..index];
             if let Some(pos) = slice.rfind("/**") {
-                let comment = &slice[pos..];
+                // Only capture content from /** to the current search position (before the node)
+                let comment = &slice[pos..index];
                 if comment.contains("*/") {
                     let lines: Vec<&str> = comment.lines().collect();
                     if let Some(last_line) = lines.last() {
@@ -272,11 +294,13 @@ impl PhpExtractor {
     fn collect_traits(node: Node<'_>, content: &str) -> Vec<String> {
         let mut traits = Vec::new();
         let mut cursor = node.walk();
+
+        // Look for trait_use_clause nodes in the class body
         for child in node.children(&mut cursor) {
-            if child.kind() == "class_interface_clause" {
+            if child.kind() == "trait_use_clause" {
                 let mut clause_cursor = child.walk();
                 for clause_child in child.children(&mut clause_cursor) {
-                    if clause_child.kind() == "qualified_name" {
+                    if matches!(clause_child.kind(), "qualified_name" | "name") {
                         if let Some(name) = NameExtractor::extract_node_text(clause_child, content) {
                             traits.push(name.to_string());
                         }
@@ -285,6 +309,106 @@ impl PhpExtractor {
             }
         }
         traits
+    }
+
+    fn extract_anonymous_class(
+        &self,
+        node: Node<'_>,
+        file_path: &str,
+        _content: &str,
+    ) -> Result<Option<SemanticConcept>, ParseError> {
+        let (start_line, start_col, end_line, end_col) = NameExtractor::get_position_info(node);
+        let mut metadata = HashMap::new();
+        metadata.insert("language".to_string(), "php".to_string());
+        metadata.insert("kind".to_string(), "class".to_string());
+        metadata.insert("anonymous".to_string(), "true".to_string());
+        metadata.insert("start_column".to_string(), start_col.to_string());
+        metadata.insert("end_column".to_string(), end_col.to_string());
+
+        Ok(Some(SemanticConcept {
+            id: format!("php::anonymous_class::{}::L{}", file_path, start_line),
+            name: "anonymous_class".to_string(),
+            concept_type: "class".to_string(),
+            confidence: 0.75,
+            file_path: file_path.to_string(),
+            line_range: LineRange {
+                start: start_line,
+                end: end_line,
+            },
+            relationships: HashMap::new(),
+            metadata,
+        }))
+    }
+
+    fn extract_arrow_function(
+        &self,
+        node: Node<'_>,
+        file_path: &str,
+        content: &str,
+    ) -> Result<Option<SemanticConcept>, ParseError> {
+        let (start_line, start_col, end_line, end_col) = NameExtractor::get_position_info(node);
+        let mut metadata = HashMap::new();
+        metadata.insert("language".to_string(), "php".to_string());
+        metadata.insert("kind".to_string(), "function".to_string());
+        metadata.insert("arrow_function".to_string(), "true".to_string());
+        metadata.insert("start_column".to_string(), start_col.to_string());
+        metadata.insert("end_column".to_string(), end_col.to_string());
+
+        if let Some(return_type) = Self::extract_return_type(node, content) {
+            metadata.insert("return_type".to_string(), return_type);
+        }
+
+        Ok(Some(SemanticConcept {
+            id: format!("php::arrow_function::{}::L{}", file_path, start_line),
+            name: "arrow_function".to_string(),
+            concept_type: "function".to_string(),
+            confidence: 0.75,
+            file_path: file_path.to_string(),
+            line_range: LineRange {
+                start: start_line,
+                end: end_line,
+            },
+            relationships: HashMap::new(),
+            metadata,
+        }))
+    }
+
+    fn extract_attribute(
+        &self,
+        node: Node<'_>,
+        file_path: &str,
+        content: &str,
+    ) -> Result<Option<SemanticConcept>, ParseError> {
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            if child.kind() == "attribute" {
+                if let Some(name_node) = child.child_by_field_name("name") {
+                    if let Some(attr_name) = NameExtractor::extract_node_text(name_node, content) {
+                        let (start_line, start_col, end_line, end_col) = NameExtractor::get_position_info(child);
+                        let mut metadata = HashMap::new();
+                        metadata.insert("language".to_string(), "php".to_string());
+                        metadata.insert("kind".to_string(), "attribute".to_string());
+                        metadata.insert("start_column".to_string(), start_col.to_string());
+                        metadata.insert("end_column".to_string(), end_col.to_string());
+
+                        return Ok(Some(SemanticConcept {
+                            id: format!("php::attribute::{}::{}", file_path, attr_name),
+                            name: attr_name.to_string(),
+                            concept_type: "attribute".to_string(),
+                            confidence: 0.8,
+                            file_path: file_path.to_string(),
+                            line_range: LineRange {
+                                start: start_line,
+                                end: end_line,
+                            },
+                            relationships: HashMap::new(),
+                            metadata,
+                        }));
+                    }
+                }
+            }
+        }
+        Ok(None)
     }
 }
 

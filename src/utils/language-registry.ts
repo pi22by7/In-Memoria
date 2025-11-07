@@ -1,6 +1,9 @@
 /**
  * Central registry for language detection based on file extensions.
  * Keeps engines, watchers, and tooling aligned on canonical language keys.
+ *
+ * Note: Keys are extension names WITHOUT the leading dot (e.g., 'ts' not '.ts').
+ * The detectLanguageFromPath function handles stripping the dot from file paths.
  */
 
 export const EXTENSION_LANGUAGE_MAP: Record<string, string> = {
@@ -46,6 +49,8 @@ export const EXTENSION_LANGUAGE_MAP: Record<string, string> = {
   // PHP support
   php: 'php',
   phtml: 'php',
+  // Note: .inc is commonly used for PHP includes but may also be used by other languages
+  // (Perl, Apache configs). Consider this a PHP-first assumption that may cause false positives.
   inc: 'php'
 };
 

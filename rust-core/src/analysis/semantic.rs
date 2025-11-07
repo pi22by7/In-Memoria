@@ -258,19 +258,19 @@ impl SemanticAnalyzer {
     async fn extract_concepts(&mut self, path: &str) -> Result<Vec<SemanticConcept>, ParseError> {
         let mut all_concepts = Vec::new();
         let mut processed_count = 0;
-        let debug_php_enabled = std::env::var("IN_MEMORIA_DEBUG_PHP").is_ok();
+        let debug_enabled = std::env::var("IN_MEMORIA_DEBUG").is_ok();
 
         for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
             if entry.file_type().is_file() {
                 let file_path = entry.path();
 
-                if debug_php_enabled {
-                    eprintln!("[PHP DEBUG] entry {}", file_path.display());
+                if debug_enabled {
+                    eprintln!("[DEBUG] entry {}", file_path.display());
                 }
 
                 if self.config.should_analyze_file(file_path) {
-                    if debug_php_enabled {
-                        eprintln!("[PHP DEBUG] processing file {}", file_path.display());
+                    if debug_enabled {
+                        eprintln!("[DEBUG] processing file {}", file_path.display());
                     }
                     processed_count += 1;
                     
@@ -310,8 +310,8 @@ impl SemanticAnalyzer {
                             continue;
                         }
                     }
-                } else if debug_php_enabled {
-                    eprintln!("[PHP DEBUG] skipped file {}", file_path.display());
+                } else if debug_enabled {
+                    eprintln!("[DEBUG] skipped file {}", file_path.display());
                 }
             }
         }

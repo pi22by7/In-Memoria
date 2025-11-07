@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ✨ **Added**
+
+- **Enhanced PHP language support** – Extended PHP extractor with modern PHP features
+  - Arrow functions (PHP 7.4+)
+  - Attributes (PHP 8+)
+  - Anonymous classes
+
+### 🐛 **Fixed**
+
+- **PHP extractor bugs** – Resolved critical issues in PHP concept extraction
+  - Fixed docblock extraction capturing incorrect content beyond node boundaries
+  - Fixed trait collection using wrong AST node type (`class_interface_clause` → `trait_use_clause`)
+  - Fixed clippy warnings (added Default impl, unused variable parameter)
+- **Debug logging** – Made debug statements language-agnostic (`IN_MEMORIA_DEBUG_PHP` → `IN_MEMORIA_DEBUG`)
+
+### 📝 **Documentation**
+
+- Documented extension mapping behavior (keys without leading dots)
+- Added note about `.inc` extension potential false positives for non-PHP files
+- Documented NAPI binding test exclusion rationale
+
 ## [0.5.7] - 2025-11-03
 
 ### ✨ **Added**
