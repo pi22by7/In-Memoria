@@ -104,35 +104,131 @@ export class DashboardPanel {
           color: var(--vscode-foreground);
           background: var(--vscode-editor-background);
           padding: 20px;
+          line-height: 1.6;
         }
-        .dashboard { max-width: 1200px; margin: 0 auto; }
-        h1 { margin-bottom: 30px; font-size: 28px; color: var(--vscode-textLink-foreground); }
-        h2 { margin: 25px 0 15px; font-size: 20px; border-bottom: 1px solid var(--vscode-panel-border); padding-bottom: 8px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .dashboard { max-width: 1400px; margin: 0 auto; }
+        h1 {
+          margin-bottom: 30px;
+          font-size: 32px;
+          color: var(--vscode-textLink-foreground);
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        h2 {
+          margin: 30px 0 20px;
+          font-size: 20px;
+          border-bottom: 2px solid var(--vscode-textLink-foreground);
+          padding-bottom: 10px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .card {
           background: var(--vscode-editor-background);
           border: 1px solid var(--vscode-panel-border);
-          border-radius: 6px;
-          padding: 20px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          border-radius: 8px;
+          padding: 24px;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+          transition: transform 0.2s, box-shadow 0.2s;
+          position: relative;
+          overflow: hidden;
         }
-        .card h3 { font-size: 14px; color: var(--vscode-descriptionForeground); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .card .value { font-size: 36px; font-weight: bold; color: var(--vscode-textLink-foreground); }
-        .card .label { font-size: 12px; color: var(--vscode-descriptionForeground); margin-top: 5px; }
+        .card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(90deg, var(--vscode-textLink-foreground), var(--vscode-textLink-activeForeground));
+        }
+        .card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        .card h3 { font-size: 13px; color: var(--vscode-descriptionForeground); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
+        .card .value { font-size: 42px; font-weight: bold; color: var(--vscode-textLink-foreground); line-height: 1; }
+        .card .label { font-size: 12px; color: var(--vscode-descriptionForeground); margin-top: 8px; }
         .list { list-style: none; }
-        .list li { padding: 10px; margin: 5px 0; background: var(--vscode-list-hoverBackground); border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
-        .list li .name { font-weight: 500; }
-        .list li .count { background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); padding: 2px 8px; border-radius: 12px; font-size: 11px; }
-        .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; margin: 4px; }
+        .list li {
+          padding: 14px;
+          margin: 8px 0;
+          background: var(--vscode-list-hoverBackground);
+          border-radius: 6px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          transition: background 0.2s;
+          border-left: 3px solid transparent;
+        }
+        .list li:hover {
+          background: var(--vscode-list-activeSelectionBackground);
+          border-left-color: var(--vscode-textLink-foreground);
+        }
+        .list li .name { font-weight: 500; font-size: 14px; }
+        .list li .count {
+          background: var(--vscode-badge-background);
+          color: var(--vscode-badge-foreground);
+          padding: 4px 10px;
+          border-radius: 12px;
+          font-size: 11px;
+          font-weight: 600;
+        }
+        .badge { display: inline-block; padding: 6px 14px; border-radius: 14px; font-size: 12px; font-weight: 600; margin: 4px; }
         .badge.high { background: #28a745; color: white; }
-        .badge.medium { background: #ffc107; color: black; }
-        .badge.low { background: #dc3545; color: white; }
-        .architecture { font-size: 18px; padding: 15px; background: var(--vscode-textBlockQuote-background); border-left: 4px solid var(--vscode-textLink-foreground); border-radius: 4px; }
-        .status { display: flex; align-items: center; gap: 10px; padding: 15px; background: var(--vscode-inputValidation-infoBackground); border-radius: 4px; margin-bottom: 20px; }
-        .status.success { background: var(--vscode-inputValidation-successBackground); }
-        .status-icon { font-size: 24px; }
-        .patterns { display: flex; flex-wrap: wrap; gap: 10px; }
-        .pattern-chip { padding: 8px 16px; background: var(--vscode-button-secondaryBackground); border-radius: 16px; font-size: 13px; }
+        .badge.medium { background: #ffc107; color: #000; }
+        .badge.low { background: #6c757d; color: white; }
+        .architecture {
+          font-size: 18px;
+          padding: 20px;
+          background: var(--vscode-textBlockQuote-background);
+          border-left: 5px solid var(--vscode-textLink-foreground);
+          border-radius: 6px;
+          font-weight: 500;
+        }
+        .status {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+          padding: 18px;
+          background: var(--vscode-inputValidation-infoBackground);
+          border-radius: 8px;
+          margin-bottom: 25px;
+          border: 1px solid var(--vscode-panel-border);
+        }
+        .status.success {
+          background: var(--vscode-inputValidation-successBackground);
+          border-color: #28a745;
+        }
+        .status-icon { font-size: 28px; }
+        .patterns { display: flex; flex-wrap: wrap; gap: 12px; }
+        .pattern-chip {
+          padding: 10px 18px;
+          background: var(--vscode-button-secondaryBackground);
+          border-radius: 18px;
+          font-size: 13px;
+          transition: all 0.2s;
+          border: 1px solid var(--vscode-panel-border);
+        }
+        .pattern-chip:hover {
+          background: var(--vscode-button-secondaryHoverBackground);
+          transform: translateY(-1px);
+        }
+        .progress-bar {
+          width: 100%;
+          height: 8px;
+          background: var(--vscode-panel-border);
+          border-radius: 4px;
+          overflow: hidden;
+          margin-top: 8px;
+        }
+        .progress-fill {
+          height: 100%;
+          background: linear-gradient(90deg, var(--vscode-textLink-foreground), var(--vscode-textLink-activeForeground));
+          transition: width 0.3s;
+        }
       </style>
     </head>
     <body>

@@ -99,29 +99,37 @@ export class InMemoriaClient {
   private connected = false;
 
   async connect(): Promise<void> {
-    const config = vscode.workspace.getConfiguration('inMemoria');
-    const serverCommand = config.get<string>('serverCommand', 'npx in-memoria server');
+    try {
+      const config = vscode.workspace.getConfiguration('inMemoria');
+      const serverCommand = config.get<string>('serverCommand', 'npx in-memoria server');
 
-    // Parse command and args
-    const [command, ...args] = serverCommand.split(' ');
+      // Parse command and args
+      const [command, ...args] = serverCommand.split(' ');
 
-    this.transport = new StdioClientTransport({
-      command,
-      args
-    });
+      this.transport = new StdioClientTransport({
+        command,
+        args
+      });
 
-    this.client = new Client(
-      {
-        name: 'in-memoria-vscode',
-        version: '0.1.0'
-      },
-      {
-        capabilities: {}
+      this.client = new Client(
+        {
+          name: 'in-memoria-vscode',
+          version: '0.1.0'
+        },
+        {
+          capabilities: {}
+        }
+      );
+
+      await this.client.connect(this.transport);
+      this.connected = true;
+    } catch (error: any) {
+      this.connected = false;
+      if (error.code === 'ENOENT') {
+        throw new Error('In Memoria server command not found. Install with: npm install -g in-memoria');
       }
-    );
-
-    await this.client.connect(this.transport);
-    this.connected = true;
+      throw new Error(`Failed to connect to In Memoria server: ${error.message}`);
+    }
   }
 
   disconnect(): void {

@@ -3,8 +3,22 @@
   "displayName": "In Memoria Visualizer",
   "description": "Visualize and explore codebase intelligence captured by In Memoria MCP server",
   "version": "0.1.0",
-  "publisher": "in-memoria",
+  "publisher": "MrDuck",
+  "author": {
+    "name": "Omprakash J",
+    "email": "omprakashjha02@gmail.com"
+  },
   "icon": "resources/icon.png",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pi22by7/in-memoria.git",
+    "directory": "vscode-extension"
+  },
+  "bugs": {
+    "url": "https://github.com/pi22by7/in-memoria/issues"
+  },
+  "homepage": "https://github.com/pi22by7/in-memoria#readme",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -18,7 +32,9 @@
     "mcp",
     "codebase-intelligence",
     "visualization",
-    "code-analysis"
+    "code-analysis",
+    "semantic-search",
+    "pattern-learning"
   ],
   "activationEvents": [
     "onStartupFinished"
