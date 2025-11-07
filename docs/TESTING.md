@@ -11,6 +11,7 @@ npm run test:coverage
 
 # Run integration tests (slower, end-to-end)
 npm run test:integration
+
 ```
 
 ## Test Structure: `tests/` vs `src/__tests__/`

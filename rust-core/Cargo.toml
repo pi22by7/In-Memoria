@@ -7,13 +7,13 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [features]
-default = ["napi-bindings", "all-languages"]
+default = ["all-languages"]
 napi-bindings = ["dep:napi", "dep:napi-derive"]
 
 # Language support features - allows selective compilation
 all-languages = [
   "javascript", "typescript", "python", "rust-lang", "go", 
-  "java", "c", "cpp", "csharp", "sql", "svelte"
+  "java", "c", "cpp", "csharp", "sql", "svelte", "php"
 ]
 core-languages = ["javascript", "typescript", "python", "rust-lang"]
 
@@ -29,6 +29,7 @@ cpp = ["dep:tree-sitter-cpp"]
 csharp = ["dep:tree-sitter-c-sharp"]
 sql = ["dep:tree-sitter-sequel"]
 svelte = ["dep:tree-sitter-svelte-ng"]
+php = ["dep:tree-sitter-php"]
 
 [dependencies]
 napi = { version = "3.4", default-features = false, features = ["napi6", "async", "tokio_rt"], optional = true }
@@ -45,6 +46,7 @@ tree-sitter-c = { version = "0.24.1", optional = true }
 tree-sitter-cpp = { version = "0.23.4", optional = true }
 tree-sitter-c-sharp = { version = "0.23.1", optional = true }
 tree-sitter-svelte-ng = { version = "1.0.2", optional = true }
+tree-sitter-php = { version = "0.24.2", optional = true }
 streaming-iterator = "0.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

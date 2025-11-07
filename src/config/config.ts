@@ -71,7 +71,7 @@ const DEFAULT_CONFIG: InMemoriaConfig = {
   analysis: {
     supportedLanguages: [
       'javascript', 'typescript', 'python', 'rust', 'go', 'java', 
-      'cpp', 'c', 'csharp', 'svelte', 'sql'
+      'cpp', 'c', 'csharp', 'svelte', 'sql', 'php'
     ],
     maxFileSize: 5 * 1024 * 1024, // 5MB
     skipDirectories: [

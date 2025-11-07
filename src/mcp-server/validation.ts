@@ -6,28 +6,11 @@ export const AnalyzeCodebaseSchema = z.object({
   path: z.string().min(1, 'Path is required')
 });
 
-export const GetFileContentSchema = z.object({
-  path: z.string().min(1, 'Path is required')
-});
-
-export const GetProjectStructureSchema = z.object({
-  path: z.string().min(1, 'Path is required'),
-  maxDepth: z.number().int().min(1).max(10).optional().default(5)
-});
-
 export const SearchCodebaseSchema = z.object({
   query: z.string().min(1, 'Query is required'),
   type: z.enum(['semantic', 'text', 'pattern']).optional().default('text'),
   language: z.string().optional(),
   limit: z.number().int().min(1).max(100).optional().default(20)
-});
-
-export const GenerateDocumentationSchema = z.object({
-  path: z.string().min(1, 'Path is required'),
-  format: z.enum(['markdown', 'html', 'json']).optional().default('markdown'),
-  includeArchitecture: z.boolean().optional().default(true),
-  includeExamples: z.boolean().optional().default(true),
-  outputPath: z.string().optional()
 });
 
 export const LearnCodebaseIntelligenceSchema = z.object({
@@ -74,13 +57,9 @@ export const AutoLearnIfNeededSchema = z.object({
   includeSetupSteps: z.boolean().optional().default(false)
 });
 
-export const GetLearningStatusSchema = z.object({
-  path: z.string().optional()
-});
-
-export const QuickSetupSchema = z.object({
+export const GetProjectBlueprintSchema = z.object({
   path: z.string().optional(),
-  skipLearning: z.boolean().optional().default(false)
+  includeFeatureMap: z.boolean().optional().default(true)
 });
 
 // Monitoring Tool Schemas
@@ -95,6 +74,10 @@ export const GetIntelligenceMetricsSchema = z.object({
 
 export const GetPerformanceStatusSchema = z.object({
   runBenchmark: z.boolean().optional().default(false)
+});
+
+export const HealthCheckSchema = z.object({
+  path: z.string().optional()
 });
 
 // Validation function
@@ -119,20 +102,17 @@ export function validateInput(schema: z.ZodSchema<any>, input: any, toolName: st
 // Tool name to schema mapping
 export const VALIDATION_SCHEMAS = {
   'analyze_codebase': AnalyzeCodebaseSchema,
-  'get_file_content': GetFileContentSchema,
-  'get_project_structure': GetProjectStructureSchema,
   'search_codebase': SearchCodebaseSchema,
-  'generate_documentation': GenerateDocumentationSchema,
   'learn_codebase_intelligence': LearnCodebaseIntelligenceSchema,
   'get_semantic_insights': GetSemanticInsightsSchema,
   'get_pattern_recommendations': GetPatternRecommendationsSchema,
   'predict_coding_approach': PredictCodingApproachSchema,
   'get_developer_profile': GetDeveloperProfileSchema,
   'contribute_insights': ContributeInsightsSchema,
+  'get_project_blueprint': GetProjectBlueprintSchema,
   'auto_learn_if_needed': AutoLearnIfNeededSchema,
-  'get_learning_status': GetLearningStatusSchema,
-  'quick_setup': QuickSetupSchema,
   'get_system_status': GetSystemStatusSchema,
   'get_intelligence_metrics': GetIntelligenceMetricsSchema,
-  'get_performance_status': GetPerformanceStatusSchema
+  'get_performance_status': GetPerformanceStatusSchema,
+  'health_check': HealthCheckSchema
 } as const;

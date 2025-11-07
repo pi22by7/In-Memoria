@@ -18,11 +18,12 @@ describe('MonitoringTools', () => {
 
   beforeEach(() => {
     tempDir = mkdtempSync(join(tmpdir(), 'monitoring-test-'));
-    database = new SQLiteDatabase(join(tempDir, 'test.db'));
+    const dbPath = join(tempDir, 'test.db');
+    database = new SQLiteDatabase(dbPath);
     vectorDB = new SemanticVectorDB();
     semanticEngine = new SemanticEngine(database, vectorDB);
     patternEngine = new PatternEngine(database);
-    monitoringTools = new MonitoringTools(semanticEngine, patternEngine, database);
+    monitoringTools = new MonitoringTools(semanticEngine, patternEngine, database, dbPath);
   });
 
   afterEach(() => {
@@ -164,11 +165,12 @@ describe('MonitoringTools', () => {
     it('should expose correct tool definitions', () => {
       const tools = monitoringTools.tools;
 
-      expect(tools).toHaveLength(3);
+      expect(tools).toHaveLength(4);
       expect(tools.map(t => t.name)).toEqual([
         'get_system_status',
         'get_intelligence_metrics',
-        'get_performance_status'
+        'get_performance_status',
+        'health_check'
       ]);
 
       // Verify all tools have proper schemas

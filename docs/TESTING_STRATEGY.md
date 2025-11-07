@@ -84,25 +84,9 @@ In-Memoria uses a multi-layered testing approach to ensure reliability, performa
 - 🚫 Not part of CI/CD
 - ✅ Useful for rapid iteration
 
-### 4. Performance Tests (`benchmarks/`)
+### 4. Performance Tests (Deferred)
 
-**Location**: `benchmarks/`  
-**Framework**: Custom benchmark suite  
-**Purpose**: Performance regression detection and optimization
-
-**Categories**:
-
-- **Parsing Performance**: Large file parsing speed
-- **Database Queries**: Query optimization benchmarks
-- **Vector Operations**: Embedding and similarity search
-- **Memory Usage**: Memory leak detection
-
-**Characteristics**:
-
-- 📊 Generates metrics and reports
-- ⚠️ Long execution time
-- 🔍 Run on-demand or nightly
-- ✅ Tracks performance over time
+Benchmark scripts were removed for the core-only PHP landing. Reintroduce parsing/database/vector benchmarks alongside telemetry tooling in a follow-up PR.
 
 ## Test Structure
 
@@ -124,9 +108,6 @@ In-Memoria/
 │       ├── test-mcp-client.js
 │       ├── test-server-lifecycle.js
 │       └── test-error-handling.js
-├── benchmarks/                 # Performance tests
-│   ├── parsing-benchmark.js
-│   └── database-benchmark.js
 └── vitest.config.ts            # Vitest configuration
 ```
 
@@ -206,16 +187,6 @@ node tests/test-learning.js
 
 # Run with debug output
 DEBUG=* node tests/test-simple.js
-```
-
-#### Performance Tests
-
-```bash
-# Run all benchmarks
-npm run benchmark
-
-# Run specific benchmark
-node benchmarks/parsing-benchmark.js
 ```
 
 ## Writing Tests

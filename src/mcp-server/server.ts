@@ -89,7 +89,8 @@ export class CodeCartographerMCP {
       this.monitoringTools = new MonitoringTools(
         this.semanticEngine,
         this.patternEngine,
-        this.database
+        this.database,
+        dbPath
       );
       Logger.info('Tool collections initialized');
 

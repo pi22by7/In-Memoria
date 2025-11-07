@@ -186,22 +186,19 @@ describe('Input Validation', () => {
     it('should contain all expected tool schemas', () => {
       const expectedTools = [
         'analyze_codebase',
-        'get_file_content', 
-        'get_project_structure',
         'search_codebase',
-        'generate_documentation',
         'learn_codebase_intelligence',
         'get_semantic_insights',
         'get_pattern_recommendations',
         'predict_coding_approach',
         'get_developer_profile',
         'contribute_insights',
+        'get_project_blueprint',
         'auto_learn_if_needed',
-        'get_learning_status',
-        'quick_setup',
         'get_system_status',
         'get_intelligence_metrics',
-        'get_performance_status'
+        'get_performance_status',
+        'health_check'
       ];
 
       expectedTools.forEach(toolName => {
@@ -209,7 +206,7 @@ describe('Input Validation', () => {
         expect(VALIDATION_SCHEMAS[toolName as keyof typeof VALIDATION_SCHEMAS]).toBeDefined();
       });
 
-      expect(Object.keys(VALIDATION_SCHEMAS)).toHaveLength(17);
+      expect(Object.keys(VALIDATION_SCHEMAS)).toHaveLength(14);
     });
 
     it('should have working schemas for all tools', () => {

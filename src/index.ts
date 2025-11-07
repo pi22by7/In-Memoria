@@ -149,7 +149,10 @@ async function startWatcher(path: string): Promise<void> {
       `${path}/**/*.py`,
       `${path}/**/*.rs`,
       `${path}/**/*.go`,
-      `${path}/**/*.java`
+      `${path}/**/*.java`,
+      `${path}/**/*.php`,
+      `${path}/**/*.phtml`,
+      `${path}/**/*.inc`
     ],
     includeContent: true
   });
@@ -188,7 +191,7 @@ async function learnCodebase(path: string): Promise<void> {
   try {
     // Estimate file count for summary
     const glob = (await import('glob')).glob;
-    const files = await glob('**/*.{ts,tsx,js,jsx,py,rs,go,java,c,cpp,svelte,vue}', {
+    const files = await glob('**/*.{ts,tsx,js,jsx,py,rs,go,java,c,cpp,svelte,vue,php,phtml,inc}', {
       cwd: path,
       ignore: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.git/**'],
       nodir: true

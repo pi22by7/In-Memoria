@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { CircuitBreaker, CircuitState, createOpenAICircuitBreaker, createRustAnalyzerCircuitBreaker } from '../utils/circuit-breaker.js';
+import { CircuitBreaker, CircuitBreakerError, CircuitState, createOpenAICircuitBreaker, createRustAnalyzerCircuitBreaker } from '../utils/circuit-breaker.js';
 
 describe('CircuitBreaker', () => {
   let circuitBreaker: CircuitBreaker;
@@ -106,11 +106,13 @@ describe('CircuitBreaker', () => {
       expect(fallback).toHaveBeenCalledTimes(1);
     });
 
-    it('should throw original error if fallback also fails', async () => {
+    it('should surface combined error context if fallback also fails', async () => {
       const primaryOperation = vi.fn().mockRejectedValue(new Error('Primary failed'));
       const fallback = vi.fn().mockRejectedValue(new Error('Fallback failed'));
       
-      await expect(circuitBreaker.execute(primaryOperation, fallback)).rejects.toThrow('Primary failed');
+      const execution = circuitBreaker.execute(primaryOperation, fallback);
+      await expect(execution).rejects.toThrowError(CircuitBreakerError);
+      await expect(execution).rejects.toThrow('Both primary and fallback operations failed');
     });
   });
 

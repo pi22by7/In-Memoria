@@ -195,6 +195,10 @@ impl SemanticAnalyzer {
                 let extractor = PythonExtractor::new();
                 self.walk_and_extract(tree.root_node(), file_path, content, &extractor, &mut concepts)?;
             }
+            "php" => {
+                let extractor = PhpExtractor::new();
+                self.walk_and_extract(tree.root_node(), file_path, content, &extractor, &mut concepts)?;
+            }
             "sql" => {
                 let extractor = SqlExtractor::new();
                 self.walk_and_extract(tree.root_node(), file_path, content, &extractor, &mut concepts)?;
@@ -254,13 +258,20 @@ impl SemanticAnalyzer {
     async fn extract_concepts(&mut self, path: &str) -> Result<Vec<SemanticConcept>, ParseError> {
         let mut all_concepts = Vec::new();
         let mut processed_count = 0;
+        let debug_php_enabled = std::env::var("IN_MEMORIA_DEBUG_PHP").is_ok();
 
         for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
             if entry.file_type().is_file() {
                 let file_path = entry.path();
 
-                // Skip non-source files and common directories
+                if debug_php_enabled {
+                    eprintln!("[PHP DEBUG] entry {}", file_path.display());
+                }
+
                 if self.config.should_analyze_file(file_path) {
+                    if debug_php_enabled {
+                        eprintln!("[PHP DEBUG] processing file {}", file_path.display());
+                    }
                     processed_count += 1;
                     
                     // Prevent processing too many files
@@ -299,6 +310,8 @@ impl SemanticAnalyzer {
                             continue;
                         }
                     }
+                } else if debug_php_enabled {
+                    eprintln!("[PHP DEBUG] skipped file {}", file_path.display());
                 }
             }
         }
@@ -321,6 +334,7 @@ impl SemanticAnalyzer {
                         "js" | "jsx" => Some("javascript"),
                         "rs" => Some("rust"),
                         "py" => Some("python"),
+                        "php" | "phtml" | "inc" => Some("php"),
                         "sql" => Some("sql"),
                         "go" => Some("go"),
                         "java" => Some("java"),
@@ -370,6 +384,12 @@ impl HasExtractConcepts for RustExtractor {
 impl HasExtractConcepts for PythonExtractor {
     fn extract_concepts(&self, node: tree_sitter::Node<'_>, file_path: &str, content: &str, concepts: &mut Vec<SemanticConcept>) -> Result<(), ParseError> {
         PythonExtractor::extract_concepts(self, node, file_path, content, concepts)
+    }
+}
+
+impl HasExtractConcepts for PhpExtractor {
+    fn extract_concepts(&self, node: tree_sitter::Node<'_>, file_path: &str, content: &str, concepts: &mut Vec<SemanticConcept>) -> Result<(), ParseError> {
+        PhpExtractor::extract_concepts(self, node, file_path, content, concepts)
     }
 }
 
@@ -712,7 +732,15 @@ mod tests {
             analyzer.analyze_file_content("test.svelte".to_string(), svelte_content.to_string()).await
         };
         assert!(svelte_result.is_ok(), "Svelte parsing should succeed");
-        
+
+        // Test PHP
+        let php_content = "<?php\nclass Greeter {\n    public function greet(): string {\n        return 'Hello';\n    }\n}\n";
+        println!("🔍 Testing PHP parsing...");
+        let php_result = unsafe {
+            analyzer.analyze_file_content("Greeter.php".to_string(), php_content.to_string()).await
+        };
+        assert!(php_result.is_ok(), "PHP parsing should succeed");
+
         println!("✅ All language parsing tests passed!");
     }
 

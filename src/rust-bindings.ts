@@ -6,6 +6,18 @@ import { fileURLToPath } from 'url';
 const require = createRequire(import.meta.url);
 
 function loadNativeBinary() {
+  // Respect explicit native binding overrides if provided (used in CI telemetry workflows)
+  if (process.env.NAPI_RS_NATIVE_LIBRARY_PATH) {
+    try {
+      return require(process.env.NAPI_RS_NATIVE_LIBRARY_PATH);
+    } catch (error) {
+      console.error(
+        `[RUST-BINDINGS WARN] Failed to load from NAPI_RS_NATIVE_LIBRARY_PATH: ${error}`
+      );
+      // Fall through to platform detection below
+    }
+  }
+
   const { platform, arch } = process;
   
   // Map Node.js platform/arch to our package names

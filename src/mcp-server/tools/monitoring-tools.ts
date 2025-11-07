@@ -3,16 +3,18 @@ import { SemanticEngine } from '../../engines/semantic-engine.js';
 import { PatternEngine } from '../../engines/pattern-engine.js';
 import { SQLiteDatabase } from '../../storage/sqlite-db.js';
 import { existsSync, statSync } from 'fs';
-import { join, dirname } from 'path';
+import { dirname } from 'path';
 import { PathValidator } from '../../utils/path-validator.js';
 import { config } from '../../config/config.js';
 import { Logger } from '../../utils/logger.js';
+import { detectLanguageFromPath } from '../../utils/language-registry.js';
 
 export class MonitoringTools {
   constructor(
     private semanticEngine: SemanticEngine,
     private patternEngine: PatternEngine,
-    private database: SQLiteDatabase
+    private database: SQLiteDatabase,
+    private readonly databaseFilePath?: string
   ) { }
 
   get tools(): Tool[] {
@@ -254,8 +256,13 @@ export class MonitoringTools {
         database: {} as any,
         memory: {} as any,
         system: {} as any,
-        benchmark: {} as any
+        benchmark: {} as any,
+        intelligence: {} as any
       };
+
+      let concepts: Array<{ filePath: string }> = [];
+      let patterns: any[] = [];
+      let conceptsByLanguage: Record<string, number> = {};
 
       // Database performance
       const dbPath = this.getDatabasePath();
@@ -267,19 +274,44 @@ export class MonitoringTools {
         };
         performance.database.lastModified = stats.mtime.toISOString();
 
-        // Query performance test
-        const queryStart = Date.now();
-        const concepts = this.database.getSemanticConcepts();
-        const queryTime = Date.now() - queryStart;
+        const conceptQueryStart = Date.now();
+        concepts = this.database.getSemanticConcepts();
+        const conceptsMs = Date.now() - conceptQueryStart;
+
+        const patternQueryStart = Date.now();
+        patterns = this.database.getDeveloperPatterns();
+        const patternsMs = Date.now() - patternQueryStart;
+
+        const rating = conceptsMs < 100 ? 'excellent'
+          : conceptsMs < 500 ? 'good'
+            : conceptsMs < 1000 ? 'fair'
+              : 'poor';
 
         performance.database.queryPerformance = {
-          conceptQueryTime: queryTime,
+          conceptsMs,
+          patternsMs,
           conceptCount: concepts.length,
-          performanceRating: queryTime < 100 ? 'excellent' :
-            queryTime < 500 ? 'good' :
-              queryTime < 1000 ? 'fair' : 'poor'
+          patternsCount: patterns.length,
+          performanceRating: rating
         };
       }
+
+      if (concepts.length > 0) {
+        conceptsByLanguage = concepts.reduce<Record<string, number>>((acc, concept) => {
+          const language = detectLanguageFromPath(concept.filePath);
+          if (!acc[language]) {
+            acc[language] = 0;
+          }
+          acc[language] += 1;
+          return acc;
+        }, {});
+      }
+
+      performance.intelligence = {
+        conceptsByLanguage,
+        totalConcepts: concepts.length,
+        totalPatterns: patterns.length
+      };
 
       // Memory usage
       const memUsage = process.memoryUsage();
@@ -421,8 +453,10 @@ export class MonitoringTools {
   }
 
   private getDatabasePath(): string {
-    // This is a simplified version - in reality you'd get this from configuration
-    return join(process.cwd(), 'in-memoria.db');
+    if (this.databaseFilePath) {
+      return this.databaseFilePath;
+    }
+    return config.getDatabasePath();
   }
 
   private getDatabaseSize(): number {

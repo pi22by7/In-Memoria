@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.7] - 2025-11-03
+
+### ✨ **Added**
+
+- **PHP language support (core)** – Introduced PHP extractor in the Rust engine, language registry wiring, and the `sandbox-php-sample` fixture for local smoke testing.
+
+### 🎯 **Improved**
+
+- **Monitoring insights** – `get_performance_status` now reports per-language concept counts plus concept/pattern query timings (`conceptsMs`/`patternsMs`) to support future telemetry gating.
+
+### 📝 **Documentation**
+
+- README now highlights PHP as a supported language alongside the existing stack.
+
+
 ## [0.5.6] - 2025-10-30
 
 ### 🐛 **Fixed**

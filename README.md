@@ -138,7 +138,7 @@ In Memoria is built on Rust + TypeScript, using the Model Context Protocol to co
 
 **Rust Layer** - Fast, native processing:
 
-- Tree-sitter AST parsing for 11 languages (TypeScript, JavaScript, Python, Rust, Go, Java, C/C++, C#, Svelte, SQL)
+- Tree-sitter AST parsing for 12 languages (TypeScript, JavaScript, Python, PHP, Rust, Go, Java, C/C++, C#, Svelte, SQL)
 - Blueprint analyzer (detects project structure, entry points, architecture patterns)
 - Pattern learner (statistical analysis of your coding style)
 - Semantic engine (understands code relationships and concepts)
@@ -264,6 +264,7 @@ Native AST parsing via tree-sitter for:
 
 - TypeScript & JavaScript (including JSX/TSX)
 - Python
+- PHP
 - Rust
 - Go
 - Java
