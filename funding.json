@@ -15,7 +15,7 @@
         {
             "guid": "in-memoria",
             "name": "In Memoria",
-            "description": "Economic infrastructure for sustainable AI-assisted development with ~3,000 monthly npm downloads. In-Memoria is an MCP (Model Context Protocol) server that solves the token efficiency crisis through persistent intelligence and input optimization. As AI inference costs rise due to power and compute constraints, In-Memoria addresses waste at the source: 93% reduction in project context tokens, eliminating redundant retransmission, and enabling cumulative intelligence. Built with Rust core and TypeScript orchestration, it provides AST-based semantic analysis for 11 languages, pattern learning, smart file routing, and token-optimized project blueprints. Works with Claude, Copilot, Cursor, and any MCP-compatible AI assistant. Currently at v0.5.7 with 98.3% test pass rate and zero memory leaks. Serves as foundational infrastructure enabling cost-effective, environmentally sustainable AI development workflows globally while maintaining local-first privacy.",
+            "description": "Economic infrastructure for sustainable AI-assisted development with ~3,000 monthly npm downloads. In-Memoria is an MCP (Model Context Protocol) server that solves the token efficiency crisis through persistent intelligence and input optimization. As AI inference costs rise due to power and compute constraints, In-Memoria addresses waste at the source: 93% reduction in project context tokens, eliminating redundant retransmission, and enabling cumulative intelligence. Built with Rust core and TypeScript orchestration, it provides AST-based semantic analysis for 11 languages, pattern learning, smart file routing, and token-optimized project blueprints. Works with Claude, Copilot, Cursor, and any MCP-compatible AI assistant. Currently at v0.5.8 with 98.3% test pass rate and zero memory leaks. Serves as foundational infrastructure enabling cost-effective, environmentally sustainable AI development workflows globally while maintaining local-first privacy.",
             "webpageUrl": {
                 "url": "https://github.com/pi22by7/in-memoria",
                 "wellKnown": "https://github.com/pi22by7/in-memoria/blob/main/.well-known/funding-manifest-urls"
@@ -66,7 +66,7 @@
                 "status": "active",
                 "name": "Annual Sustainability Grant",
                 "description": "Part-to-full-time development funding for one year. Enables: (1) v1.0 stable release, (2) Enhanced vector search and multi-project intelligence, (3) Comprehensive documentation, (4) Active community support, (5) Performance optimization for enterprise codebases, (6) Team collaboration features. Accelerates In-Memoria as sustainable AI infrastructure while maintaining solo maintainer focus.",
-                "amount": 50000,
+                "amount": 10000,
                 "currency": "USD",
                 "frequency": "yearly",
                 "channels": [
@@ -78,7 +78,7 @@
                 "status": "active",
                 "name": "Monthly Development Support",
                 "description": "Monthly funding to support part-time development, maintenance, and community engagement. Enables continued feature development, bug fixes, documentation improvements, and user support.",
-                "amount": 5000,
+                "amount": 1000,
                 "currency": "USD",
                 "frequency": "monthly",
                 "channels": [
@@ -91,7 +91,7 @@
                 "status": "active",
                 "name": "Strategic Contribution",
                 "description": "Substantial one-time contribution for accelerated feature development or specific roadmap priorities. Suitable for organizations benefiting from In-Memoria's token efficiency.",
-                "amount": 1000,
+                "amount": 500,
                 "currency": "USD",
                 "frequency": "one-time",
                 "channels": [

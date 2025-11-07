@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.8] - 2025-11-07
+
 ### ✨ **Added**
 
 - **Enhanced PHP language support** – Extended PHP extractor with modern PHP features
@@ -22,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed clippy warnings (added Default impl, unused variable parameter)
 - **Debug logging** – Made debug statements language-agnostic (`IN_MEMORIA_DEBUG_PHP` → `IN_MEMORIA_DEBUG`)
 
+### 🔧 **Changed**
+
+- **Sandbox structure** – Reorganized test fixtures from `sandbox-php-sample/` to `sandboxes/php/` for multi-language support
+
 ### 📝 **Documentation**
 
 - Documented extension mapping behavior (keys without leading dots)
@@ -32,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ **Added**
 
-- **PHP language support (core)** – Introduced PHP extractor in the Rust engine, language registry wiring, and the `sandbox-php-sample` fixture for local smoke testing.
+- **PHP language support (core)** – Introduced PHP extractor in the Rust engine, language registry wiring, and the `sandboxes/php` fixture for local smoke testing.
 
 ### 🎯 **Improved**
 

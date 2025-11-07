@@ -32,4 +32,4 @@ body:
     id: version
     attributes:
       label: Version
-      placeholder: "0.5.7"
+      placeholder: "0.5.8"
