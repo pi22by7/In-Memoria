@@ -373,19 +373,7 @@ npm run build
 npm run dev          # Start in development mode
 npm test            # Run test suite (98.3% pass rate)
 npm run build:rust  # Build Rust components
-npm run test:php-integration   # PHP synthetic + real-world fixture harness
 ```
-
-**Telemetry sanity checks** (recommended before cutting a release):
-
-```bash
-npx tsx scripts/capture-performance-status.ts sandbox-php-sample tmp/metrics/php-smoke.json
-npx tsx scripts/capture-performance-status.ts sandbox-python-sample tmp/metrics/python-smoke.json
-npx tsx scripts/compare-language-metrics.ts tmp/metrics/php-smoke.json tmp/metrics/python-smoke.json 10
-npx tsx scripts/run-php-telemetry.ts --project sandbox-php-sample --max-concepts-ms 10 --min-php-concepts 5
-```
-
-The PHP sandbox fixture now yields **5 concepts** with 1 ms concept/pattern query times, matching the Python baseline and driving nightly telemetry thresholds.
 
 **Quality metrics**:
 

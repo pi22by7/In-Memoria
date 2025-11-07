@@ -11,16 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ **Added**
 
-- **PHP telemetry parity** – Expanded sandbox fixture to five classes and added `npm run test:php-integration` harness command for synthetic/real-world fixtures.
+- **PHP language support (core)** – Introduced PHP extractor in the Rust engine, language registry wiring, and the `sandbox-php-sample` fixture for local smoke testing.
 
 ### 🎯 **Improved**
 
-- **Monitoring insights** – `get_performance_status` now reports per-language concept counts plus concept/pattern query timings (`conceptsMs`/`patternsMs`) to support telemetry gating.
+- **Monitoring insights** – `get_performance_status` now reports per-language concept counts plus concept/pattern query timings (`conceptsMs`/`patternsMs`) to support future telemetry gating.
 
 ### 📝 **Documentation**
 
-- README highlights PHP as first-class, documents telemetry sanity checks, and references the new harness command.
-- Testing guides (`docs/TESTING*.md`) and release checklist include `npm run test:php-integration` and updated telemetry thresholds (≥5 PHP concepts, ≤10 ms concept queries).
+- README now highlights PHP as a supported language alongside the existing stack.
 
 
 ## [0.5.6] - 2025-10-30

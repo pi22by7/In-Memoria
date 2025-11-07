@@ -36,7 +36,6 @@
     "test:integration": "npm run build && node tests/run-all.js integration",
     "test:manual": "npm run build && node tests/run-all.js",
     "test:all": "npm run test:unit && npm run test:integration",
-    "test:php-integration": "tsx scripts/php-integration-check.ts",
     "typecheck": "tsc --noEmit",
     "start": "node dist/index.js server",
     "prepublishOnly": "npm run build",

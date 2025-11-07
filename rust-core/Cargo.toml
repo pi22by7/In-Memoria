@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [features]
-default = ["napi-bindings", "all-languages"]
+default = ["all-languages"]
 napi-bindings = ["dep:napi", "dep:napi-derive"]
 
 # Language support features - allows selective compilation

@@ -21,7 +21,7 @@
     "node": ">= 10"
   },
   "scripts": {
-    "build": "napi build --platform --release",
-    "build:debug": "napi build --platform"
+    "build": "napi build --platform --release --features napi-bindings",
+    "build:debug": "napi build --platform --features napi-bindings"
   }
 }

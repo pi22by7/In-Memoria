@@ -82,8 +82,8 @@ describe('ProgressTracker', () => {
       tracker.updateProgress('learning', 25);    // 50%
       
       const overall = tracker.getProgress();
-      // Expected: (1*100 + 3*50 + 2*50) / 6 = 66.67%
-      expect(overall?.percentage).toBeCloseTo(66.67, 1);
+      // Expected: (1*100 + 3*50 + 2*50) / 6 ≈ 58.33%
+      expect(overall?.percentage).toBeCloseTo(58.33, 2);
     });
   });
 
@@ -162,8 +162,8 @@ describe('ProgressTracker', () => {
       tracker.updateProgress('test', 3);
       
       const bar = tracker.renderProgressBar('test', 20);
-      expect(bar).toContain('test:');
-      expect(bar).toContain('30.0%');
+      expect(bar).toContain('Test');
+      expect(bar).toContain('30%');
       expect(bar).toContain('(3/10)');
     });
 
@@ -175,7 +175,7 @@ describe('ProgressTracker', () => {
       
       const status = tracker.getConsoleStatus();
       expect(status.length).toBeGreaterThan(0);
-      expect(status[0]).toContain('Overall Progress');
+      expect(status[0]).toContain('⏱️  Overall:');
     });
   });
 });

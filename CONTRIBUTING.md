@@ -417,7 +417,6 @@ Add any other context or screenshots about the feature request.
 
 - [Architecture Decision Records](docs/adr/)
 - [API Documentation](docs/api/)
-- [Performance Benchmarks](docs/benchmarks/)
 - [Development Roadmap](TODO.md)
 
 ## ❓ Getting Help

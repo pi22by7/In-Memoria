@@ -1,6 +1,6 @@
 #![deny(clippy::all)]
 
-#[cfg(feature = "napi-bindings")]
+#[cfg(all(feature = "napi-bindings", not(test)))]
 use napi_derive::napi;
 // Core modules  
 pub mod types;
@@ -26,7 +26,7 @@ pub use parsing::ParserManager as AstParser; // Backwards compatibility alias
 pub use patterns::PatternLearner;
 pub use patterns::PatternLearningEngine as LegacyPatternLearner;
 
-#[cfg(feature = "napi-bindings")]
+#[cfg(all(feature = "napi-bindings", not(test)))]
 #[napi]
 pub fn init_core() -> String {
     "In Memoria Rust Core initialized".to_string()
