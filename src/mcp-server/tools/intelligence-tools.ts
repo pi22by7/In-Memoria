@@ -288,7 +288,8 @@ export class IntelligenceTools {
     relatedFiles?: string[];
   }> {
     const context = CodingContextSchema.parse(args);
-    const patterns = this.database.getDeveloperPatterns();
+    // Limit patterns fetched to prevent token overflow
+    const patterns = this.database.getDeveloperPatterns(undefined, 100);
 
     // Get relevant patterns based on context
     const relevantPatterns = await this.patternEngine.findRelevantPatterns(
@@ -297,11 +298,18 @@ export class IntelligenceTools {
       context.selectedCode
     );
 
+    // Truncate code examples to prevent token overflow
+    const truncateCode = (code: string, maxLength: number = 150): string => {
+      if (code.length <= maxLength) return code;
+      return code.substring(0, maxLength) + '...';
+    };
+
     const recommendations: PatternRecommendation[] = relevantPatterns.map(pattern => ({
       pattern: pattern.patternId,
       description: pattern.patternContent.description || 'Pattern recommendation',
       confidence: pattern.confidence,
-      examples: pattern.examples.map(ex => ex.code || ''),
+      // Limit to 2 examples per pattern, truncate each to 150 chars
+      examples: pattern.examples.slice(0, 2).map(ex => truncateCode(ex.code || '')),
       reasoning: `Based on ${pattern.frequency} similar occurrences in your codebase`
     }));
 
@@ -391,7 +399,8 @@ export class IntelligenceTools {
     includeRecentActivity?: boolean;
     includeWorkContext?: boolean;
   }): Promise<DeveloperProfile> {
-    const patterns = this.database.getDeveloperPatterns();
+    // Limit patterns to prevent token overflow (fetch top 50 patterns)
+    const patterns = this.database.getDeveloperPatterns(undefined, 50);
     const recentPatterns = patterns.filter(p => {
       const daysSinceLastSeen = Math.floor(
         (Date.now() - p.lastSeen.getTime()) / (1000 * 60 * 60 * 24)
@@ -399,12 +408,19 @@ export class IntelligenceTools {
       return daysSinceLastSeen <= 30; // Last 30 days
     });
 
+    // Truncate code examples to prevent token overflow
+    const truncateCode = (code: string, maxLength: number = 150): string => {
+      if (code.length <= maxLength) return code;
+      return code.substring(0, maxLength) + '...';
+    };
+
     const profile: DeveloperProfile = {
       preferredPatterns: patterns.slice(0, 10).map(p => ({
         pattern: p.patternId,
         description: p.patternContent.description || 'Developer pattern',
         confidence: p.confidence,
-        examples: p.examples.map(ex => ex.code || ''),
+        // Limit to 2 examples per pattern, truncate each to 150 chars
+        examples: p.examples.slice(0, 2).map(ex => truncateCode(ex.code || '')),
         reasoning: `Used ${p.frequency} times`
       })),
       codingStyle: {

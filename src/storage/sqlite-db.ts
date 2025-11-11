@@ -206,7 +206,7 @@ export class SQLiteDatabase {
     );
   }
 
-  getDeveloperPatterns(patternType?: string): DeveloperPattern[] {
+  getDeveloperPatterns(patternType?: string, limit?: number): DeveloperPattern[] {
     let query = 'SELECT * FROM developer_patterns';
     let params: any[] = [];
 
@@ -216,6 +216,15 @@ export class SQLiteDatabase {
     }
 
     query += ' ORDER BY frequency DESC, confidence DESC';
+
+    // Apply limit to prevent token overflow (default: 50 patterns max)
+    if (limit !== undefined && limit > 0) {
+      query += ' LIMIT ?';
+      params.push(limit);
+    } else if (limit === undefined) {
+      // Default limit to prevent unbounded queries
+      query += ' LIMIT 50';
+    }
 
     const stmt = this.db.prepare(query);
     const rows = stmt.all(...params) as any[];

@@ -316,8 +316,8 @@ export class PatternEngine {
     // console.error(`   currentFile: ${currentFile || 'undefined'}`);
     // console.error(`   selectedCode: ${selectedCode ? `${selectedCode.length} chars` : 'undefined'}`);
 
-    // Get all patterns from database
-    const dbPatterns = this.database.getDeveloperPatterns();
+    // Limit patterns fetched to prevent token overflow (top 200 most used patterns)
+    const dbPatterns = this.database.getDeveloperPatterns(undefined, 200);
     // console.error(`   Retrieved ${dbPatterns.length} patterns from database`);
 
     if (dbPatterns.length === 0) {
@@ -474,12 +474,12 @@ export class PatternEngine {
     }
   }
 
-  async getPatternsByType(patternType: string): Promise<DeveloperPattern[]> {
-    return this.database.getDeveloperPatterns(patternType);
+  async getPatternsByType(patternType: string, limit?: number): Promise<DeveloperPattern[]> {
+    return this.database.getDeveloperPatterns(patternType, limit);
   }
 
-  async getAllPatterns(): Promise<DeveloperPattern[]> {
-    return this.database.getDeveloperPatterns();
+  async getAllPatterns(limit?: number): Promise<DeveloperPattern[]> {
+    return this.database.getDeveloperPatterns(undefined, limit);
   }
 
   async getPatternStatistics(): Promise<{
@@ -488,7 +488,8 @@ export class PatternEngine {
     mostUsed: DeveloperPattern[];
     recentlyUsed: DeveloperPattern[];
   }> {
-    const allPatterns = this.database.getDeveloperPatterns();
+    // Limit to 100 patterns to prevent token overflow in statistics
+    const allPatterns = this.database.getDeveloperPatterns(undefined, 100);
     
     const byType: Record<string, number> = {};
     for (const pattern of allPatterns) {
@@ -601,8 +602,8 @@ export class PatternEngine {
   private async updatePatternUsageStats(change: FileChange): Promise<void> {
     if (!change.content || !change.language) return;
 
-    // Track usage of different patterns based on file content
-    const patterns = this.database.getDeveloperPatterns();
+    // Track usage of different patterns based on file content (limit to 100 most common)
+    const patterns = this.database.getDeveloperPatterns(undefined, 100);
     
     for (const pattern of patterns) {
       // Check if pattern is used in the changed file

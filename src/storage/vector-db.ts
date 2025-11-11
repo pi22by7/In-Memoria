@@ -47,9 +47,15 @@ export class SemanticVectorDB {
   private readonly EMBEDDING_CACHE_SIZE = 1000;
   private readonly EMBEDDING_DIMENSION = 1536; // OpenAI ada-002 dimension
   private readonly LOCAL_EMBEDDING_DIMENSION = 384; // All-MiniLM-L6-v2 dimension
-  
+
   // Embedding progress tracking
   private hasLoggedEmbeddingStart = false;
+
+  // Rate limiting for OpenAI API (conservative: 50 requests per minute)
+  private openaiRequestQueue: Promise<any>[] = [];
+  private readonly OPENAI_MAX_RPM = 50; // Conservative limit (OpenAI allows 3000 RPM)
+  private readonly OPENAI_RATE_LIMIT_WINDOW = 60000; // 1 minute in ms
+  private openaiRequestTimestamps: number[] = [];
 
   constructor(apiKey?: string) {
     this.db = new Surreal({
@@ -339,12 +345,41 @@ export class SemanticVectorDB {
   }
 
   /**
+   * Rate limit OpenAI API requests
+   */
+  private async waitForRateLimit(): Promise<void> {
+    const now = Date.now();
+
+    // Remove timestamps outside the rate limit window
+    this.openaiRequestTimestamps = this.openaiRequestTimestamps.filter(
+      timestamp => now - timestamp < this.OPENAI_RATE_LIMIT_WINDOW
+    );
+
+    // If we've hit the rate limit, wait
+    if (this.openaiRequestTimestamps.length >= this.OPENAI_MAX_RPM) {
+      const oldestRequest = this.openaiRequestTimestamps[0];
+      const waitTime = this.OPENAI_RATE_LIMIT_WINDOW - (now - oldestRequest);
+
+      if (waitTime > 0) {
+        Logger.info(`⏳ Rate limit reached. Waiting ${Math.ceil(waitTime / 1000)}s before next OpenAI API call...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+
+    // Record this request
+    this.openaiRequestTimestamps.push(Date.now());
+  }
+
+  /**
    * Get embeddings from OpenAI API using the official SDK
    */
   private async getOpenAIEmbedding(code: string): Promise<number[]> {
     if (!this.openaiClient) {
       throw new Error('OpenAI client not initialized');
     }
+
+    // Apply rate limiting
+    await this.waitForRateLimit();
 
     return this.openaiCircuitBreaker.execute(async () => {
       const cleanCode = this.preprocessCodeForEmbedding(code);

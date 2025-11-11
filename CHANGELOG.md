@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 **Fixed**
+
+- **Token overflow in MCP tools** – Fixed `get_pattern_recommendations` and `get_developer_profile` exceeding Claude Code's 25,000 token limit
+  - Added `limit` parameter to `getDeveloperPatterns()` with default limit of 50 patterns
+  - Truncated code examples to 2 per pattern, max 150 characters each
+  - Reduced response size from ~58,000 tokens to ~2,000-5,000 tokens (90% reduction)
+  - Applied limits across all pattern-fetching methods in pattern engine
+- **Interactive setup password input** – Fixed OpenAI API key input displaying characters with asterisks (e.g., 'y*')
+  - Clear terminal echo before writing masking asterisk
+  - Prevents double display of typed characters in raw terminal mode
+  - Issue: [#21](https://github.com/anthropics/in-memoria/issues/21)
+
+### 🎯 **Improved**
+
+- **OpenAI API key transparency and cost control** – Enhanced clarity around OpenAI embedding usage
+  - Updated interactive setup to clearly explain free local embeddings vs. optional OpenAI embeddings
+  - Added cost estimates before learning phase (~$0.50-$2 for large codebases)
+  - Added rate limiting (50 RPM) to prevent hitting OpenAI API limits
+  - Display real-time API usage info during learning process
+  - Clarified that OpenAI key is **optional** - local embeddings work great without it
+  - Issue: [#21](https://github.com/anthropics/in-memoria/issues/21)
+
 ## [0.5.8] - 2025-11-07
 
 ### ✨ **Added**

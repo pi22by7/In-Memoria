@@ -90,15 +90,29 @@ export class InteractiveSetup {
     config.enableRealTimeAnalysis = await this.confirm('Enable real-time analysis?', true);
     config.enablePatternLearning = await this.confirm('Enable pattern learning?', true);
 
-    const enhancedEmbeddings = await this.confirm('Enable enhanced vector embeddings? (requires OpenAI API key)', false);
-    config.enableVectorEmbeddings = enhancedEmbeddings;
+    console.log('\n📊 Vector Embeddings for Semantic Search:');
+    console.log('   In Memoria uses embeddings to enable semantic code search.');
+    console.log('   • Default: Free local embeddings (transformers.js, no API key needed)');
+    console.log('   • Optional: OpenAI embeddings (higher quality, uses API credits)');
+    console.log('   ');
+    const useOpenAI = await this.confirm('Use OpenAI embeddings? (optional, costs ~$0.50-$2 for large projects)', false);
+    config.enableVectorEmbeddings = useOpenAI;
 
-    if (enhancedEmbeddings) {
+    if (useOpenAI) {
+      console.log('\n💡 OpenAI Embedding Info:');
+      console.log('   • Model: text-embedding-ada-002 ($0.0004 per 1K tokens)');
+      console.log('   • Usage: 1 API call per concept/pattern during learning');
+      console.log('   • Estimate: ~$0.50-$2 for a large codebase (1000+ files)');
+      console.log('   • Fallback: Auto-switches to local embeddings if API fails');
+      console.log('   ');
+
       const existingKey = process.env.OPENAI_API_KEY;
       if (existingKey) {
         const useExisting = await this.confirm(`Use existing OpenAI API key from environment?`, true);
         if (!useExisting) {
           config.openaiApiKey = await this.prompt('OpenAI API Key', '', true);
+        } else {
+          config.openaiApiKey = existingKey;
         }
       } else {
         config.openaiApiKey = await this.prompt('OpenAI API Key', '', true);
@@ -439,7 +453,9 @@ export class InteractiveSetup {
             }
           } else if (char >= ' ') {
             input += char;
-            process.stdout.write('*');
+            // Clear any echoed character and write asterisk
+            // In raw mode, some terminals still echo, so we need to clear it
+            process.stdout.write('\b \b*');
           }
         };
 
