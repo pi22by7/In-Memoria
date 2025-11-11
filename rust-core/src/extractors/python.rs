@@ -889,7 +889,7 @@ mod tests {
         let _ = extractor.extract_concepts(tree.root_node(), "test.py", code, &mut concepts);
         
         // Should find at least the class
-        assert!(concepts.len() > 0);
+        assert!(!concepts.is_empty());
     }
 
     #[test]
@@ -902,6 +902,6 @@ mod tests {
         let mut concepts = Vec::new();
         let _ = extractor.extract_concepts(tree.root_node(), "calc.py", code, &mut concepts);
         
-        assert!(concepts.len() > 0);
+        assert!(!concepts.is_empty());
     }
 }

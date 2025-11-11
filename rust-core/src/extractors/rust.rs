@@ -154,7 +154,7 @@ mod tests {
             .iter()
             .filter(|c| c.concept_type == "struct")
             .collect();
-        assert!(struct_concepts.len() > 0);
+        assert!(!struct_concepts.is_empty());
 
         let struct_concept = &struct_concepts[0];
         assert_eq!(struct_concept.name, "User");
@@ -174,7 +174,7 @@ mod tests {
             .iter()
             .filter(|c| c.concept_type == "struct") // Enums mapped as structs
             .collect();
-        assert!(enum_concepts.len() > 0);
+        assert!(!enum_concepts.is_empty());
 
         let enum_concept = &enum_concepts[0];
         assert_eq!(enum_concept.name, "Color");
@@ -192,7 +192,7 @@ mod tests {
             .iter()
             .filter(|c| c.concept_type == "function")
             .collect();
-        assert!(function_concepts.len() > 0);
+        assert!(!function_concepts.is_empty());
 
         let function_concept = &function_concepts[0];
         assert_eq!(function_concept.name, "calculate_total");
@@ -211,7 +211,7 @@ mod tests {
             .iter()
             .filter(|c| c.concept_type == "struct") // Traits mapped as structs
             .collect();
-        assert!(trait_concepts.len() > 0);
+        assert!(!trait_concepts.is_empty());
 
         let trait_concept = &trait_concepts[0];
         assert_eq!(trait_concept.name, "Display");
@@ -315,7 +315,7 @@ mod tests {
         let concepts = extract_all_concepts(&extractor, &tree, "complex.rs", code);
 
         // Should find multiple concepts
-        assert!(concepts.len() > 0);
+        assert!(!concepts.is_empty());
 
         let struct_concepts: Vec<_> = concepts
             .iter()
@@ -327,8 +327,8 @@ mod tests {
             .filter(|c| c.concept_type == "function")
             .collect();
 
-        assert!(struct_concepts.len() > 0);
-        assert!(function_concepts.len() > 0);
+        assert!(!struct_concepts.is_empty());
+        assert!(!function_concepts.is_empty());
 
         // Check for specific names
         let concept_names: Vec<&String> = concepts.iter().map(|c| &c.name).collect();
@@ -361,7 +361,7 @@ mod tests {
 
     #[test]
     fn test_extractor_default() {
-        let extractor = RustExtractor::default();
+        let extractor = RustExtractor;
         let code = "struct Test;";
         let tree = create_rust_tree(code);
 

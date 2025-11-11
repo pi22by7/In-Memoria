@@ -272,10 +272,11 @@ mod tests {
 
     #[test]
     fn test_custom_config() {
-        let mut config = AnalysisConfig::default();
-        config.max_file_size = 500_000; // 500KB
-        config.max_files = 500;
-        config.supported_extensions = vec!["ts", "js", "rs"];
+        let config = AnalysisConfig {
+            max_file_size: 500_000, // 500KB
+            max_files: 500,
+            supported_extensions: vec!["ts", "js", "rs"],
+        };
 
         assert_eq!(config.max_file_size, 500_000);
         assert_eq!(config.max_files, 500);

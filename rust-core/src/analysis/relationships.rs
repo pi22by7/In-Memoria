@@ -416,7 +416,7 @@ mod tests {
     #[test]
     fn test_relationship_learner_creation() {
         let _learner = RelationshipLearner::new();
-        assert!(true); // Constructor should work
+        // Constructor should work
     }
 
     #[test]

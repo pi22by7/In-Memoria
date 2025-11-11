@@ -420,8 +420,8 @@ mod tests {
         
         assert!(result.is_ok());
         let analysis = result.unwrap();
-        assert!(analysis.detected.len() >= 1);
-        assert!(analysis.recommendations.len() >= 1);
+        assert!(!analysis.detected.is_empty());
+        assert!(!analysis.recommendations.is_empty());
     }
 
     #[tokio::test]
@@ -452,7 +452,7 @@ mod tests {
         
         assert!(result.is_ok());
         let patterns = result.unwrap();
-        assert!(patterns.len() > 0);
+        assert!(!patterns.is_empty());
         assert_eq!(patterns[0].pattern_type, "function");
     }
 
@@ -488,7 +488,7 @@ mod tests {
         assert!(result.is_ok());
         let prediction = result.unwrap();
         assert!(prediction.confidence > 0.0);
-        assert!(prediction.patterns.len() > 0);
+        assert!(!prediction.patterns.is_empty());
         assert!(!prediction.approach.is_empty());
     }
 

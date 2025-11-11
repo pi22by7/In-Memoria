@@ -211,7 +211,7 @@ mod tests {
 
     #[test]
     fn test_multiple_concept_types() {
-        let concepts = vec![
+        let concepts = [
             create_test_concept("UserService", "class"),
             create_test_concept("IUserService", "interface"),
             create_test_concept("getUser", "function"),

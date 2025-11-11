@@ -289,7 +289,7 @@ mod tests {
         let root = tree.root_node();
         
         let children = NameExtractor::get_direct_children(root);
-        assert!(children.len() > 0);
+        assert!(!children.is_empty());
         
         // Should have a function declaration as a child
         let has_function = children.iter().any(|child| child.kind() == "function_declaration");

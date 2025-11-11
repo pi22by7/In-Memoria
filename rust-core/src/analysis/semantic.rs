@@ -473,8 +473,7 @@ mod tests {
             }
             Err(e) => {
                 println!("❌ Parsing failed: {}", e);
-                // Don't panic - assert with proper error message
-                assert!(false, "TypeScript parsing should succeed, but failed with: {}", e);
+                panic!("TypeScript parsing should succeed, but failed with: {}", e);
             }
         }
     }
@@ -501,8 +500,7 @@ mod tests {
             }
             Err(e) => {
                 println!("❌ Parsing failed: {}", e);
-                // Don't panic - assert with proper error message
-                assert!(false, "JavaScript parsing should succeed, but failed with: {}", e);
+                panic!("JavaScript parsing should succeed, but failed with: {}", e);
             }
         }
     }
@@ -529,8 +527,7 @@ mod tests {
             }
             Err(e) => {
                 println!("❌ Parsing failed: {}", e);
-                // Don't panic - assert with proper error message
-                assert!(false, "Python parsing should succeed, but failed with: {}", e);
+                panic!("Python parsing should succeed, but failed with: {}", e);
             }
         }
     }
@@ -557,8 +554,7 @@ mod tests {
             }
             Err(e) => {
                 println!("❌ Parsing failed: {}", e);
-                // Don't panic - assert with proper error message
-                assert!(false, "Rust parsing should succeed, but failed with: {}", e);
+                panic!("Rust parsing should succeed, but failed with: {}", e);
             }
         }
     }
@@ -576,7 +572,7 @@ mod tests {
         println!("Learned {} concepts from codebase", concepts.len());
         
         // Should find some concepts in the current Rust codebase
-        assert!(concepts.len() > 0);
+        assert!(!concepts.is_empty());
     }
 
     #[tokio::test]
@@ -633,7 +629,7 @@ mod tests {
         println!("- Complexity: {:?}", analysis.complexity);
         
         assert!(!analysis.languages.is_empty());
-        assert!(analysis.concepts.len() > 0);
+        assert!(!analysis.concepts.is_empty());
         assert!(analysis.complexity.file_count > 0);
     }
 
@@ -648,7 +644,7 @@ mod tests {
         
         assert!(result.is_ok());
         let concepts = result.unwrap();
-        assert!(concepts.len() > 0);
+        assert!(!concepts.is_empty());
         
         // Verify concept properties
         let concept = &concepts[0];
@@ -816,7 +812,7 @@ mod tests {
         
         assert!(result.is_ok());
         let concepts = result.unwrap();
-        assert!(concepts.len() > 0);
+        assert!(!concepts.is_empty());
         
         // Check that fallback extraction worked
         let concept = &concepts[0];

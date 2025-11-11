@@ -689,7 +689,7 @@ mod tests {
         assert!(manager.is_ok());
         
         let manager = manager.unwrap();
-        assert!(manager.parsers.len() > 0);
+        assert!(!manager.parsers.is_empty());
     }
 
     #[test]

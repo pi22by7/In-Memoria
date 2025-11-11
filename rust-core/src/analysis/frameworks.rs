@@ -451,7 +451,7 @@ mod tests {
     #[test]
     fn test_framework_detector_creation() {
         let _detector = FrameworkDetector::new();
-        assert!(true); // Constructor should work
+        // Constructor should work
     }
 
     #[tokio::test]

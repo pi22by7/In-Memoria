@@ -550,7 +550,7 @@ mod tests {
             .iter()
             .filter(|c| c.concept_type == "class")
             .collect();
-        assert!(class_concepts.len() > 0);
+        assert!(!class_concepts.is_empty());
 
         let class_concept = &class_concepts[0];
         assert_eq!(class_concept.name, "UserService");
@@ -570,7 +570,7 @@ mod tests {
             .iter()
             .filter(|c| c.concept_type == "class") // Interfaces mapped as classes
             .collect();
-        assert!(interface_concepts.len() > 0);
+        assert!(!interface_concepts.is_empty());
 
         let interface_concept = &interface_concepts[0];
         assert_eq!(interface_concept.name, "IUserService");
@@ -589,7 +589,7 @@ mod tests {
             .iter()
             .filter(|c| c.concept_type == "function")
             .collect();
-        assert!(function_concepts.len() > 0);
+        assert!(!function_concepts.is_empty());
 
         let function_concept = &function_concepts[0];
         assert_eq!(function_concept.name, "calculateTotal");
@@ -609,7 +609,7 @@ mod tests {
             .iter()
             .filter(|c| c.concept_type == "variable")
             .collect();
-        assert!(__variable_concepts.len() > 0);
+        assert!(!__variable_concepts.is_empty());
     }
 
     #[test]
@@ -624,7 +624,7 @@ mod tests {
             .iter()
             .filter(|c| c.concept_type == "class")
             .collect();
-        assert!(class_concepts.len() > 0);
+        assert!(!class_concepts.is_empty());
 
         let class_concept = &class_concepts[0];
         assert_eq!(class_concept.name, "Calculator");
@@ -642,7 +642,7 @@ mod tests {
             .iter()
             .filter(|c| c.concept_type == "function")
             .collect();
-        assert!(function_concepts.len() > 0);
+        assert!(!function_concepts.is_empty());
 
         let function_concept = &function_concepts[0];
         assert_eq!(function_concept.name, "hello");
@@ -661,13 +661,13 @@ mod tests {
             .iter()
             .filter(|c| c.concept_type == "variable")
             .collect();
-        assert!(__variable_concepts.len() > 0);
+        assert!(!__variable_concepts.is_empty());
 
         // Should find at least one variable
         let variable_names: Vec<&String> = __variable_concepts.iter().map(|c| &c.name).collect();
 
         // Note: The exact extraction depends on tree structure
-        assert!(variable_names.len() > 0);
+        assert!(!variable_names.is_empty());
     }
 
     #[test]
@@ -697,13 +697,13 @@ mod tests {
             .iter()
             .filter(|c| c.concept_type == "class")
             .collect();
-        assert!(class_concepts.len() > 0);
+        assert!(!class_concepts.is_empty());
 
         let function_concepts: Vec<_> = concepts
             .iter()
             .filter(|c| c.concept_type == "function")
             .collect();
-        assert!(function_concepts.len() > 0);
+        assert!(!function_concepts.is_empty());
 
         // Should find the class name
         let class_concept = &class_concepts[0];
@@ -722,7 +722,7 @@ mod tests {
             .iter()
             .filter(|c| c.concept_type == "class") // Type aliases mapped as classes
             .collect();
-        assert!(type_concepts.len() > 0);
+        assert!(!type_concepts.is_empty());
 
         let type_concept = &type_concepts[0];
         assert_eq!(type_concept.name, "UserType");
@@ -781,7 +781,7 @@ const third = () => {};
 
         let concepts = extract_all_concepts(&extractor, &tree, "test.js", code);
 
-        assert!(concepts.len() > 0);
+        assert!(!concepts.is_empty());
 
         let concept = &concepts[0];
         assert!(!concept.id.is_empty());
@@ -794,7 +794,7 @@ const third = () => {};
 
     #[test]
     fn test_extractor_default() {
-        let extractor = TypeScriptExtractor::default();
+        let extractor = TypeScriptExtractor;
         let code = "const test = 42;";
         let tree = create_js_tree(code);
 
@@ -848,7 +848,7 @@ const third = () => {};
         let concepts = extract_all_concepts(&extractor, &tree, "complex.ts", code);
 
         // Should find multiple concepts
-        assert!(concepts.len() > 0);
+        assert!(!concepts.is_empty());
 
         let class_concepts: Vec<_> = concepts
             .iter()
@@ -866,8 +866,8 @@ const third = () => {};
             .collect();
 
         // Should find interfaces, classes, types, and functions
-        assert!(class_concepts.len() > 0);
-        assert!(function_concepts.len() > 0);
+        assert!(!class_concepts.is_empty());
+        assert!(!function_concepts.is_empty());
 
         // Check specific concept names
         let concept_names: Vec<&String> = concepts.iter().map(|c| &c.name).collect();

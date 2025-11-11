@@ -244,7 +244,7 @@ mod tests {
 
         assert!(identifier_nodes.is_ok());
         let nodes = identifier_nodes.unwrap();
-        assert!(nodes.len() > 0);
+        assert!(!nodes.is_empty());
     }
 
     #[test]
@@ -268,7 +268,7 @@ mod tests {
 
         // Get function declarations as direct children of program
         let functions = walker.get_children_by_kind(root, "function_declaration");
-        assert!(functions.len() > 0);
+        assert!(!functions.is_empty());
     }
 
     #[test]

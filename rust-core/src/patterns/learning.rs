@@ -1961,8 +1961,7 @@ mod tests {
         assert!(engine
             .learning_metrics
             .confidence_distribution
-            .get("high")
-            .is_some());
+            .contains_key("high"));
     }
 
     #[tokio::test]
