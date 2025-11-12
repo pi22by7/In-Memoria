@@ -93,7 +93,7 @@ export class MonitoringTools {
 
     const status = {
       timestamp: new Date().toISOString(),
-      version: '0.5.8',
+      version: '0.6.0',
       status: 'operational',
       components: {} as any,
       intelligence: {} as any,
@@ -426,7 +426,6 @@ export class MonitoringTools {
       platform: process.platform,
       arch: process.arch,
       environment: {
-        hasOpenAI: !!process.env.OPENAI_API_KEY,
         workingDirectory: process.cwd()
       }
     };

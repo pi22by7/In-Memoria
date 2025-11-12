@@ -344,7 +344,7 @@ async function initializeProject(path: string): Promise<void> {
 
   // Create default configuration
   const defaultConfig = {
-    version: "0.5.8",
+    version: "0.6.0",
     intelligence: {
       enableRealTimeAnalysis: true,
       enablePatternLearning: true,

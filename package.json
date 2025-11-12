@@ -1,6 +1,6 @@
 {
   "name": "in-memoria",
-  "version": "0.5.8",
+  "version": "0.6.0",
   "mcpName": "me.pi22by7/in-memoria",
   "description": "Persistent intelligence infrastructure for agentic development",
   "main": "dist/index.js",
@@ -74,10 +74,10 @@
     "zod": "^4.1.12"
   },
   "optionalDependencies": {
-    "@in-memoria/darwin-arm64": "0.5.8",
-    "@in-memoria/darwin-x64": "0.5.8",
-    "@in-memoria/linux-x64": "0.5.8",
-    "@in-memoria/win32-x64": "0.5.8"
+    "@in-memoria/darwin-arm64": "0.6.0",
+    "@in-memoria/darwin-x64": "0.6.0",
+    "@in-memoria/linux-x64": "0.6.0",
+    "@in-memoria/win32-x64": "0.6.0"
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.4.1",

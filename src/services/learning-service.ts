@@ -140,7 +140,7 @@ export class LearningService {
           languagePrimary: codebaseAnalysis.languages?.[0],
           languagesDetected: codebaseAnalysis.languages || [],
           frameworkDetected: codebaseAnalysis.frameworks || [],
-          intelligenceVersion: '0.5.8',
+          intelligenceVersion: '0.6.0',
           lastFullScan: new Date()
         });
         insights.push(`   ✅ Created project metadata for ${path}`);

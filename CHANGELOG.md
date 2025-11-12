@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-11-12
+
 ### 🐛 **Fixed**
 
 - **Token overflow in MCP tools** – Fixed `get_pattern_recommendations` and `get_developer_profile` exceeding Claude Code's 25,000 token limit
@@ -22,11 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ✨ **Added**
 
 - **Persistent vector embeddings** – Vector embeddings now persist across restarts
-  - Switched from in-memory (`mem://`) to file-based RocksDB (`rocksdb://`)
-  - Embeddings stored in `in-memoria-vectors.db` file
+  - Switched from in-memory storage to file-based SurrealKV
+  - Embeddings automatically saved to `in-memoria-vectors.db`
   - No more re-embedding on every server restart
-  - Automatic `SURREAL_SYNC_DATA=true` enforcement for crash safety
-  - Configurable via `IN_MEMORIA_VECTOR_DB_PATH` environment variable
+  - Automatic crash-safe configuration
   - Significantly faster startup times for large codebases
 
 ### 🔥 **Removed**

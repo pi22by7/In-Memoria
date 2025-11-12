@@ -74,10 +74,10 @@ export class SemanticVectorDB {
 
   async initialize(collectionName: string = 'in-memoria'): Promise<void> {
     try {
-      // Use RocksDB for persistent storage of vector embeddings
+      // Use SurrealKV for persistent storage of vector embeddings
       // IMPORTANT: Requires SURREAL_SYNC_DATA=true for crash safety
       const dbPath = process.env.IN_MEMORIA_VECTOR_DB_PATH || 'in-memoria-vectors.db';
-      await this.db.connect(`rocksdb://${dbPath}`);
+      await this.db.connect(`surrealkv://${dbPath}`);
 
       // Use database and namespace
       await this.db.use({
