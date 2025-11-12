@@ -146,7 +146,7 @@ In Memoria is built on Rust + TypeScript, using the Model Context Protocol to co
 **TypeScript Layer** - MCP server and orchestration:
 
 - 13 specialized tools for AI assistants (organized into 4 categories)
-- SQLite for structured data, SurrealDB (in-memory) for vector search
+- SQLite for structured data, SurrealDB with SurrealKV for persistent vector embeddings
 - File watching for incremental updates
 - Smart routing that maps features to files
 
