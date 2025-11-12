@@ -19,7 +19,7 @@ Security updates are provided for the following versions:
 ### Local-First Security
 - **All data stays local** - no code or intelligence data is transmitted to external servers
 - **No telemetry** - In-Memoria doesn't collect usage data or send analytics
-- **Optional cloud features** - Vector embeddings (OpenAI) are opt-in only
+- **100% offline** - All vector embeddings generated locally using transformers.js
 
 ### Data Protection
 - **Filesystem access** - Only reads files you explicitly analyze

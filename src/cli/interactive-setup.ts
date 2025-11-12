@@ -90,34 +90,15 @@ export class InteractiveSetup {
     config.enableRealTimeAnalysis = await this.confirm('Enable real-time analysis?', true);
     config.enablePatternLearning = await this.confirm('Enable pattern learning?', true);
 
-    console.log('\n📊 Vector Embeddings for Semantic Search:');
-    console.log('   In Memoria uses embeddings to enable semantic code search.');
-    console.log('   • Default: Free local embeddings (transformers.js, no API key needed)');
-    console.log('   • Optional: OpenAI embeddings (higher quality, uses API credits)');
+    console.log('\n📊 Vector Embeddings:');
+    console.log('   In Memoria uses local embeddings (transformers.js) for semantic code search.');
+    console.log('   • 100% free - no API keys needed');
+    console.log('   • Runs entirely on your machine');
+    console.log('   • High quality embeddings with all-MiniLM-L6-v2 model');
     console.log('   ');
-    const useOpenAI = await this.confirm('Use OpenAI embeddings? (optional, costs ~$0.50-$2 for large projects)', false);
-    config.enableVectorEmbeddings = useOpenAI;
 
-    if (useOpenAI) {
-      console.log('\n💡 OpenAI Embedding Info:');
-      console.log('   • Model: text-embedding-ada-002 ($0.0004 per 1K tokens)');
-      console.log('   • Usage: 1 API call per concept/pattern during learning');
-      console.log('   • Estimate: ~$0.50-$2 for a large codebase (1000+ files)');
-      console.log('   • Fallback: Auto-switches to local embeddings if API fails');
-      console.log('   ');
-
-      const existingKey = process.env.OPENAI_API_KEY;
-      if (existingKey) {
-        const useExisting = await this.confirm(`Use existing OpenAI API key from environment?`, true);
-        if (!useExisting) {
-          config.openaiApiKey = await this.prompt('OpenAI API Key', '', true);
-        } else {
-          config.openaiApiKey = existingKey;
-        }
-      } else {
-        config.openaiApiKey = await this.prompt('OpenAI API Key', '', true);
-      }
-    }
+    // Always enable vector embeddings (using local)
+    config.enableVectorEmbeddings = true;
 
     // File watching configuration
     console.log('\n📁 File Watching Configuration:');
@@ -213,15 +194,6 @@ export class InteractiveSetup {
     console.log(`\n✅ Configuration saved`);
     console.log(`   📄 Location: ${configPath}`);
 
-    // Create environment file if API key provided
-    if (config.openaiApiKey) {
-      const envPath = join(configDir, '.env');
-      writeFileSync(envPath, `OPENAI_API_KEY=${config.openaiApiKey}\n`);
-      console.log(`\n✅ Environment file created`);
-      console.log(`   🔒 Location: ${envPath}`);
-      console.log(`   ⚠️  Remember to add .in-memoria/.env to your .gitignore!`);
-    }
-
     // Update .gitignore
     await this.updateGitignore(config.projectPath);
   }
@@ -240,7 +212,7 @@ export class InteractiveSetup {
     try {
       // Initialize components
       database = new SQLiteDatabase(join(config.projectPath, 'in-memoria.db'));
-      vectorDB = new SemanticVectorDB(config.openaiApiKey);
+      vectorDB = new SemanticVectorDB(); // Uses local embeddings only
       semanticEngine = new SemanticEngine(database, vectorDB);
       patternEngine = new PatternEngine(database);
 

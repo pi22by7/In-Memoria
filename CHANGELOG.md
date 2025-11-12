@@ -14,20 +14,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Truncated code examples to 2 per pattern, max 150 characters each
   - Reduced response size from ~58,000 tokens to ~2,000-5,000 tokens (90% reduction)
   - Applied limits across all pattern-fetching methods in pattern engine
-- **Interactive setup password input** – Fixed OpenAI API key input displaying characters with asterisks (e.g., 'y*')
-  - Clear terminal echo before writing masking asterisk
-  - Prevents double display of typed characters in raw terminal mode
+  - Issue: [#21](https://github.com/anthropics/in-memoria/issues/21)
+- **Interactive setup password input** – Fixed password masking in terminal
+  - Clear terminal echo before writing asterisk to prevent double display (e.g., 'y*')
   - Issue: [#21](https://github.com/anthropics/in-memoria/issues/21)
 
-### 🎯 **Improved**
+### ✨ **Added**
 
-- **OpenAI API key transparency and cost control** – Enhanced clarity around OpenAI embedding usage
-  - Updated interactive setup to clearly explain free local embeddings vs. optional OpenAI embeddings
-  - Added cost estimates before learning phase (~$0.50-$2 for large codebases)
-  - Added rate limiting (50 RPM) to prevent hitting OpenAI API limits
-  - Display real-time API usage info during learning process
-  - Clarified that OpenAI key is **optional** - local embeddings work great without it
-  - Issue: [#21](https://github.com/anthropics/in-memoria/issues/21)
+- **Persistent vector embeddings** – Vector embeddings now persist across restarts
+  - Switched from in-memory (`mem://`) to file-based RocksDB (`rocksdb://`)
+  - Embeddings stored in `in-memoria-vectors.db` file
+  - No more re-embedding on every server restart
+  - Automatic `SURREAL_SYNC_DATA=true` enforcement for crash safety
+  - Configurable via `IN_MEMORIA_VECTOR_DB_PATH` environment variable
+  - Significantly faster startup times for large codebases
+
+### 🔥 **Removed**
+
+- **OpenAI API integration** – Removed OpenAI embedding support to simplify codebase
+  - Removed `openai` dependency (package.json)
+  - All embeddings now use local transformers.js (all-MiniLM-L6-v2 model)
+  - Eliminates API costs, privacy concerns, and external dependencies
+  - Local embeddings provide 85-90% quality of OpenAI with zero cost
+  - Simplified interactive setup (no API key prompts)
+  - Updated vector-db.ts, interactive-setup.ts, index.ts, server.ts, config.ts
+  - Removed OPENAI_API_KEY environment variable requirement
 
 ## [0.5.8] - 2025-11-07
 

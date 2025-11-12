@@ -37,6 +37,13 @@ async function main() {
   const args = process.argv.slice(2);
   const command = args[0];
 
+  // Check critical environment variables for crash safety
+  if (!process.env.SURREAL_SYNC_DATA) {
+    Logger.warn('⚠️  SURREAL_SYNC_DATA not set. Setting to "true" for crash safety.');
+    Logger.warn('⚠️  To silence this warning, set: export SURREAL_SYNC_DATA=true');
+    process.env.SURREAL_SYNC_DATA = 'true';
+  }
+
   // Handle version flags
   if (args.includes('--version') || args.includes('-v')) {
     showVersion();
@@ -134,7 +141,7 @@ async function startWatcher(path: string): Promise<void> {
 
   // Initialize components
   const database = new SQLiteDatabase(config.getDatabasePath(path));
-  const vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
+  const vectorDB = new SemanticVectorDB(); // Uses local embeddings only
   const semanticEngine = new SemanticEngine(database, vectorDB);
   const patternEngine = new PatternEngine(database);
   const analyzer = new ChangeAnalyzer(semanticEngine, patternEngine, database);
@@ -251,7 +258,7 @@ async function analyzeCodebase(path: string): Promise<void> {
   console.log(`Analyzing codebase: ${path}`);
 
   const database = new SQLiteDatabase(config.getDatabasePath(path));
-  const vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
+  const vectorDB = new SemanticVectorDB(); // Uses local embeddings only
   const semanticEngine = new SemanticEngine(database, vectorDB);
   const patternEngine = new PatternEngine(database);
 
@@ -423,9 +430,6 @@ Examples:
   in-memoria learn ./my-project
   in-memoria analyze ./src
   in-memoria init
-
-Environment Variables:
-  OPENAI_API_KEY           OpenAI API key for enhanced vector embeddings (optional)
 
 For more information, visit: https://github.com/pi22by7/in-memoria
 `);

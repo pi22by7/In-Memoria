@@ -154,8 +154,8 @@ In Memoria is built on Rust + TypeScript, using the Model Context Protocol to co
 
 - Everything stays on your machine
 - SQLite for patterns and metadata
-- SurrealDB in-memory mode for vector embeddings and semantic search
-- Optional OpenAI API or local transformers.js for embeddings (Xenova/all-MiniLM-L6-v2)
+- SurrealDB with RocksDB backend for persistent vector embeddings and semantic search
+- Local transformers.js for embeddings (Xenova/all-MiniLM-L6-v2)
 
 ### What Makes It Different
 
@@ -290,12 +290,10 @@ Build artifacts (`node_modules/`, `dist/`, `.next/`, etc.) are automatically fil
 
 ### Known Limitations
 
-- ⚠️ Semantic search works best with OpenAI embeddings (requires API key) but falls back to local transformers.js
 - ⚠️ Large codebases (100k+ files) can be slow on first analysis
 - ⚠️ Pattern accuracy improves with codebase consistency
 - ⚠️ Some languages have better tree-sitter support than others
 - ⚠️ Documentation could be more comprehensive
-- ⚠️ SurrealDB runs in-memory mode (data persists in SQLite, vectors rebuilt on restart)
 
 ### We Need Your Help
 
@@ -388,7 +386,7 @@ npm run build:rust  # Build Rust components
 A: No, it enhances them. In Memoria provides the memory and context that tools like Claude, Copilot, and Cursor can use to give better suggestions.
 
 **Q: What data is collected?**
-A: Everything stays local. No telemetry, no phone-home. Your code never leaves your machine. The only optional external call is to OpenAI API for embeddings (if you provide an API key), otherwise it uses local transformers.js models.
+A: Everything stays local. No telemetry, no phone-home. Your code never leaves your machine. All embeddings are generated locally using transformers.js models.
 
 **Q: How accurate is pattern learning?**
 A: It improves with codebase size and consistency. Projects with established patterns see better results than small or inconsistent codebases. The system learns from frequency and repetition.

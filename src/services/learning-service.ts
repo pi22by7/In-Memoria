@@ -124,16 +124,7 @@ export class LearningService {
 
       // Phase 6: Vector embeddings for semantic search
       insights.push('🔍 Phase 6: Building semantic search index...');
-
-      // Warn user about OpenAI API usage if key is present
-      const totalEmbeddings = concepts.length + patterns.length;
-      if (projectVectorDB['apiKey'] && projectVectorDB['apiKey'].length > 0) {
-        insights.push(`   ℹ️  OpenAI API key detected - will attempt enhanced embeddings`);
-        insights.push(`   📊 Estimated: ${totalEmbeddings} API calls (~$${(totalEmbeddings * 0.0004 * 0.01).toFixed(2)}-$${(totalEmbeddings * 0.0004 * 0.1).toFixed(2)})`);
-        insights.push(`   🔄 Auto-fallback: Switches to local embeddings if API fails`);
-      } else {
-        insights.push(`   ✅ Using free local embeddings (no API key needed)`);
-      }
+      insights.push(`   ✅ Using free local embeddings (transformers.js)`);
 
       const vectorCount = await this.buildSemanticIndex(projectVectorDB, concepts, patterns);
       insights.push(`   ✅ Created ${vectorCount} vector embeddings for semantic search`);

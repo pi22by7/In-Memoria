@@ -26,7 +26,6 @@ export interface InMemoriaConfig {
   
   // API configuration
   api: {
-    openaiApiKey?: string;
     requestTimeout: number;
     rateLimitRequests: number;
     rateLimitWindow: number; // in milliseconds
@@ -62,7 +61,6 @@ const DEFAULT_CONFIG: InMemoriaConfig = {
   },
   
   api: {
-    openaiApiKey: process.env.OPENAI_API_KEY,
     requestTimeout: 30000,
     rateLimitRequests: 50,
     rateLimitWindow: 60000 // 1 minute
@@ -194,12 +192,8 @@ export class ConfigManager {
     if (process.env.IN_MEMORIA_MAX_CONCURRENT) {
       this.config.performance.maxConcurrentFiles = parseInt(process.env.IN_MEMORIA_MAX_CONCURRENT, 10);
     }
-    
+
     // API configuration
-    if (process.env.OPENAI_API_KEY) {
-      this.config.api.openaiApiKey = process.env.OPENAI_API_KEY;
-    }
-    
     if (process.env.IN_MEMORIA_REQUEST_TIMEOUT) {
       this.config.api.requestTimeout = parseInt(process.env.IN_MEMORIA_REQUEST_TIMEOUT, 10);
     }
@@ -229,7 +223,6 @@ export class ConfigManager {
       '  IN_MEMORIA_REQUEST_TIMEOUT - API request timeout in ms (default: 30000)',
       '  IN_MEMORIA_LOG_LEVEL - Logging level: error|warn|info|debug (default: info)',
       '  IN_MEMORIA_PERFORMANCE_LOGGING - Enable performance logging (default: false)',
-      '  OPENAI_API_KEY - OpenAI API key for enhanced features',
       '',
       'Note: Database is always created within the analyzed project directory'
     ];

@@ -65,7 +65,7 @@ export class CodeCartographerMCP {
         throw new Error(`Database initialization failed: ${dbError instanceof Error ? dbError.message : String(dbError)}`);
       }
 
-      this.vectorDB = new SemanticVectorDB(process.env.OPENAI_API_KEY);
+      this.vectorDB = new SemanticVectorDB(); // Uses local embeddings only
       Logger.info('Vector database initialized');
 
       // Initialize engines
