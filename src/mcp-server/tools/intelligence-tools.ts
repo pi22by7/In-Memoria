@@ -1,5 +1,5 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { 
+import {
   CodingContextSchema,
   AIInsightsSchema,
   type CodingContext,
@@ -15,6 +15,7 @@ import { SQLiteDatabase } from '../../storage/sqlite-db.js';
 import { SemanticVectorDB } from '../../storage/vector-db.js';
 import { config } from '../../config/config.js';
 import { PathValidator } from '../../utils/path-validator.js';
+import { IntelligenceStorageService } from '../../services/intelligence-storage.js';
 
 export class IntelligenceTools {
   constructor(
@@ -696,39 +697,6 @@ export class IntelligenceTools {
     return null;
   }
 
-  private async storeIntelligence(
-    path: string, 
-    concepts: any[], 
-    patterns: any[]
-  ): Promise<void> {
-    // Store concepts
-    for (const concept of concepts) {
-      this.database.insertSemanticConcept({
-        id: concept.id,
-        conceptName: concept.name,
-        conceptType: concept.type,
-        confidenceScore: concept.confidence,
-        relationships: concept.relationships,
-        evolutionHistory: {},
-        filePath: concept.filePath,
-        lineRange: concept.lineRange
-      });
-    }
-
-    // Store patterns
-    for (const pattern of patterns) {
-      this.database.insertDeveloperPattern({
-        patternId: pattern.id,
-        patternType: pattern.type,
-        patternContent: pattern.content,
-        frequency: pattern.frequency,
-        contexts: pattern.contexts,
-        examples: pattern.examples,
-        confidence: pattern.confidence
-      });
-    }
-  }
-
   private extractNamingConventions(patterns: any[]): Record<string, string> {
     return {
       functions: 'camelCase',
@@ -752,163 +720,6 @@ export class IntelligenceTools {
 
   private extractRecentFocus(patterns: any[]): string[] {
     return patterns.map(p => p.type).slice(0, 5);
-  }
-
-  private async analyzeCodebaseRelationships(
-    concepts: any[], 
-    patterns: any[]
-  ): Promise<{ conceptRelationships: number; dependencyPatterns: number }> {
-    // Analyze semantic relationships between concepts
-    const conceptRelationships = new Set<string>();
-    
-    // Group concepts by file to find file-level relationships
-    const conceptsByFile = concepts.reduce((acc, concept) => {
-      const filePath = concept.filePath || concept.file_path || 'unknown';
-      if (!acc[filePath]) acc[filePath] = [];
-      acc[filePath].push(concept);
-      return acc;
-    }, {} as Record<string, any[]>);
-    
-    // Find relationships within files
-    Object.values(conceptsByFile).forEach(fileConcepts => {
-      if (Array.isArray(fileConcepts)) {
-        for (let i = 0; i < fileConcepts.length; i++) {
-          for (let j = i + 1; j < fileConcepts.length; j++) {
-            const relationshipKey = `${fileConcepts[i].id}-${fileConcepts[j].id}`;
-            conceptRelationships.add(relationshipKey);
-          }
-        }
-      }
-    });
-    
-    // Analyze dependency patterns from imports/references
-    const dependencyPatterns = new Set<string>();
-    patterns.forEach(pattern => {
-      const patternType = pattern.type || '';
-      if (patternType.includes('dependency') || 
-          patternType.includes('import') ||
-          patternType.includes('organization')) {
-        dependencyPatterns.add(pattern.id);
-      }
-    });
-    
-    return {
-      conceptRelationships: conceptRelationships.size,
-      dependencyPatterns: dependencyPatterns.size
-    };
-  }
-
-  private async generateLearningInsights(
-    concepts: any[], 
-    patterns: any[], 
-    codebaseAnalysis: any
-  ): Promise<string[]> {
-    const insights: string[] = [];
-    
-    // Analyze codebase characteristics
-    const totalLines = codebaseAnalysis.complexity?.lines || 0;
-    const conceptDensity = totalLines > 0 ? (concepts.length / totalLines * 1000).toFixed(2) : '0';
-    insights.push(`📊 Concept density: ${conceptDensity} concepts per 1000 lines`);
-    
-    // Analyze pattern distribution
-    const namingPatterns = patterns.filter(p => p.type?.includes('naming'));
-    const structuralPatterns = patterns.filter(p => p.type?.includes('organization') || p.type?.includes('structure'));
-    const implementationPatterns = patterns.filter(p => p.type?.includes('implementation'));
-    
-    if (namingPatterns.length > 0) {
-      insights.push(`✨ Strong naming conventions detected (${namingPatterns.length} patterns)`);
-    }
-    if (structuralPatterns.length > 0) {
-      insights.push(`🏗️ Organized code structure found (${structuralPatterns.length} patterns)`);
-    }
-    if (implementationPatterns.length > 0) {
-      insights.push(`⚙️ Design patterns in use (${implementationPatterns.length} patterns)`);
-    }
-    
-    // Analyze complexity
-    const complexity = codebaseAnalysis.complexity;
-    if (complexity) {
-      if (complexity.cyclomatic < 10) {
-        insights.push('🟢 Low complexity codebase - easy to maintain');
-      } else if (complexity.cyclomatic < 30) {
-        insights.push('🟡 Moderate complexity - consider refactoring high-complexity areas');
-      } else {
-        insights.push('🔴 High complexity detected - refactoring recommended');
-      }
-    }
-    
-    // Analyze language and framework usage
-    const languages = codebaseAnalysis.languages || [];
-    const frameworks = codebaseAnalysis.frameworks || [];
-    
-    if (languages.length === 1) {
-      insights.push(`🎯 Single-language codebase (${languages[0]}) - consistent technology stack`);
-    } else if (languages.length > 1) {
-      insights.push(`🌐 Multi-language codebase (${languages.join(', ')}) - consider integration patterns`);
-    }
-    
-    if (frameworks.length > 0) {
-      insights.push(`🔧 Framework usage: ${frameworks.join(', ')}`);
-    }
-    
-    return insights;
-  }
-
-  private async storeProjectBlueprint(
-    projectPath: string,
-    codebaseAnalysis: any,
-    database: SQLiteDatabase
-  ): Promise<void> {
-    const { nanoid } = await import('nanoid');
-
-    // Store entry points
-    if (codebaseAnalysis.entryPoints && Array.isArray(codebaseAnalysis.entryPoints)) {
-      for (const entryPoint of codebaseAnalysis.entryPoints) {
-        database.insertEntryPoint({
-          id: nanoid(),
-          projectPath,
-          entryType: entryPoint.type,
-          filePath: entryPoint.filePath,
-          description: entryPoint.description,
-          framework: entryPoint.framework
-        });
-      }
-    }
-
-    // Store key directories
-    if (codebaseAnalysis.keyDirectories && Array.isArray(codebaseAnalysis.keyDirectories)) {
-      for (const directory of codebaseAnalysis.keyDirectories) {
-        database.insertKeyDirectory({
-          id: nanoid(),
-          projectPath,
-          directoryPath: directory.path,
-          directoryType: directory.type,
-          fileCount: directory.fileCount,
-          description: directory.description
-        });
-      }
-    }
-  }
-
-  private inferArchitecturePattern(codebaseAnalysis: any): string {
-    const frameworks = codebaseAnalysis.frameworks || [];
-    const directories = codebaseAnalysis.keyDirectories || [];
-
-    if (frameworks.some((f: string) => f.toLowerCase().includes('react'))) {
-      return 'Component-Based (React)';
-    } else if (frameworks.some((f: string) => f.toLowerCase().includes('express'))) {
-      return 'REST API (Express)';
-    } else if (frameworks.some((f: string) => f.toLowerCase().includes('fastapi'))) {
-      return 'REST API (FastAPI)';
-    } else if (directories.some((d: any) => d.type === 'services')) {
-      return 'Service-Oriented';
-    } else if (directories.some((d: any) => d.type === 'components')) {
-      return 'Component-Based';
-    } else if (directories.some((d: any) => d.type === 'models' && d.type === 'views')) {
-      return 'MVC Pattern';
-    } else {
-      return 'Modular';
-    }
   }
 
   private inferArchitectureFromBlueprint(blueprint: { frameworks: string[]; keyDirectories: any[] }): string {
