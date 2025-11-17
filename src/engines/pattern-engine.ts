@@ -742,7 +742,11 @@ export class PatternEngine {
 
               try {
                 await access(resolved, constants.F_OK);
-                const files = await FileTraversal.collectCodeFiles(resolved);
+                const filesFromDir = await FileTraversal.collectCodeFiles(resolved);
+
+                // Convert paths from relative-to-directory to relative-to-project
+                const { relative: relativePath, join } = await import('path');
+                const files = filesFromDir.map(f => relativePath(resolvedProject, join(resolved, f)));
 
                 if (files.length > 0) {
                   primaryFiles.push(...files.slice(0, Math.ceil(files.length / 2)));
