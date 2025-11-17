@@ -172,12 +172,10 @@ export class MonitoringTools {
       // Handle learning_history view
       if (view === 'learning_history') {
         const { IncrementalLearner } = await import('../../services/incremental-learner.js');
-        const learner = new IncrementalLearner(this.database, this.semanticEngine, this.patternEngine);
+        const projectId = 'current-project'; // TODO: Get actual project ID
+        const learner = new IncrementalLearner(this.database, this.semanticEngine, this.patternEngine, projectId);
 
-        const deltas = await learner.getRecentDeltas({
-          limit: args.limit || 10,
-          since: args.since_timestamp,
-        });
+        const deltas = await learner.getRecentDeltas(args.limit || 10);
 
         return {
           success: true,
@@ -193,7 +191,7 @@ export class MonitoringTools {
         const { CrossProjectService } = await import('../../services/cross-project-service.js');
 
         try {
-          const globalDb = GlobalDatabase.getInstance();
+          const globalDb = new GlobalDatabase();
           const crossProjectService = new CrossProjectService(globalDb);
 
           const portfolioView = await crossProjectService.getPortfolioView();

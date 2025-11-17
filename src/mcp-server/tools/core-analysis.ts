@@ -1705,7 +1705,7 @@ export class CoreAnalysisTools {
       });
 
       lines.push('### 🔍 Pattern Recommendations');
-      if (patternRecs.recommendations.length > 0) {
+      if (patternRecs.recommendations && patternRecs.recommendations.length > 0) {
         lines.push(`- **Pattern analysis**: ${patternRecs.recommendations.length} patterns identified for optimization`);
         for (const rec of patternRecs.recommendations.slice(0, 3)) {
           lines.push(`  - **${rec.pattern.split('_').slice(1).join(' ')}**: ${rec.description} (${(rec.confidence * 100).toFixed(0)}% confidence)`);
@@ -1766,7 +1766,7 @@ export class CoreAnalysisTools {
         currentFile: analysis.path
       });
 
-      if (patternRecs.recommendations.length > 0) {
+      if (patternRecs.recommendations && patternRecs.recommendations.length > 0) {
         lines.push('### 🎯 Pattern-Based Examples');
         lines.push('');
 
@@ -1815,7 +1815,7 @@ export class CoreAnalysisTools {
         }
       }
 
-      if (patternRecs.recommendations.length === 0 && semanticInsights.insights.length === 0) {
+      if ((!patternRecs.recommendations || patternRecs.recommendations.length === 0) && semanticInsights.insights.length === 0) {
         lines.push('### 📚 Learning Required');
         lines.push('*Run the learning pipeline to discover patterns and generate intelligent examples.*');
         lines.push('');

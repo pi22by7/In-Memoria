@@ -320,15 +320,16 @@ export class IntelligenceTools {
     // Handle global linking if requested
     if (args.link_globally && result.success) {
       try {
-        const globalDb = GlobalDatabase.getInstance();
+        const globalDb = new GlobalDatabase();
         const crossProjectService = new CrossProjectService(globalDb);
 
         // Determine project name (use provided or directory name)
         const projectName = args.project_name || args.path.split('/').pop() || 'Unknown Project';
 
         // Link project to global database
-        const projectId = await crossProjectService.linkProject(
+        const projectLink = await crossProjectService.linkProject(
           args.path,
+          this.database,
           projectName,
           args.project_description
         );
@@ -336,7 +337,7 @@ export class IntelligenceTools {
         return {
           ...result,
           linkedGlobally: true,
-          projectId,
+          projectId: projectLink.id,
         };
       } catch (error: any) {
         // Don't fail the whole operation if global linking fails
@@ -368,13 +369,13 @@ export class IntelligenceTools {
     // Handle cross-project search
     if (scope === 'all_projects') {
       try {
-        const globalDb = GlobalDatabase.getInstance();
+        const globalDb = new GlobalDatabase();
         const crossProjectService = new CrossProjectService(globalDb);
 
-        const results = await crossProjectService.searchAcrossProjects(args.query || '', {
-          projectIds: args.project_filter,
-          language: args.language_filter,
-          type: 'concept',
+        const results = await crossProjectService.searchAllProjects({
+          query: args.query || '',
+          projectFilter: args.project_filter,
+          languageFilter: args.language_filter,
           limit: limit,
         });
 
@@ -490,7 +491,7 @@ export class IntelligenceTools {
     // Handle global scope
     if (scope === 'global') {
       try {
-        const globalDb = GlobalDatabase.getInstance();
+        const globalDb = new GlobalDatabase();
         const crossProjectService = new CrossProjectService(globalDb);
 
         const globalPatterns = await crossProjectService.getGlobalPatterns({
