@@ -11,6 +11,7 @@ import { CoreAnalysisTools } from './tools/core-analysis.js';
 import { IntelligenceTools } from './tools/intelligence-tools.js';
 import { AutomationTools } from './tools/automation-tools.js';
 import { MonitoringTools } from './tools/monitoring-tools.js';
+import { Phase1Tools } from './tools/phase1-tools.js';
 import { SemanticEngine } from '../engines/semantic-engine.js';
 import { PatternEngine } from '../engines/pattern-engine.js';
 import { SQLiteDatabase } from '../storage/sqlite-db.js';
@@ -29,12 +30,13 @@ export class CodeCartographerMCP {
   private intelligenceTools!: IntelligenceTools;
   private automationTools!: AutomationTools;
   private monitoringTools!: MonitoringTools;
+  private phase1Tools!: Phase1Tools;
 
   constructor() {
     this.server = new Server(
       {
         name: 'in-memoria',
-        version: '0.6.0',
+        version: '0.7.0',  // Phase 1 features
       },
       {
         capabilities: {
@@ -92,7 +94,17 @@ export class CodeCartographerMCP {
         this.database,
         dbPath
       );
-      Logger.info('Tool collections initialized');
+
+      // Initialize Phase 1 tools
+      const projectMetadata = this.database.getProjectMetadata();
+      this.phase1Tools = new Phase1Tools(
+        this.semanticEngine,
+        this.patternEngine,
+        this.database,
+        projectMetadata?.project_id || 'default',
+        process.cwd()
+      );
+      Logger.info('Tool collections initialized (including Phase 1 tools)');
 
       Logger.info('In Memoria components initialized successfully');
     } catch (error: unknown) {
@@ -110,7 +122,8 @@ export class CodeCartographerMCP {
           ...this.coreTools.tools,
           ...this.intelligenceTools.tools,
           ...this.automationTools.tools,
-          ...this.monitoringTools.tools
+          ...this.monitoringTools.tools,
+          ...this.phase1Tools.tools
         ]
       };
     });
@@ -217,6 +230,15 @@ export class CodeCartographerMCP {
 
       case 'health_check':
         return await this.monitoringTools.healthCheck(args);
+
+      // Phase 1 Tools
+      case 'check_pattern_compliance':
+      case 'get_learning_history':
+      case 'link_project':
+      case 'search_all_projects':
+      case 'get_global_patterns':
+      case 'get_portfolio_view':
+        return await this.phase1Tools.handleToolCall(name, args);
 
       default:
         throw new McpError(
