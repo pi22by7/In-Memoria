@@ -61,3 +61,10 @@ export class Logger {
     }
   }
 }
+
+/**
+ * Get logger instance (returns Logger class)
+ */
+export function getLogger(): typeof Logger {
+  return Logger;
+}

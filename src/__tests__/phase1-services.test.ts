@@ -23,6 +23,14 @@ describe('Phase 1 Services', () => {
     database = new SQLiteDatabase(join(tempDir, 'test.db'));
     vectorDB = new SemanticVectorDB(join(tempDir, 'vector.db'));
 
+    // Insert test project into project_metadata (required for foreign key constraints)
+    database.insertProjectMetadata({
+      projectId: 'test-project',
+      projectPath: tempDir,
+      projectName: 'Test Project',
+      primaryLanguage: 'typescript'
+    });
+
     // Create minimal engines for testing
     semanticEngine = new SemanticEngine(database, vectorDB);
     patternEngine = new PatternEngine(database);
@@ -119,6 +127,19 @@ describe('Phase 1 Services', () => {
     });
 
     it('should handle pattern exceptions', async () => {
+      // First insert a pattern that the exception will reference
+      database.getDB().prepare(`
+        INSERT INTO developer_patterns (
+          pattern_id, pattern_type, pattern_content, frequency, confidence
+        ) VALUES (?, ?, ?, ?, ?)
+      `).run(
+        'pattern-123',
+        'naming',
+        JSON.stringify({ category: 'test' }),
+        5,
+        0.8
+      );
+
       const detector = new PatternConflictDetector(
         database,
         semanticEngine,
