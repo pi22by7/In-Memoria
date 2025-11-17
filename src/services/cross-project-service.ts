@@ -2,7 +2,6 @@ import { getLogger } from '../utils/logger.js';
 import type { GlobalDatabase, GlobalProject, GlobalPattern, SyncResult } from '../storage/global-db.js';
 import type { SqliteDatabase } from '../storage/sqlite-db.js';
 import { PatternAggregator } from './pattern-aggregator.js';
-import { nanoid } from 'nanoid';
 import { detectLanguageFromPath, detectLanguageFromPattern } from '../utils/language-registry.js';
 
 const logger = getLogger();
@@ -261,7 +260,7 @@ export class CrossProjectService {
    * Search across all projects
    */
   async searchAllProjects(options: CrossProjectSearchOptions): Promise<SearchResult[]> {
-    const { query, mode = 'text', projectFilter, languageFilter, limit = 20 } = options;
+    const { query, projectFilter, languageFilter, limit = 20 } = options;
 
     const results: SearchResult[] = [];
 

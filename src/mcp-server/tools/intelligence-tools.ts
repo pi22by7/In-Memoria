@@ -15,7 +15,6 @@ import { SQLiteDatabase } from '../../storage/sqlite-db.js';
 import { SemanticVectorDB } from '../../storage/vector-db.js';
 import { config } from '../../config/config.js';
 import { PathValidator } from '../../utils/path-validator.js';
-import { IntelligenceStorageService } from '../../services/intelligence-storage.js';
 
 export class IntelligenceTools {
   constructor(

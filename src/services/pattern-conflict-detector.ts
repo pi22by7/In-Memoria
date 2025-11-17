@@ -89,7 +89,6 @@ export class PatternConflictDetector {
       severityThreshold = 'medium',
       includeWarnings = true,
       includeSuggestions = true,
-      autoFix = true,
     } = options;
 
     const violations: PatternViolation[] = [];
