@@ -11,7 +11,6 @@ import { CoreAnalysisTools } from './tools/core-analysis.js';
 import { IntelligenceTools } from './tools/intelligence-tools.js';
 import { AutomationTools } from './tools/automation-tools.js';
 import { MonitoringTools } from './tools/monitoring-tools.js';
-import { Phase1Tools } from './tools/phase1-tools.js';
 import { SemanticEngine } from '../engines/semantic-engine.js';
 import { PatternEngine } from '../engines/pattern-engine.js';
 import { SQLiteDatabase } from '../storage/sqlite-db.js';
@@ -30,7 +29,6 @@ export class CodeCartographerMCP {
   private intelligenceTools!: IntelligenceTools;
   private automationTools!: AutomationTools;
   private monitoringTools!: MonitoringTools;
-  private phase1Tools!: Phase1Tools;
 
   constructor() {
     this.server = new Server(
@@ -95,17 +93,7 @@ export class CodeCartographerMCP {
         dbPath
       );
 
-      // Initialize Phase 1 tools
-      const projectMetadata = this.database.getProjectMetadata();
-      this.phase1Tools = new Phase1Tools(
-        this.semanticEngine,
-        this.patternEngine,
-        this.database,
-        projectMetadata?.project_id || 'default',
-        process.cwd()
-      );
-      Logger.info('Tool collections initialized (including Phase 1 tools)');
-
+      Logger.info('Tool collections initialized');
       Logger.info('In Memoria components initialized successfully');
     } catch (error: unknown) {
       Logger.error('Failed to initialize In Memoria components:', error);
@@ -122,8 +110,7 @@ export class CodeCartographerMCP {
           ...this.coreTools.tools,
           ...this.intelligenceTools.tools,
           ...this.automationTools.tools,
-          ...this.monitoringTools.tools,
-          ...this.phase1Tools.tools
+          ...this.monitoringTools.tools
         ]
       };
     });
@@ -231,14 +218,13 @@ export class CodeCartographerMCP {
       case 'health_check':
         return await this.monitoringTools.healthCheck(args);
 
-      // Phase 1 Tools
-      case 'check_pattern_compliance':
-      case 'get_learning_history':
-      case 'link_project':
-      case 'search_all_projects':
-      case 'get_global_patterns':
-      case 'get_portfolio_view':
-        return await this.phase1Tools.handleToolCall(name, args);
+      // Phase 1 tools have been consolidated into existing tools via parameters:
+      // - check_pattern_compliance → get_pattern_recommendations with mode='compliance_check'
+      // - get_learning_history → get_intelligence_metrics with view='learning_history'
+      // - link_project → learn_codebase_intelligence with link_globally=true
+      // - search_all_projects → get_semantic_insights with scope='all_projects'
+      // - get_global_patterns → get_pattern_recommendations with scope='global'
+      // - get_portfolio_view → get_intelligence_metrics with view='portfolio'
 
       default:
         throw new McpError(
