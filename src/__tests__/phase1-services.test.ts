@@ -9,19 +9,22 @@ import { PatternConflictDetector } from '../services/pattern-conflict-detector.j
 import { GlobalDatabase } from '../storage/global-db.js';
 import { CrossProjectService } from '../services/cross-project-service.js';
 import { IncrementalLearner } from '../services/incremental-learner.js';
+import { SemanticVectorDB } from '../storage/vector-db.js';
 
 describe('Phase 1 Services', () => {
   let tempDir: string;
   let database: SQLiteDatabase;
   let semanticEngine: SemanticEngine;
   let patternEngine: PatternEngine;
+  let vectorDB: SemanticVectorDB;
 
   beforeEach(() => {
     tempDir = mkdtempSync(join(tmpdir(), 'in-memoria-phase1-test-'));
     database = new SQLiteDatabase(join(tempDir, 'test.db'));
+    vectorDB = new SemanticVectorDB(join(tempDir, 'vector.db'));
 
     // Create minimal engines for testing
-    semanticEngine = new SemanticEngine(database);
+    semanticEngine = new SemanticEngine(database, vectorDB);
     patternEngine = new PatternEngine(database);
   });
 
@@ -44,7 +47,7 @@ describe('Phase 1 Services', () => {
 
     it('should detect naming pattern violations', async () => {
       // Add a camelCase naming pattern
-      database.prepare(`
+      database.getDB().prepare(`
         INSERT INTO developer_patterns (
           pattern_id, pattern_type, pattern_content, frequency, confidence
         ) VALUES (?, ?, ?, ?, ?)
@@ -82,7 +85,7 @@ describe('Phase 1 Services', () => {
 
     it('should pass compliance for code following patterns', async () => {
       // Add a camelCase naming pattern
-      database.prepare(`
+      database.getDB().prepare(`
         INSERT INTO developer_patterns (
           pattern_id, pattern_type, pattern_content, frequency, confidence
         ) VALUES (?, ?, ?, ?, ?)

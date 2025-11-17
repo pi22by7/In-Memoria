@@ -38,6 +38,7 @@ export interface FileIntelligence {
   dependencies: string[];
   lastAnalyzed: Date;
   createdAt: Date;
+  lastLearnedCommit?: string | null;
 }
 
 export interface AIInsight {
@@ -283,7 +284,8 @@ export class SQLiteDatabase {
       complexityMetrics: JSON.parse(row.complexity_metrics || '{}'),
       dependencies: JSON.parse(row.dependencies || '[]'),
       lastAnalyzed: new Date(row.last_analyzed + ' UTC'),
-      createdAt: new Date(row.created_at + ' UTC')
+      createdAt: new Date(row.created_at + ' UTC'),
+      lastLearnedCommit: row.last_learned_commit || null
     };
   }
 

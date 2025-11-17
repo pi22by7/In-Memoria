@@ -265,7 +265,7 @@ export class IncrementalLearner extends EventEmitter {
         return; // File not learned yet
       }
 
-      const conceptIds = JSON.parse(fileIntelligence.semanticConcepts || '[]');
+      const conceptIds = fileIntelligence.semanticConcepts || [];
 
       // Mark concepts as deleted
       for (const conceptId of conceptIds) {
@@ -311,7 +311,7 @@ export class IncrementalLearner extends EventEmitter {
       // Get previous concepts for this file
       const previousIntelligence = this.db.getFileIntelligence(change.path);
       const previousConceptIds = previousIntelligence
-        ? JSON.parse(previousIntelligence.semanticConcepts || '[]')
+        ? (previousIntelligence.semanticConcepts || [])
         : [];
 
       // Extract current concepts
@@ -341,7 +341,7 @@ export class IncrementalLearner extends EventEmitter {
           '{}', // relationships to be computed later
           change.path,
           JSON.stringify({ start: 0, end: 0 }), // line range from analysis if available
-          isNew ? (delta.commitSha || null) : previousIntelligence?.last_learned_commit,
+          isNew ? (delta.commitSha || null) : previousIntelligence?.lastLearnedCommit,
           delta.commitSha || null
         );
 
@@ -367,19 +367,18 @@ export class IncrementalLearner extends EventEmitter {
       }
 
       // Update file intelligence
-      this.db.saveFileIntelligence({
+      this.db.insertFileIntelligence({
         filePath: change.path,
         fileHash: analysis.fileHash || '',
         semanticConcepts: currentConceptIds,
-        patternsUsed: analysis.topPatterns?.map(p => p.name) || [],
+        patternsUsed: analysis.topPatterns?.map((p: any) => p.name) || [],
         complexityMetrics: {
           cyclomatic: analysis.complexity?.cyclomatic || 0,
           cognitive: analysis.complexity?.cognitive || 0,
         },
         dependencies: [],
-        lastAnalyzed: new Date().toISOString(),
+        lastAnalyzed: new Date(),
         lastLearnedCommit: delta.commitSha,
-        lastLearnedTimestamp: delta.timestamp,
       });
 
       Logger.debug(`Updated intelligence for ${change.path}: +${delta.conceptsAdded} concepts`);

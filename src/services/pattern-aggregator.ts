@@ -59,11 +59,7 @@ export class PatternAggregator {
     signature: string,
     patterns: GlobalPattern[]
   ): Omit<PatternAggregation, 'id' | 'createdAt' | 'updatedAt'> {
-    const occurrences: Array<{
-      projectId: string;
-      frequency: number;
-      confidence: number;
-    }> = [];
+    const occurrences: PatternOccurrence[] = [];
 
     // Collect occurrences from all patterns
     for (const pattern of patterns) {
@@ -72,6 +68,7 @@ export class PatternAggregator {
           projectId,
           frequency: pattern.totalFrequency,
           confidence: pattern.confidence,
+          patternData: pattern.patternData,
         });
       }
     }
@@ -117,7 +114,7 @@ export class PatternAggregator {
    */
   private generatePatternSignature(pattern: GlobalPattern): string {
     // Create a normalized key for the pattern
-    const key = {
+    const key: Record<string, string> = {
       category: pattern.category,
       subcategory: pattern.subcategory || '',
       language: pattern.language || 'any',
@@ -274,6 +271,7 @@ export class PatternAggregator {
         projectId: p.sourceProjects[0] || '',
         frequency: p.totalFrequency,
         confidence: p.confidence,
+        patternData: p.patternData,
       }))
     );
 

@@ -1,8 +1,6 @@
-import { getLogger } from '../utils/logger.js';
+import { Logger } from '../utils/logger.js';
 import type { PatternViolation } from './pattern-conflict-detector.js';
 import { NamingConventions } from '../utils/naming-conventions.js';
-
-const logger = getLogger();
 
 export interface QuickFix {
   description: string;
@@ -46,11 +44,11 @@ export class QuickFixGenerator {
           return this.generateAsyncPatternFix(violation);
 
         default:
-          logger.debug(`No fix generator for violation type: ${violation.type}`);
+          Logger.debug(`No fix generator for violation type: ${violation.type}`);
           return null;
       }
     } catch (error) {
-      logger.error('Failed to generate fix:', error);
+      Logger.error('Failed to generate fix:', error);
       return null;
     }
   }
@@ -422,7 +420,7 @@ export class QuickFixGenerator {
         modifiedCode = await this.applyFix(modifiedCode, fix);
         appliedFixes.push(fix);
       } catch (error) {
-        logger.error('Failed to apply fix:', error);
+        Logger.error('Failed to apply fix:', error);
       }
     }
 

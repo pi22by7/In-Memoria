@@ -493,6 +493,7 @@ export class PatternConflictDetector {
     implementation: any[];
   }> {
     const naming = this.db
+      .getDB()
       .prepare(
         `
       SELECT * FROM developer_patterns
@@ -503,6 +504,7 @@ export class PatternConflictDetector {
       .all();
 
     const structural = this.db
+      .getDB()
       .prepare(
         `
       SELECT * FROM developer_patterns
@@ -513,6 +515,7 @@ export class PatternConflictDetector {
       .all();
 
     const implementation = this.db
+      .getDB()
       .prepare(
         `
       SELECT * FROM developer_patterns
@@ -536,6 +539,7 @@ export class PatternConflictDetector {
     }
 
     this.db
+      .getDB()
       .prepare(
         `
       INSERT INTO pattern_violations (
@@ -566,6 +570,7 @@ export class PatternConflictDetector {
    */
   async isExcepted(patternId: string, filePath: string): Promise<boolean> {
     const exception = this.db
+      .getDB()
       .prepare(
         `
       SELECT * FROM pattern_exceptions
@@ -589,6 +594,7 @@ export class PatternConflictDetector {
     expiresAt?: number
   ): Promise<void> {
     this.db
+      .getDB()
       .prepare(
         `
       INSERT INTO pattern_exceptions (
@@ -628,7 +634,7 @@ export class PatternConflictDetector {
     query += ' ORDER BY v.detected_at DESC LIMIT ?';
     params.push(limit);
 
-    const rows = this.db.prepare(query).all(...params) as any[];
+    const rows = this.db.getDB().prepare(query).all(...params) as any[];
 
     return rows.map((row) => ({
       id: row.id,
@@ -665,6 +671,7 @@ export class PatternConflictDetector {
     resolution: 'accepted_fix' | 'overridden' | 'ignored' | 'pattern_updated'
   ): Promise<void> {
     this.db
+      .getDB()
       .prepare(
         `
       UPDATE pattern_violations
@@ -677,11 +684,13 @@ export class PatternConflictDetector {
     // If pattern was updated, adjust confidence
     if (resolution === 'pattern_updated') {
       const violation = this.db
+        .getDB()
         .prepare('SELECT pattern_id FROM pattern_violations WHERE id = ?')
         .get(violationId) as any;
 
       if (violation) {
         this.db
+          .getDB()
           .prepare(
             `
           UPDATE developer_patterns

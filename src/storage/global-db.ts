@@ -2,10 +2,8 @@ import Database from 'better-sqlite3';
 import { existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { homedir } from 'os';
-import { getLogger } from '../utils/logger.js';
+import { Logger } from '../utils/logger.js';
 import { nanoid } from 'nanoid';
-
-const logger = getLogger();
 
 export interface GlobalProject {
   id: string;
@@ -98,7 +96,7 @@ export class GlobalDatabase {
     // Initialize schema
     this.initializeSchema();
 
-    logger.info(`Global database initialized at: ${this.dbPath}`);
+    Logger.info(`Global database initialized at: ${this.dbPath}`);
   }
 
   /**
@@ -210,7 +208,7 @@ export class GlobalDatabase {
         metadata.isActive !== undefined ? (metadata.isActive ? 1 : 0) : 1
       );
 
-    logger.info(`Linked project ${name} (${projectId}) to global database`);
+    Logger.info(`Linked project ${name} (${projectId}) to global database`);
     return projectId;
   }
 
@@ -221,7 +219,7 @@ export class GlobalDatabase {
     // Soft delete - mark as inactive
     this.db.prepare('UPDATE global_projects SET is_active = 0 WHERE id = ?').run(projectId);
 
-    logger.info(`Unlinked project ${projectId} from global database`);
+    Logger.info(`Unlinked project ${projectId} from global database`);
   }
 
   /**
@@ -667,7 +665,7 @@ export class GlobalDatabase {
    */
   close(): void {
     this.db.close();
-    logger.info('Global database connection closed');
+    Logger.info('Global database connection closed');
   }
 
   /**

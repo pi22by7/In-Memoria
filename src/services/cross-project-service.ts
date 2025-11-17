@@ -385,6 +385,7 @@ export class CrossProjectService {
     frameworks: string[];
   } {
     const metadata = projectDb
+      .getDB()
       .prepare('SELECT * FROM project_metadata LIMIT 1')
       .get() as any;
 
@@ -401,6 +402,7 @@ export class CrossProjectService {
 
   private getProjectPatterns(projectDb: SQLiteDatabase): any[] {
     return projectDb
+      .getDB()
       .prepare(
         `
       SELECT * FROM developer_patterns
@@ -413,6 +415,7 @@ export class CrossProjectService {
 
   private getProjectConcepts(projectDb: SQLiteDatabase): any[] {
     return projectDb
+      .getDB()
       .prepare(
         `
       SELECT * FROM semantic_concepts
