@@ -1,11 +1,11 @@
 import { nanoid } from 'nanoid';
-import { getLogger } from '../utils/logger.js';
-import type { SqliteDatabase } from '../storage/sqlite-db.js';
+import { Logger } from '../utils/logger.js';
+import type { SQLiteDatabase } from '../storage/sqlite-db.js';
 import type { SemanticEngine } from '../engines/semantic-engine.js';
 import type { PatternEngine } from '../engines/pattern-engine.js';
 import { NamingConventions } from '../utils/naming-conventions.js';
 
-const logger = getLogger();
+
 
 export interface PatternViolation {
   id: string;
@@ -59,13 +59,13 @@ const PATTERN_FREQUENCY_THRESHOLD = 5; // Must see pattern 5+ times
  * Pattern conflict detection service - detects when code violates learned patterns
  */
 export class PatternConflictDetector {
-  private db: SqliteDatabase;
+  private db: SQLiteDatabase;
   private semanticEngine: SemanticEngine;
   private patternEngine: PatternEngine;
   private projectId: string;
 
   constructor(
-    db: SqliteDatabase,
+    db: SQLiteDatabase,
     semanticEngine: SemanticEngine,
     patternEngine: PatternEngine,
     projectId: string
@@ -159,14 +159,14 @@ export class PatternConflictDetector {
         checkDurationMs: Date.now() - startTime,
       };
 
-      logger.debug(
+      Logger.debug(
         `Pattern compliance check completed in ${report.checkDurationMs}ms: ` +
           `${violations.length} violations, ${warnings.length} warnings, ${suggestions.length} suggestions`
       );
 
       return report;
     } catch (error) {
-      logger.error('Pattern compliance check failed:', error);
+      Logger.error('Pattern compliance check failed:', error);
       throw error;
     }
   }
@@ -385,7 +385,7 @@ export class PatternConflictDetector {
         const errorHandlers = this.extractErrorHandlers(code);
 
         for (const handler of errorHandlers) {
-          const expectedPattern = patternData.pattern; // e.g., "logger.error"
+          const expectedPattern = patternData.pattern; // e.g., "Logger.error"
           const hasExpectedPattern = handler.code.includes(expectedPattern);
 
           if (!hasExpectedPattern) {
@@ -531,7 +531,7 @@ export class PatternConflictDetector {
   private async saveViolation(violation: PatternViolation, filePath: string): Promise<void> {
     // Check if exception exists
     if (await this.isExcepted(violation.pattern.id, filePath)) {
-      logger.debug(`Violation excepted for pattern ${violation.pattern.id} in ${filePath}`);
+      Logger.debug(`Violation excepted for pattern ${violation.pattern.id} in ${filePath}`);
       return;
     }
 
@@ -840,8 +840,8 @@ export class PatternConflictDetector {
 
   private generateErrorHandlingFix(currentCode: string, expectedPattern: string): string {
     // Simple fix generation
-    if (expectedPattern.includes('logger.error')) {
-      return currentCode.replace(/console\.(log|error)\(/g, 'logger.error(');
+    if (expectedPattern.includes('Logger.error')) {
+      return currentCode.replace(/console\.(log|error)\(/g, 'Logger.error(');
     }
     return currentCode;
   }

@@ -142,6 +142,23 @@ export class SemanticEngine {
     });
   }
 
+  /**
+   * Analyze a file by reading it from disk
+   * Convenience wrapper around analyzeFileContent
+   */
+  async analyzeFile(filePath: string, options?: { includePatterns?: boolean; includeComplexity?: boolean }): Promise<any> {
+    const { readFileSync } = await import('fs');
+    const content = readFileSync(filePath, 'utf-8');
+    const concepts = await this.analyzeFileContent(filePath, content);
+
+    // Return in format expected by incremental-learner
+    return {
+      concepts,
+      patterns: options?.includePatterns ? [] : undefined, // TODO: Add pattern analysis if needed
+      complexity: options?.includeComplexity ? {} : undefined // TODO: Add complexity if needed
+    };
+  }
+
   async analyzeFileContent(filePath: string, content: string): Promise<FileAnalysisResult['concepts']> {
     return globalProfiler.timeAsync('SemanticEngine.analyzeFileContent', async () => {
       // Create cache key based on file path and content hash

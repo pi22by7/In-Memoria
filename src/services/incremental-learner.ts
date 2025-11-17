@@ -1,12 +1,12 @@
 import { nanoid } from 'nanoid';
-import { getLogger } from '../utils/logger.js';
-import type { SqliteDatabase } from '../storage/sqlite-db.js';
+import { Logger } from '../utils/logger.js';
+import type { SQLiteDatabase } from '../storage/sqlite-db.js';
 import type { SemanticEngine } from '../engines/semantic-engine.js';
 import type { PatternEngine } from '../engines/pattern-engine.js';
 import type { GitChange, GitCommit } from './git-integration.js';
 import { EventEmitter } from 'eventemitter3';
 
-const logger = getLogger();
+
 
 export interface LearningDelta {
   id: string;
@@ -58,7 +58,7 @@ interface QueuedLearningTask {
  * instead of requiring full codebase scans.
  */
 export class IncrementalLearner extends EventEmitter {
-  private db: SqliteDatabase;
+  private db: SQLiteDatabase;
   private semanticEngine: SemanticEngine;
   private patternEngine: PatternEngine;
   private projectId: string;
@@ -70,7 +70,7 @@ export class IncrementalLearner extends EventEmitter {
   private totalDeltasProcessed: number = 0;
 
   constructor(
-    db: SqliteDatabase,
+    db: SQLiteDatabase,
     semanticEngine: SemanticEngine,
     patternEngine: PatternEngine,
     projectId: string,
@@ -152,7 +152,7 @@ export class IncrementalLearner extends EventEmitter {
       this.totalDeltasProcessed++;
       this.emit('delta:complete', delta);
 
-      logger.info(`Incremental learning completed in ${delta.durationMs}ms: +${delta.conceptsAdded} concepts, ~${delta.conceptsModified} modified, -${delta.conceptsRemoved} removed`);
+      Logger.info(`Incremental learning completed in ${delta.durationMs}ms: +${delta.conceptsAdded} concepts, ~${delta.conceptsModified} modified, -${delta.conceptsRemoved} removed`);
 
       return delta;
     } catch (error) {
@@ -164,7 +164,7 @@ export class IncrementalLearner extends EventEmitter {
       this.currentDelta = undefined;
       this.emit('delta:error', delta, error);
 
-      logger.error('Incremental learning failed:', error);
+      Logger.error('Incremental learning failed:', error);
       throw error;
     }
   }
@@ -179,7 +179,7 @@ export class IncrementalLearner extends EventEmitter {
     priority: number = 0
   ): Promise<void> {
     if (!this.config.enabled) {
-      logger.debug('Incremental learning is disabled');
+      Logger.debug('Incremental learning is disabled');
       return;
     }
 
@@ -195,7 +195,7 @@ export class IncrementalLearner extends EventEmitter {
     this.queue.push(task);
     this.queue.sort((a, b) => b.priority - a.priority); // Higher priority first
 
-    logger.debug(`Queued ${files.length} files for learning (queue size: ${this.queue.length})`);
+    Logger.debug(`Queued ${files.length} files for learning (queue size: ${this.queue.length})`);
     this.emit('queue:add', task);
 
     // Start processing if not already running
@@ -246,7 +246,7 @@ export class IncrementalLearner extends EventEmitter {
         }
       }
     } catch (error) {
-      logger.error('Error processing learning queue:', error);
+      Logger.error('Error processing learning queue:', error);
       this.emit('queue:error', error);
     } finally {
       this.isProcessing = false;
@@ -265,11 +265,11 @@ export class IncrementalLearner extends EventEmitter {
         return; // File not learned yet
       }
 
-      const conceptIds = JSON.parse(fileIntelligence.semantic_concepts || '[]');
+      const conceptIds = JSON.parse(fileIntelligence.semanticConcepts || '[]');
 
       // Mark concepts as deleted
       for (const conceptId of conceptIds) {
-        this.db.prepare(`
+        this.db.getDB().prepare(`
           UPDATE semantic_concepts
           SET is_deleted = 1,
               last_modified_commit = ?
@@ -280,11 +280,11 @@ export class IncrementalLearner extends EventEmitter {
       }
 
       // Delete file intelligence record
-      this.db.prepare('DELETE FROM file_intelligence WHERE file_path = ?').run(filePath);
+      this.db.getDB().prepare('DELETE FROM file_intelligence WHERE file_path = ?').run(filePath);
 
-      logger.debug(`Marked ${conceptIds.length} concepts as deleted from ${filePath}`);
+      Logger.debug(`Marked ${conceptIds.length} concepts as deleted from ${filePath}`);
     } catch (error) {
-      logger.error(`Failed to handle file deletion for ${filePath}:`, error);
+      Logger.error(`Failed to handle file deletion for ${filePath}:`, error);
     }
   }
 
@@ -304,14 +304,14 @@ export class IncrementalLearner extends EventEmitter {
       });
 
       if (!analysis) {
-        logger.debug(`No analysis results for ${change.path}`);
+        Logger.debug(`No analysis results for ${change.path}`);
         return;
       }
 
       // Get previous concepts for this file
       const previousIntelligence = this.db.getFileIntelligence(change.path);
       const previousConceptIds = previousIntelligence
-        ? JSON.parse(previousIntelligence.semantic_concepts || '[]')
+        ? JSON.parse(previousIntelligence.semanticConcepts || '[]')
         : [];
 
       // Extract current concepts
@@ -326,7 +326,7 @@ export class IncrementalLearner extends EventEmitter {
         const isNew = !previousConceptIds.includes(concept.name);
 
         // Save concept
-        this.db.prepare(`
+        this.db.getDB().prepare(`
           INSERT OR REPLACE INTO semantic_concepts (
             id, concept_name, concept_type, confidence_score,
             relationships, file_path, line_range,
@@ -355,7 +355,7 @@ export class IncrementalLearner extends EventEmitter {
       // Mark removed concepts as deleted
       for (const oldConceptId of previousConceptIds) {
         if (!currentConceptIds.includes(oldConceptId)) {
-          this.db.prepare(`
+          this.db.getDB().prepare(`
             UPDATE semantic_concepts
             SET is_deleted = 1,
                 last_modified_commit = ?
@@ -382,9 +382,9 @@ export class IncrementalLearner extends EventEmitter {
         lastLearnedTimestamp: delta.timestamp,
       });
 
-      logger.debug(`Updated intelligence for ${change.path}: +${delta.conceptsAdded} concepts`);
+      Logger.debug(`Updated intelligence for ${change.path}: +${delta.conceptsAdded} concepts`);
     } catch (error) {
-      logger.error(`Failed to handle file change for ${change.path}:`, error);
+      Logger.error(`Failed to handle file change for ${change.path}:`, error);
     }
   }
 
@@ -401,13 +401,13 @@ export class IncrementalLearner extends EventEmitter {
 
       // Update pattern counts and confidence
       for (const pattern of patterns) {
-        const existing = this.db.prepare(`
+        const existing = this.db.getDB().prepare(`
           SELECT * FROM developer_patterns WHERE pattern_id = ?
         `).get(pattern.id) as any;
 
         if (existing) {
           // Increment frequency
-          this.db.prepare(`
+          this.db.getDB().prepare(`
             UPDATE developer_patterns
             SET frequency = frequency + 1,
                 last_seen = datetime('now', 'utc'),
@@ -419,7 +419,7 @@ export class IncrementalLearner extends EventEmitter {
           delta.patternsModified++;
         } else {
           // New pattern
-          this.db.prepare(`
+          this.db.getDB().prepare(`
             INSERT INTO developer_patterns (
               pattern_id, pattern_type, pattern_content,
               frequency, contexts, examples, confidence,
@@ -440,9 +440,9 @@ export class IncrementalLearner extends EventEmitter {
         }
       }
 
-      logger.debug(`Updated patterns: +${delta.patternsAdded} new, ~${delta.patternsModified} modified`);
+      Logger.debug(`Updated patterns: +${delta.patternsAdded} new, ~${delta.patternsModified} modified`);
     } catch (error) {
-      logger.error('Failed to update patterns from delta:', error);
+      Logger.error('Failed to update patterns from delta:', error);
     }
   }
 
@@ -450,7 +450,7 @@ export class IncrementalLearner extends EventEmitter {
    * Get recent learning deltas
    */
   async getRecentDeltas(limit: number = 10): Promise<LearningDelta[]> {
-    const rows = this.db.prepare(`
+    const rows = this.db.getDB().prepare(`
       SELECT * FROM learning_deltas
       WHERE project_id = ?
       ORDER BY timestamp DESC
@@ -493,7 +493,7 @@ export class IncrementalLearner extends EventEmitter {
    * Save delta to database
    */
   private async saveDelta(delta: LearningDelta): Promise<void> {
-    this.db.prepare(`
+    this.db.getDB().prepare(`
       INSERT INTO learning_deltas (
         id, project_id, timestamp, trigger_type, commit_sha, commit_message,
         files_changed, concepts_added, concepts_removed, concepts_modified,
@@ -524,7 +524,7 @@ export class IncrementalLearner extends EventEmitter {
    * Update delta in database
    */
   private async updateDelta(delta: LearningDelta): Promise<void> {
-    this.db.prepare(`
+    this.db.getDB().prepare(`
       UPDATE learning_deltas
       SET status = ?,
           concepts_added = ?,
@@ -578,7 +578,7 @@ export class IncrementalLearner extends EventEmitter {
     averageDurationMs: number;
     successRate: number;
   }> {
-    const stats = this.db.prepare(`
+    const stats = this.db.getDB().prepare(`
       SELECT
         COUNT(*) as total_deltas,
         SUM(concepts_added) as total_concepts_added,

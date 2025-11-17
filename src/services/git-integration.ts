@@ -2,10 +2,10 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { existsSync } from 'fs';
 import { join, relative, resolve } from 'path';
-import { getLogger } from '../utils/logger.js';
+import { Logger } from '../utils/logger.js';
 
 const execAsync = promisify(exec);
-const logger = getLogger();
+
 
 export interface GitChange {
   type: 'added' | 'modified' | 'deleted' | 'renamed';
@@ -52,7 +52,7 @@ export class GitIntegrationService {
   async initialize(): Promise<boolean> {
     this.isRepo = await this.isGitRepository(this.repoPath);
     if (!this.isRepo) {
-      logger.debug(`Not a git repository: ${this.repoPath}`);
+      Logger.debug(`Not a git repository: ${this.repoPath}`);
     }
     return this.isRepo;
   }
@@ -88,7 +88,7 @@ export class GitIntegrationService {
       });
       return stdout.trim();
     } catch (error) {
-      logger.error('Failed to get repository root:', error);
+      Logger.error('Failed to get repository root:', error);
       return null;
     }
   }
@@ -98,7 +98,7 @@ export class GitIntegrationService {
    */
   async getChangedFiles(since?: string): Promise<GitChange[]> {
     if (!this.isRepo) {
-      logger.warn('Not a git repository, cannot get changed files');
+      Logger.warn('Not a git repository, cannot get changed files');
       return [];
     }
 
@@ -116,7 +116,7 @@ export class GitIntegrationService {
 
       return this.parseGitDiffOutput(stdout);
     } catch (error) {
-      logger.error('Failed to get changed files:', error);
+      Logger.error('Failed to get changed files:', error);
       return [];
     }
   }
@@ -173,7 +173,7 @@ export class GitIntegrationService {
 
       return Array.from(uniqueChanges.values());
     } catch (error) {
-      logger.error('Failed to get uncommitted changes:', error);
+      Logger.error('Failed to get uncommitted changes:', error);
       return [];
     }
   }
@@ -240,7 +240,7 @@ export class GitIntegrationService {
         filesChanged: [],
       };
     } catch (error) {
-      logger.error('Failed to get current commit:', error);
+      Logger.error('Failed to get current commit:', error);
       return null;
     }
   }
@@ -259,7 +259,7 @@ export class GitIntegrationService {
 
       return this.parseGitLogOutput(stdout);
     } catch (error) {
-      logger.error('Failed to get commit history:', error);
+      Logger.error('Failed to get commit history:', error);
       return [];
     }
   }
@@ -304,7 +304,7 @@ export class GitIntegrationService {
       );
       return stdout;
     } catch (error) {
-      logger.debug(`File not found at commit ${commitSha}: ${filePath}`);
+      Logger.debug(`File not found at commit ${commitSha}: ${filePath}`);
       return null;
     }
   }
@@ -373,7 +373,7 @@ export class GitIntegrationService {
         untracked,
       };
     } catch (error) {
-      logger.error('Failed to get git status:', error);
+      Logger.error('Failed to get git status:', error);
       return null;
     }
   }
@@ -395,7 +395,7 @@ export class GitIntegrationService {
 
       return this.parseGitDiffOutput(stdout);
     } catch (error) {
-      logger.error('Failed to get changes between commits:', error);
+      Logger.error('Failed to get changes between commits:', error);
       return [];
     }
   }
@@ -425,7 +425,7 @@ export class GitIntegrationService {
         filesChanged: [filePath],
       };
     } catch (error) {
-      logger.error('Failed to get last commit for file:', error);
+      Logger.error('Failed to get last commit for file:', error);
       return null;
     }
   }
@@ -464,7 +464,7 @@ export class GitIntegrationService {
         .filter(line => line.trim())
         .map(line => line.trim());
     } catch (error) {
-      logger.error('Failed to get recently changed files:', error);
+      Logger.error('Failed to get recently changed files:', error);
       return [];
     }
   }
@@ -506,7 +506,7 @@ export class GitIntegrationService {
         lastModified,
       };
     } catch (error) {
-      logger.error('Failed to get file stats:', error);
+      Logger.error('Failed to get file stats:', error);
       return null;
     }
   }
@@ -549,7 +549,7 @@ export class GitIntegrationService {
           callback(uncommitted);
         }
       } catch (error) {
-        logger.error('Error watching repository:', error);
+        Logger.error('Error watching repository:', error);
       }
 
       if (isRunning) {
@@ -589,7 +589,7 @@ export async function createGitService(repoPath: string): Promise<GitIntegration
   const isRepo = await service.initialize();
 
   if (!isRepo) {
-    logger.debug(`Path is not a git repository: ${repoPath}`);
+    Logger.debug(`Path is not a git repository: ${repoPath}`);
     return null;
   }
 

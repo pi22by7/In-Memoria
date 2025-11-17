@@ -278,6 +278,30 @@ export class PatternEngine {
     }
   }
 
+  /**
+   * Analyze patterns from multiple files (batch operation)
+   * Used by incremental learner to process changed files
+   */
+  async analyzePatterns(filePaths: string[], mode: string = 'full'): Promise<any[]> {
+    const { readFileSync, existsSync } = await import('fs');
+    const allPatterns: any[] = [];
+
+    for (const filePath of filePaths) {
+      try {
+        if (!existsSync(filePath)) continue;
+
+        const content = readFileSync(filePath, 'utf-8');
+        const patterns = await this.analyzeFilePatterns(filePath, content);
+        allPatterns.push(...patterns);
+      } catch (error) {
+        // Skip files that can't be read or analyzed
+        console.warn(`Failed to analyze patterns in ${filePath}:`, error);
+      }
+    }
+
+    return allPatterns;
+  }
+
   async analyzeFileChange(change: FileChange): Promise<PatternAnalysisResult> {
     try {
       const changeData = JSON.stringify({

@@ -1,8 +1,8 @@
-import { getLogger } from '../utils/logger.js';
+import { Logger } from '../utils/logger.js';
 import type { GlobalDatabase, GlobalPattern, PatternAggregation } from '../storage/global-db.js';
 import { StringSimilarity } from '../utils/string-similarity.js';
 
-const logger = getLogger();
+
 
 interface PatternOccurrence {
   projectId: string;
@@ -43,11 +43,11 @@ export class PatternAggregator {
         aggregated++;
       }
 
-      logger.info(
+      Logger.info(
         `Pattern aggregation completed in ${Date.now() - startTime}ms: ${aggregated} patterns aggregated`
       );
     } catch (error) {
-      logger.error('Pattern aggregation failed:', error);
+      Logger.error('Pattern aggregation failed:', error);
       throw error;
     }
   }

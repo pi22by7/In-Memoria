@@ -1,10 +1,8 @@
-import { getLogger } from '../utils/logger.js';
+import { Logger } from '../utils/logger.js';
 import type { GlobalDatabase, GlobalProject, GlobalPattern, SyncResult } from '../storage/global-db.js';
-import type { SqliteDatabase } from '../storage/sqlite-db.js';
+import type { SQLiteDatabase } from '../storage/sqlite-db.js';
 import { PatternAggregator } from './pattern-aggregator.js';
 import { detectLanguageFromPath, detectLanguageFromPattern } from '../utils/language-registry.js';
-
-const logger = getLogger();
 
 export interface ProjectLink {
   id: string;
@@ -71,7 +69,7 @@ export class CrossProjectService {
    */
   async linkProject(
     projectPath: string,
-    projectDb: SqliteDatabase,
+    projectDb: SQLiteDatabase,
     name?: string,
     description?: string
   ): Promise<ProjectLink> {
@@ -98,7 +96,7 @@ export class CrossProjectService {
         throw new Error('Failed to link project');
       }
 
-      logger.info(
+      Logger.info(
         `Project linked in ${Date.now() - startTime}ms: ${project.name} (${project.path})`
       );
 
@@ -112,7 +110,7 @@ export class CrossProjectService {
         conceptCount: project.conceptCount,
       };
     } catch (error) {
-      logger.error('Failed to link project:', error);
+      Logger.error('Failed to link project:', error);
       throw error;
     }
   }
@@ -137,7 +135,7 @@ export class CrossProjectService {
   /**
    * Sync a project's patterns and concepts to global database
    */
-  async syncProject(projectId: string, projectDb: SqliteDatabase): Promise<SyncResult> {
+  async syncProject(projectId: string, projectDb: SQLiteDatabase): Promise<SyncResult> {
     const startTime = Date.now();
     const result: SyncResult = {
       projectId,
@@ -206,7 +204,7 @@ export class CrossProjectService {
       await this.patternAggregator.aggregatePatterns();
 
       result.durationMs = Date.now() - startTime;
-      logger.info(
+      Logger.info(
         `Project synced in ${result.durationMs}ms: ` +
           `+${result.patternsAdded} patterns, +${result.conceptsAdded} concepts`
       );
@@ -217,7 +215,7 @@ export class CrossProjectService {
       result.error = error instanceof Error ? error.message : String(error);
       result.durationMs = Date.now() - startTime;
 
-      logger.error('Project sync failed:', error);
+      Logger.error('Project sync failed:', error);
       return result;
     }
   }
@@ -225,14 +223,14 @@ export class CrossProjectService {
   /**
    * Sync all linked projects
    */
-  async syncAllProjects(projectDatabases: Map<string, SqliteDatabase>): Promise<SyncResult[]> {
+  async syncAllProjects(projectDatabases: Map<string, SQLiteDatabase>): Promise<SyncResult[]> {
     const projects = this.globalDb.getProjectRegistry();
     const results: SyncResult[] = [];
 
     for (const project of projects) {
       const projectDb = projectDatabases.get(project.path);
       if (!projectDb) {
-        logger.warn(`No database found for project ${project.name} at ${project.path}`);
+        Logger.warn(`No database found for project ${project.name} at ${project.path}`);
         continue;
       }
 
@@ -381,7 +379,7 @@ export class CrossProjectService {
 
   // Helper methods
 
-  private getProjectMetadata(projectDb: SqliteDatabase): {
+  private getProjectMetadata(projectDb: SQLiteDatabase): {
     projectName?: string;
     primaryLanguage?: string;
     frameworks: string[];
@@ -401,7 +399,7 @@ export class CrossProjectService {
     };
   }
 
-  private getProjectPatterns(projectDb: SqliteDatabase): any[] {
+  private getProjectPatterns(projectDb: SQLiteDatabase): any[] {
     return projectDb
       .prepare(
         `
@@ -413,7 +411,7 @@ export class CrossProjectService {
       .all();
   }
 
-  private getProjectConcepts(projectDb: SqliteDatabase): any[] {
+  private getProjectConcepts(projectDb: SQLiteDatabase): any[] {
     return projectDb
       .prepare(
         `

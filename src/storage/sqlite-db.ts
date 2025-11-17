@@ -139,6 +139,14 @@ export class SQLiteDatabase {
     return this.migrator;
   }
 
+  /**
+   * Get the underlying better-sqlite3 Database instance
+   * Use this for advanced queries not covered by the high-level API
+   */
+  getDB(): Database.Database {
+    return this.db;
+  }
+
   // Semantic Concepts
   insertSemanticConcept(concept: Omit<SemanticConcept, 'createdAt' | 'updatedAt'>): void {
     const stmt = this.db.prepare(`
