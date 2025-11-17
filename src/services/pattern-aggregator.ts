@@ -1,5 +1,6 @@
 import { getLogger } from '../utils/logger.js';
 import type { GlobalDatabase, GlobalPattern, PatternAggregation } from '../storage/global-db.js';
+import { StringSimilarity } from '../utils/string-similarity.js';
 
 const logger = getLogger();
 
@@ -219,7 +220,7 @@ export class PatternAggregator {
         valueSimilarity += 1;
       } else if (typeof val1 === 'string' && typeof val2 === 'string') {
         // String similarity (simple)
-        valueSimilarity += this.stringSimilarity(val1, val2);
+        valueSimilarity += StringSimilarity.jaccardSimilarity(val1, val2);
       } else if (typeof val1 === 'number' && typeof val2 === 'number') {
         // Number similarity
         valueSimilarity += 1 - Math.abs(val1 - val2) / Math.max(Math.abs(val1), Math.abs(val2), 1);
@@ -232,32 +233,6 @@ export class PatternAggregator {
 
     // Combine key overlap and value similarity
     return (keyOverlap + avgValueSimilarity) / 2;
-  }
-
-  /**
-   * Calculate string similarity (Jaccard similarity on character bigrams)
-   */
-  private stringSimilarity(str1: string, str2: string): number {
-    if (str1 === str2) return 1.0;
-
-    const bigrams1 = this.getBigrams(str1);
-    const bigrams2 = this.getBigrams(str2);
-
-    const intersection = new Set([...bigrams1].filter((b) => bigrams2.has(b)));
-    const union = new Set([...bigrams1, ...bigrams2]);
-
-    return union.size > 0 ? intersection.size / union.size : 0;
-  }
-
-  /**
-   * Get character bigrams from string
-   */
-  private getBigrams(str: string): Set<string> {
-    const bigrams = new Set<string>();
-    for (let i = 0; i < str.length - 1; i++) {
-      bigrams.add(str.substring(i, i + 2));
-    }
-    return bigrams;
   }
 
   /**
