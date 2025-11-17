@@ -5,6 +5,7 @@ import { nanoid } from 'nanoid';
 import { CircuitBreaker, createRustAnalyzerCircuitBreaker } from '../utils/circuit-breaker.js';
 import { globalProfiler, PerformanceOptimizer } from '../utils/performance-profiler.js';
 import { detectLanguageFromPath as resolveLanguageFromPath } from '../utils/language-registry.js';
+import { FileTraversal } from '../utils/file-traversal.js';
 
 export interface CodebaseAnalysisResult {
   languages: string[];
@@ -714,12 +715,12 @@ export class SemanticEngine {
             const stats = await stat(resolved);
 
             if (stats.isDirectory()) {
-              // Count files in directory with depth limit
-              const fileCount = await this.countFilesInDirectory(resolved, 5);
+              // Count files in directory
+              const files = await FileTraversal.collectFiles(resolved);
               keyDirectories.push({
                 path: dir.pattern,
                 type: dir.type,
-                fileCount
+                fileCount: files.length
               });
             }
           } catch {
@@ -745,48 +746,6 @@ export class SemanticEngine {
       rustImplementation,
       fallbackImplementation
     );
-  }
-
-  /**
-   * Count files recursively in a directory (async with depth limit)
-   * @param dirPath - Directory to count files in
-   * @param maxDepth - Maximum recursion depth (default 5)
-   * @param currentDepth - Current depth (for internal recursion tracking)
-   */
-  private async countFilesInDirectory(
-    dirPath: string,
-    maxDepth: number = 5,
-    currentDepth: number = 0
-  ): Promise<number> {
-    // Prevent infinite recursion
-    if (currentDepth >= maxDepth) {
-      return 0;
-    }
-
-    const { readdir } = await import('fs/promises');
-    const { join } = await import('path');
-    let count = 0;
-
-    try {
-      const entries = await readdir(dirPath, { withFileTypes: true });
-
-      for (const entry of entries) {
-        const fullPath = join(dirPath, entry.name);
-
-        if (entry.isDirectory()) {
-          // Skip node_modules and other common ignore patterns
-          if (!['node_modules', '.git', 'dist', 'build', '.next', '__pycache__', 'venv'].includes(entry.name)) {
-            count += await this.countFilesInDirectory(fullPath, maxDepth, currentDepth + 1);
-          }
-        } else if (entry.isFile()) {
-          count++;
-        }
-      }
-    } catch {
-      // Ignore errors for individual directories (permission issues, etc.)
-    }
-
-    return count;
   }
 
   /**

@@ -3,6 +3,7 @@ import { SQLiteDatabase, DeveloperPattern } from '../storage/sqlite-db.js';
 import { FileChange } from '../watchers/file-watcher.js';
 import { CircuitBreaker, createRustAnalyzerCircuitBreaker } from '../utils/circuit-breaker.js';
 import { nanoid } from 'nanoid';
+import { FileTraversal } from '../utils/file-traversal.js';
 
 export interface PatternExtractionResult {
   type: string;
@@ -741,7 +742,7 @@ export class PatternEngine {
 
               try {
                 await access(resolved, constants.F_OK);
-                const files = await this.collectFilesInDirectory(resolved, projectPath, 5);
+                const files = await FileTraversal.collectCodeFiles(resolved);
 
                 if (files.length > 0) {
                   primaryFiles.push(...files.slice(0, Math.ceil(files.length / 2)));
@@ -778,58 +779,6 @@ export class PatternEngine {
       rustImplementation,
       fallbackImplementation
     );
-  }
-
-  /**
-   * Collect files from directory (async with depth limit)
-   * @param dirPath - Directory to collect files from
-   * @param projectPath - Project root path (for relative path calculation)
-   * @param maxDepth - Maximum recursion depth
-   * @param currentDepth - Current depth (for internal recursion tracking)
-   */
-  private async collectFilesInDirectory(
-    dirPath: string,
-    projectPath: string,
-    maxDepth: number = 5,
-    currentDepth: number = 0
-  ): Promise<string[]> {
-    // Prevent infinite recursion
-    if (currentDepth >= maxDepth) {
-      return [];
-    }
-
-    const { readdir } = await import('fs/promises');
-    const { join, relative } = await import('path');
-    const files: string[] = [];
-
-    try {
-      const entries = await readdir(dirPath, { withFileTypes: true });
-
-      for (const entry of entries) {
-        const fullPath = join(dirPath, entry.name);
-
-        if (entry.isDirectory()) {
-          if (!['node_modules', '.git', 'dist', 'build', '.next', '__pycache__', 'venv'].includes(entry.name)) {
-            const nestedFiles = await this.collectFilesInDirectory(
-              fullPath,
-              projectPath,
-              maxDepth,
-              currentDepth + 1
-            );
-            files.push(...nestedFiles);
-          }
-        } else if (entry.isFile()) {
-          const ext = entry.name.split('.').pop()?.toLowerCase();
-          if (['ts', 'tsx', 'js', 'jsx', 'py', 'rs', 'go', 'java'].includes(ext || '')) {
-            files.push(relative(projectPath, fullPath));
-          }
-        }
-      }
-    } catch {
-      // Ignore errors for individual directories (permission issues, etc.)
-    }
-
-    return files;
   }
 
   /**

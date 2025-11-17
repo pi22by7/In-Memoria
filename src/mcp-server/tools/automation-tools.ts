@@ -4,7 +4,7 @@ import { PatternEngine } from '../../engines/pattern-engine.js';
 import { SQLiteDatabase } from '../../storage/sqlite-db.js';
 import { ProgressTracker } from '../../utils/progress-tracker.js';
 import { ConsoleProgressRenderer } from '../../utils/console-progress.js';
-import { glob } from 'glob';
+import { FileTraversal } from '../../utils/file-traversal.js';
 import { statSync, existsSync } from 'fs';
 import { join } from 'path';
 
@@ -112,7 +112,7 @@ export class AutomationTools {
       console.error(`🚀 Quick setup for: ${projectPath}`);
 
       // Step 1: Project check
-      const files = await this.countProjectFiles(projectPath);
+      const files = await FileTraversal.countProjectFiles(projectPath);
       setupSteps!.push({
         step: 'project_check',
         status: 'completed',
@@ -215,7 +215,7 @@ export class AutomationTools {
 
     try {
       // Setup progress phases
-      const files = await this.countProjectFiles(projectPath);
+      const files = await FileTraversal.countProjectFiles(projectPath);
       tracker.addPhase('discovery', files.total, 1);
       tracker.addPhase('semantic_analysis', files.codeFiles, 3);
       tracker.addPhase('pattern_learning', files.codeFiles, 2);
@@ -432,7 +432,7 @@ export class AutomationTools {
       const patterns = this.database.getDeveloperPatterns();
 
       // Count project files
-      const files = await this.countProjectFiles(projectPath);
+      const files = await FileTraversal.countProjectFiles(projectPath);
 
       // Check if data is stale (based on file modification times)
       const hasIntelligence = concepts.length > 0 || patterns.length > 0;
@@ -484,7 +484,7 @@ export class AutomationTools {
         step: 'project_check',
         status: 'completed',
         message: `Project detected at ${projectPath}`,
-        details: await this.countProjectFiles(projectPath)
+        details: await FileTraversal.countProjectFiles(projectPath)
       });
 
       // Step 2: Database initialization (automatic)
@@ -565,100 +565,6 @@ export class AutomationTools {
     }
   }
 
-  private async countProjectFiles(path: string): Promise<{ total: number; codeFiles: number }> {
-    try {
-      const allFiles = await glob('**/*', {
-        cwd: path,
-        ignore: [
-          // Package managers and dependencies
-          '**/node_modules/**',
-          '**/bower_components/**',
-          '**/jspm_packages/**',
-          '**/vendor/**',
-
-          // Version control
-          '**/.git/**',
-          '**/.svn/**',
-          '**/.hg/**',
-
-          // Build outputs and artifacts
-          '**/dist/**',
-          '**/build/**',
-          '**/out/**',
-          '**/output/**',
-          '**/target/**',
-          '**/bin/**',
-          '**/obj/**',
-          '**/Debug/**',
-          '**/Release/**',
-
-          // Framework-specific build directories
-          '**/.next/**',
-          '**/.nuxt/**',
-          '**/.svelte-kit/**',
-          '**/.vitepress/**',
-          '**/_site/**',
-
-          // Static assets and public files
-          '**/public/**',
-          '**/static/**',
-          '**/assets/**',
-
-          // Testing and coverage
-          '**/coverage/**',
-          '**/.coverage/**',
-          '**/htmlcov/**',
-          '**/.pytest_cache/**',
-          '**/.nyc_output/**',
-          '**/nyc_output/**',
-          '**/lib-cov/**',
-
-          // Python environments and cache
-          '**/__pycache__/**',
-          '**/.venv/**',
-          '**/venv/**',
-          '**/env/**',
-          '**/.env/**',
-
-          // Temporary and cache directories
-          '**/tmp/**',
-          '**/temp/**',
-          '**/.tmp/**',
-          '**/cache/**',
-          '**/.cache/**',
-          '**/logs/**',
-          '**/.logs/**',
-
-          // Generated/minified files
-          '**/*.min.js',
-          '**/*.min.css',
-          '**/*.bundle.js',
-          '**/*.chunk.js',
-          '**/*.map',
-
-          // Lock files
-          '**/package-lock.json',
-          '**/yarn.lock',
-          '**/Cargo.lock',
-          '**/Gemfile.lock',
-          '**/Pipfile.lock',
-          '**/poetry.lock'
-        ],
-        nodir: true
-      });
-
-      const codeFiles = allFiles.filter(file =>
-        /\.(ts|tsx|js|jsx|py|rs|go|java|c|cpp|h|hpp|svelte|vue)$/.test(file)
-      );
-
-      return {
-        total: allFiles.length,
-        codeFiles: codeFiles.length
-      };
-    } catch (error) {
-      return { total: 0, codeFiles: 0 };
-    }
-  }
 
   private getLastLearningTime(): string | null {
     // Simple heuristic - get the latest created_at from semantic_concepts or developer_patterns
