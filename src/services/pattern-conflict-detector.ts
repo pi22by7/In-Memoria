@@ -79,85 +79,25 @@ export class PatternConflictDetector {
   /**
    * Check code compliance against learned patterns
    */
+  /**
+   * Check compliance against learned patterns (KISS: orchestration method)
+   */
   async checkCompliance(
     code: string,
     filePath: string,
     options: CheckOptions = {}
   ): Promise<ComplianceReport> {
     const startTime = Date.now();
-    const {
-      severityThreshold = 'medium',
-      includeWarnings = true,
-      includeSuggestions = true,
-    } = options;
-
-    const violations: PatternViolation[] = [];
-    const warnings: PatternViolation[] = [];
-    const suggestions: PatternViolation[] = [];
+    const { severityThreshold = 'medium', includeWarnings = true, includeSuggestions = true } = options;
 
     try {
-      // Get learned patterns for this project
+      // Get patterns and check all types
       const patterns = await this.getLearnedPatterns();
+      const { violations, warnings, suggestions } = await this.checkAllPatterns(code, filePath, patterns, severityThreshold);
 
-      // Check naming patterns
-      const namingViolations = await this.checkNamingPatterns(
-        code,
-        filePath,
-        patterns.naming
-      );
-      this.categorizeViolations(
-        namingViolations,
-        severityThreshold,
-        violations,
-        warnings,
-        suggestions
-      );
-
-      // Check structural patterns
-      const structuralViolations = await this.checkStructuralPatterns(
-        code,
-        filePath,
-        patterns.structural
-      );
-      this.categorizeViolations(
-        structuralViolations,
-        severityThreshold,
-        violations,
-        warnings,
-        suggestions
-      );
-
-      // Check implementation patterns
-      const implementationViolations = await this.checkImplementationPatterns(
-        code,
-        filePath,
-        patterns.implementation
-      );
-      this.categorizeViolations(
-        implementationViolations,
-        severityThreshold,
-        violations,
-        warnings,
-        suggestions
-      );
-
-      // Calculate overall score
-      const totalChecks = violations.length + warnings.length + suggestions.length;
-      const overallScore = totalChecks === 0 ? 100 : Math.max(0, 100 - violations.length * 20 - warnings.length * 10 - suggestions.length * 5);
-
-      // Save violations to database
-      for (const violation of violations) {
-        await this.saveViolation(violation, filePath);
-      }
-
-      const report: ComplianceReport = {
-        passed: violations.length === 0,
-        violations,
-        warnings: includeWarnings ? warnings : [],
-        suggestions: includeSuggestions ? suggestions : [],
-        overallScore,
-        checkDurationMs: Date.now() - startTime,
-      };
+      // Save violations and build report
+      await this.persistViolations(violations, filePath);
+      const report = this.buildComplianceReport(violations, warnings, suggestions, includeWarnings, includeSuggestions, startTime);
 
       Logger.debug(
         `Pattern compliance check completed in ${report.checkDurationMs}ms: ` +
@@ -169,6 +109,69 @@ export class PatternConflictDetector {
       Logger.error('Pattern compliance check failed:', error);
       throw error;
     }
+  }
+
+  /**
+   * Check all pattern types and categorize violations
+   */
+  private async checkAllPatterns(
+    code: string,
+    filePath: string,
+    patterns: { naming: any[]; structural: any[]; implementation: any[] },
+    severityThreshold: 'low' | 'medium' | 'high'
+  ): Promise<{ violations: PatternViolation[]; warnings: PatternViolation[]; suggestions: PatternViolation[] }> {
+    const violations: PatternViolation[] = [];
+    const warnings: PatternViolation[] = [];
+    const suggestions: PatternViolation[] = [];
+
+    // Check all pattern types
+    const patternTypes: Array<[any[], (c: string, f: string, p: any[]) => Promise<PatternViolation[]>]> = [
+      [patterns.naming, this.checkNamingPatterns.bind(this)],
+      [patterns.structural, this.checkStructuralPatterns.bind(this)],
+      [patterns.implementation, this.checkImplementationPatterns.bind(this)]
+    ];
+
+    for (const [patternList, checkFunction] of patternTypes) {
+      const foundViolations = await checkFunction(code, filePath, patternList);
+      this.categorizeViolations(foundViolations, severityThreshold, violations, warnings, suggestions);
+    }
+
+    return { violations, warnings, suggestions };
+  }
+
+  /**
+   * Persist violations to database
+   */
+  private async persistViolations(violations: PatternViolation[], filePath: string): Promise<void> {
+    for (const violation of violations) {
+      await this.saveViolation(violation, filePath);
+    }
+  }
+
+  /**
+   * Build final compliance report
+   */
+  private buildComplianceReport(
+    violations: PatternViolation[],
+    warnings: PatternViolation[],
+    suggestions: PatternViolation[],
+    includeWarnings: boolean,
+    includeSuggestions: boolean,
+    startTime: number
+  ): ComplianceReport {
+    const totalChecks = violations.length + warnings.length + suggestions.length;
+    const overallScore = totalChecks === 0
+      ? 100
+      : Math.max(0, 100 - violations.length * 20 - warnings.length * 10 - suggestions.length * 5);
+
+    return {
+      passed: violations.length === 0,
+      violations,
+      warnings: includeWarnings ? warnings : [],
+      suggestions: includeSuggestions ? suggestions : [],
+      overallScore,
+      checkDurationMs: Date.now() - startTime,
+    };
   }
 
   /**
