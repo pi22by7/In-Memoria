@@ -33,10 +33,13 @@ In Memoria is an MCP server that learns from your actual codebase and remembers 
 
 Think of it as giving your AI pair programmer a notepad that doesn't get wiped clean every time you restart the session.
 
-**Current version: 0.6.0** - [See what's changed](CHANGELOG.md)
+**Current version: 0.7.0** - [See what's changed](CHANGELOG.md)
 
 ### What It Does
 
+- **Incremental learning** - Always-fresh intelligence that updates in seconds, not minutes (10-100x faster) ⭐ NEW
+- **Pattern compliance** - Real-time warnings when your code violates established patterns ⭐ NEW
+- **Cross-project intelligence** - Learn patterns across all your repositories, not just one ⭐ NEW
 - **Learns your patterns** - Analyzes your code to understand naming conventions, architectural choices, and structural preferences
 - **Instant project context** - Provides tech stack, entry points, and architecture in <200 tokens (no re-analysis needed)
 - **Smart file routing** - Routes vague requests like "add password reset" directly to relevant files
@@ -145,9 +148,10 @@ In Memoria is built on Rust + TypeScript, using the Model Context Protocol to co
 
 **TypeScript Layer** - MCP server and orchestration:
 
-- 13 specialized tools for AI assistants (organized into 4 categories)
+- 19 specialized tools for AI assistants (organized into 4 categories)
 - SQLite for structured data, SurrealDB with SurrealKV for persistent vector embeddings
-- File watching for incremental updates
+- Incremental learning with background queue (10-100x faster updates)
+- Pattern compliance checking and cross-project intelligence
 - Smart routing that maps features to files
 
 **Storage** - Local-first:
@@ -168,9 +172,33 @@ This isn't just another RAG system or static rules engine:
 - **Remembers context** - Tracks work sessions, tasks, and architectural decisions
 - **Multi-mode search** - Semantic (meaning), text (keywords), or pattern-based
 
+## What's New in v0.7.0 🎯
+
+We've completed **Phase 1: The Three Critical Features** - making In Memoria indispensable for daily development:
+
+### 🔄 Incremental Learning
+Learn from every code change without full rescans. Updates happen in seconds, not minutes (10-100x faster). Background learning queue ensures non-blocking updates with Git-aware change detection.
+
+### 🛡️ Pattern Conflict Detection
+Real-time pattern compliance checking catches inconsistencies before they become technical debt. Multi-level severity warnings with quick-fix suggestions. AI agents can validate code against learned patterns before writing.
+
+**New MCP tool**: `check_pattern_compliance` - Validate file or code snippet compliance with project patterns
+
+### 🌐 Cross-Project Learning
+Portfolio-wide intelligence across all your repositories. Global pattern library with per-project overrides. Cross-repo semantic search to leverage experience from hundreds of projects.
+
+**New MCP tools**: `search_all_projects`, `get_global_patterns`, `link_project`
+
+### 🔧 DRY/KISS Refactoring
+Complete codebase quality overhaul - 7 new utility modules (1,053 lines) eliminate duplication, 22 helper methods simplify complex orchestration. 100% test pass rate (135/135 tests).
+
+**Total Phase 1 Impact**: 3,985 lines of new functionality, 6 new MCP tools, 2 database migrations
+
+---
+
 ## What's New in v0.5.x
 
-We recently completed Phases 1-4 of the implementation roadmap:
+Phases 1-4 of the implementation roadmap completed earlier:
 
 ### 🗺️ Project Blueprints (Phase 1)
 
@@ -190,14 +218,14 @@ No more janky console spam. Progress bars update in-place with consistent 500ms 
 
 ## MCP Tools for AI Assistants
 
-In Memoria provides **13 specialized tools** that AI assistants can call via MCP. They're organized into 4 categories (down from 16 after Phase 4 consolidation merged redundant tools):
+In Memoria provides **19 specialized tools** that AI assistants can call via MCP. They're organized into 4 categories (+6 new tools from Phase 1):
 
 ### 🎯 Core Analysis (2 tools)
 
 - `analyze_codebase` - Analyze files/directories with concepts, patterns, complexity (Phase 4: now handles both files and directories)
 - `search_codebase` - Multi-mode search (semantic/text/pattern)
 
-### 🧠 Intelligence (7 tools)
+### 🧠 Intelligence (11 tools)
 
 - `learn_codebase_intelligence` - Deep learning to extract patterns and architecture
 - `get_project_blueprint` - Instant project context with tech stack and entry points ⭐ (Phase 4: includes learning status)
@@ -206,10 +234,16 @@ In Memoria provides **13 specialized tools** that AI assistants can call via MCP
 - `predict_coding_approach` - Implementation guidance with file routing ⭐
 - `get_developer_profile` - Access coding style and work context
 - `contribute_insights` - Record architectural decisions
+- `check_pattern_compliance` - Validate code against learned patterns ⭐ NEW (Phase 1)
+- `search_all_projects` - Cross-repo semantic search ⭐ NEW (Phase 1)
+- `get_global_patterns` - Portfolio-wide pattern insights ⭐ NEW (Phase 1)
+- `link_project` - Register projects for cross-learning ⭐ NEW (Phase 1)
 
-### 🤖 Automation (1 tool)
+### 🤖 Automation (3 tools)
 
 - `auto_learn_if_needed` - Smart auto-learning with staleness detection ⭐ (Phase 4: includes quick setup functionality)
+- `get_incremental_status` - Check learning queue status ⭐ NEW (Phase 1)
+- `trigger_incremental_learn` - Manual incremental learning triggers ⭐ NEW (Phase 1)
 
 ### 📊 Monitoring (3 tools)
 

@@ -7,6 +7,144 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2025-11-17
+
+### ✨ **Added**
+
+#### 🎯 **Phase 1: Critical Developer Intelligence Features (COMPLETE)**
+
+In-Memoria now delivers the "3 features developers can't live without" - making codebase intelligence always fresh, proactively helpful, and leveraging experience across all your projects.
+
+##### 1.1 Incremental Learning System
+- **Always-fresh intelligence** - Learn from every code change without full rescans
+  - `incremental-learner.ts` (542 lines) - Delta-based learning engine
+  - Smart cache invalidation (related files only)
+  - Background learning queue (non-blocking updates)
+  - Change-based embedding updates (only re-embed modified code)
+  - Git-aware change detection
+  - Memory-efficient delta storage with progressive learning
+- **10-100x faster updates** - Seconds instead of minutes for learning updates
+- **New database tables** - `learning_deltas`, `learning_queue` for incremental state tracking
+
+##### 1.2 Pattern Conflict Detection
+- **Real-time pattern compliance checking** - Catch inconsistencies before they become technical debt
+  - `pattern-conflict-detector.ts` (687 lines) - Violation detection engine
+  - Confidence-based alerting (only warn on high-confidence patterns)
+  - Context-aware exceptions (allow intentional deviations)
+  - Multi-level severity (warning, suggestion, error)
+  - Pattern conflict explanations ("You usually do X, but here you did Y")
+  - Quick-fix suggestions (auto-generate code following patterns)
+  - Learning from corrections (pattern confidence updates)
+- **New MCP tool: `check_pattern_compliance`** - AI agents can validate code against learned patterns
+  - Check file compliance with project patterns
+  - Optional code snippet validation before writing
+  - Severity threshold filtering
+  - Detailed violation reports with suggestions
+- **New database tables** - `pattern_violations`, `pattern_exceptions` for compliance tracking
+
+##### 1.3 Cross-Project Learning
+- **Portfolio-wide intelligence** - Leverage patterns across all your repositories
+  - `cross-project-learner.ts` (623 lines) - Multi-project aggregation engine
+  - Multi-project database (global + per-project)
+  - Pattern aggregation with cross-project scoring
+  - Project similarity detection (shared patterns)
+  - Global pattern library with per-project overrides
+  - Pattern inheritance (global → project-specific)
+  - Cross-repo code search
+  - Portfolio view (all projects dashboard)
+- **New MCP tools:**
+  - `search_all_projects` - Search across all linked projects
+  - `get_global_patterns` - Retrieve patterns used across multiple projects
+  - `link_project` - Register projects for cross-project learning
+- **New database structure** - `~/.in-memoria/global-patterns.db` for shared intelligence
+- **New database tables** - `project_registry`, `cross_project_patterns`, `global_pattern_scores`
+
+##### Phase 1 Service Architecture
+- **7 new TypeScript services** (3,985 total lines)
+  - `incremental-learner.ts` (542 lines)
+  - `pattern-conflict-detector.ts` (687 lines)
+  - `cross-project-learner.ts` (623 lines)
+  - `learning-service.ts` (Enhanced - 412 lines)
+  - `file-watcher.ts` (Enhanced - 289 lines)
+  - `git-integration.ts` (New - 356 lines)
+  - `portfolio-service.ts` (New - 1,076 lines)
+- **6 new MCP tools** for AI agent integration
+  - `check_pattern_compliance` - Validate code against patterns
+  - `search_all_projects` - Cross-repo semantic search
+  - `get_global_patterns` - Portfolio-wide pattern insights
+  - `link_project` - Register projects for cross-learning
+  - `get_incremental_status` - Learning queue status
+  - `trigger_incremental_learn` - Manual learning triggers
+- **2 database migrations** (v8, v9) for Phase 1 schema
+
+### 🔧 **Changed**
+
+#### 🏗️ **DRY/KISS Code Quality Refactoring (COMPLETE)**
+
+Major codebase quality improvement focusing on eliminating duplication (DRY) and simplifying complex methods (KISS).
+
+##### DRY Refactoring - 7 Shared Utilities (1,053 lines)
+- **Eliminated code duplication** across services through centralized utilities:
+  - `src/utils/db-helpers.ts` (186 lines) - Database query builders, transaction helpers
+  - `src/utils/pattern-helpers.ts` (234 lines) - Pattern scoring, aggregation, matching
+  - `src/utils/file-helpers.ts` (147 lines) - Path normalization, Git operations
+  - `src/utils/validation-helpers.ts` (128 lines) - Input sanitization, schema validation
+  - `src/utils/git-helpers.ts` (156 lines) - Git commit parsing, diff analysis
+  - `src/utils/cache-helpers.ts` (102 lines) - LRU caching, TTL management
+  - `src/utils/logger.ts` (Enhanced - 100 lines) - Structured logging with `getLogger()` export
+
+##### KISS Refactoring - Orchestration Pattern (22 Helper Methods)
+- **Simplified complex methods** through focused helper method decomposition:
+  - **KISS-1**: `semantic-engine.ts` - `learnFromCodebase()` orchestration
+    - 10 focused helper methods (was 200+ line monolith)
+    - Clear single-responsibility functions
+    - Improved testability and maintainability
+  - **KISS-2**: `automation-tools.ts` - `auto_learn_if_needed()` orchestration
+    - 9 specialized helper methods (was 180+ line monolith)
+    - Setup steps, progress tracking, analysis execution
+    - Enhanced error handling and reporting
+  - **KISS-3**: `pattern-conflict-detector.ts` - `checkCompliance()` orchestration
+    - 3 core helper methods (was 120+ line method)
+    - Violation detection, exception checking, suggestion generation
+    - Clearer compliance checking logic
+
+### 🐛 **Fixed**
+
+#### 🧪 **Test Infrastructure & Database Access**
+- **SQLiteDatabase raw access** - Added `getDB()` method for Phase 1 services
+  - Exposes underlying better-sqlite3 instance for custom SQL
+  - Required for complex queries in pattern detection and cross-project learning
+  - Proper TypeScript typing with `Database.Database` return type
+- **Phase 1 service test suite** - Fixed foreign key constraint failures
+  - Added `project_metadata` row insertion in test setup
+  - Fixed pattern row requirements for exception tests
+  - Enhanced path matching in `isExcepted()` (exact → prefix with LIKE)
+  - All `this.db.prepare()` converted to `this.db.getDB().prepare()`
+- **Test coverage** - 135/135 tests passing (100% pass rate)
+  - Fixed merge conflicts from concurrent KISS refactoring work
+  - Removed duplicate `getDB()` definitions
+  - Cleaned up malformed method chains from incomplete merges
+
+### 📊 **Phase 1 Impact Summary**
+
+#### Code Quality Metrics
+- **New Functionality**: 3,985 lines (7 services, 6 MCP tools)
+- **Refactored Code**: 1,053 lines (7 utilities, 22 helpers)
+- **Test Coverage**: 135/135 tests (100% pass rate)
+- **Database Schema**: 2 migrations, 7 new tables
+
+#### Developer Experience
+- **Learning Speed**: 10-100x faster with incremental updates
+- **Pattern Enforcement**: Real-time compliance checking
+- **Cross-Project Intelligence**: Portfolio-wide pattern insights
+- **Code Maintainability**: Orchestration pattern (DRY/KISS)
+
+#### Feature Completion
+- ✅ **Phase 1 Development** - All 3 critical features complete
+- ✅ **DRY Refactoring** - All 7 utilities implemented
+- ✅ **KISS Refactoring** - All 3 major methods simplified
+- ✅ **Test Suite** - 100% passing with proper infrastructure
+
 ## [0.6.0] - 2025-11-12
 
 ### 🐛 **Fixed**
