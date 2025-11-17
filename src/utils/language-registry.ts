@@ -93,3 +93,34 @@ export function detectLanguageFromPath(filePath: string): string {
 export function isParserSupportedLanguage(language: string): boolean {
   return PARSER_SUPPORTED_LANGUAGES.has(language);
 }
+
+/**
+ * Detect language from pattern content or metadata.
+ * Useful for analyzing patterns that reference languages or file types.
+ */
+export function detectLanguageFromPattern(pattern: any): string {
+  const content = typeof pattern === 'string'
+    ? pattern
+    : JSON.stringify(pattern);
+
+  const contentLower = content.toLowerCase();
+
+  // Check for language keywords in pattern content
+  if (contentLower.includes('typescript') || contentLower.includes('.ts')) return 'typescript';
+  if (contentLower.includes('javascript') || contentLower.includes('.js')) return 'javascript';
+  if (contentLower.includes('python') || contentLower.includes('.py')) return 'python';
+  if (contentLower.includes('rust') || contentLower.includes('.rs')) return 'rust';
+  if (contentLower.includes('go') || contentLower.includes('.go')) return 'go';
+  if (contentLower.includes('java') || contentLower.includes('.java')) return 'java';
+  if (contentLower.includes('c++') || contentLower.includes('.cpp')) return 'cpp';
+  if (contentLower.includes('.c') || contentLower.includes(' c ')) return 'c';
+  if (contentLower.includes('c#') || contentLower.includes('csharp') || contentLower.includes('.cs')) return 'csharp';
+  if (contentLower.includes('php') || contentLower.includes('.php')) return 'php';
+  if (contentLower.includes('ruby') || contentLower.includes('.rb')) return 'ruby';
+  if (contentLower.includes('swift') || contentLower.includes('.swift')) return 'swift';
+  if (contentLower.includes('kotlin') || contentLower.includes('.kt')) return 'kotlin';
+  if (contentLower.includes('svelte') || contentLower.includes('.svelte')) return 'svelte';
+  if (contentLower.includes('sql') || contentLower.includes('.sql')) return 'sql';
+
+  return 'unknown';
+}

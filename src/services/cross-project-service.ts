@@ -3,6 +3,7 @@ import type { GlobalDatabase, GlobalProject, GlobalPattern, SyncResult } from '.
 import type { SqliteDatabase } from '../storage/sqlite-db.js';
 import { PatternAggregator } from './pattern-aggregator.js';
 import { nanoid } from 'nanoid';
+import { detectLanguageFromPath, detectLanguageFromPattern } from '../utils/language-registry.js';
 
 const logger = getLogger();
 
@@ -167,7 +168,7 @@ export class CrossProjectService {
           totalFrequency: pattern.frequency,
           confidence: pattern.confidence,
           sourceProjects: [projectId],
-          language: this.detectLanguageFromPattern(pattern),
+          language: detectLanguageFromPattern(pattern.pattern_content),
         });
 
         if (globalPatternId) {
@@ -183,7 +184,7 @@ export class CrossProjectService {
           type: concept.concept_type,
           filePath: concept.file_path,
           projectId,
-          language: this.detectLanguageFromFile(concept.file_path),
+          language: detectLanguageFromPath(concept.file_path),
           metadata: {
             confidence: concept.confidence_score,
           },
@@ -424,52 +425,6 @@ export class CrossProjectService {
     `
       )
       .all();
-  }
-
-  private detectLanguageFromPattern(pattern: any): string {
-    // Simple language detection from pattern content
-    const content = pattern.pattern_content || '{}';
-
-    if (content.includes('typescript') || content.includes('.ts')) return 'typescript';
-    if (content.includes('javascript') || content.includes('.js')) return 'javascript';
-    if (content.includes('python') || content.includes('.py')) return 'python';
-    if (content.includes('rust') || content.includes('.rs')) return 'rust';
-    if (content.includes('go') || content.includes('.go')) return 'go';
-
-    return 'unknown';
-  }
-
-  private detectLanguageFromFile(filePath: string): string {
-    const ext = filePath.split('.').pop()?.toLowerCase();
-
-    switch (ext) {
-      case 'ts':
-      case 'tsx':
-        return 'typescript';
-      case 'js':
-      case 'jsx':
-        return 'javascript';
-      case 'py':
-        return 'python';
-      case 'rs':
-        return 'rust';
-      case 'go':
-        return 'go';
-      case 'java':
-        return 'java';
-      case 'c':
-      case 'h':
-        return 'c';
-      case 'cpp':
-      case 'hpp':
-        return 'cpp';
-      case 'cs':
-        return 'csharp';
-      case 'php':
-        return 'php';
-      default:
-        return 'unknown';
-    }
   }
 
   private categorizeProjectSize(conceptCount: number): 'small' | 'medium' | 'large' {
