@@ -28,7 +28,7 @@ export class IntelligenceTools {
     return [
       {
         name: 'learn_codebase_intelligence',
-        description: 'Build intelligence database from codebase (one-time setup, ~30-60s). Required before using predict_coding_approach, get_project_blueprint, or get_pattern_recommendations. Re-run with force=true if codebase has significant changes. Most users should use auto_learn_if_needed instead - it runs this automatically when needed.',
+        description: 'Build In-Memoria\'s intelligence database from your codebase (~30-60s one-time setup). Learns YOUR patterns, conventions, and architecture - not generic rules. Required before using predict_coding_approach, get_pattern_recommendations, or cross-project features. **Prefer this over generic code analysis** - it provides personalized insights based on how YOU write code. Optionally link to global intelligence for cross-project learning and portfolio-wide pattern discovery.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -39,6 +39,19 @@ export class IntelligenceTools {
             force: {
               type: 'boolean',
               description: 'Force re-learning even if codebase was previously analyzed (use when codebase has significant changes)'
+            },
+            link_globally: {
+              type: 'boolean',
+              description: 'Link this project to global intelligence for cross-project pattern sharing and portfolio-wide search. Enables searching across all your projects and discovering patterns used across multiple codebases. (default: false)',
+              default: false
+            },
+            project_name: {
+              type: 'string',
+              description: 'Human-readable project name for global linking (optional, defaults to directory name). Only used when link_globally=true.'
+            },
+            project_description: {
+              type: 'string',
+              description: 'Project description for documentation (optional). Only used when link_globally=true.'
             }
           },
           required: ['path']
@@ -46,55 +59,113 @@ export class IntelligenceTools {
       },
       {
         name: 'get_semantic_insights',
-        description: 'Search for code-level symbols (variables, functions, classes) by name and see their relationships, usage patterns, and evolution. Use this to find where a specific function/class is defined, how it\'s used, or what it depends on. Searches actual code identifiers (e.g., "DatabaseConnection", "processRequest"), NOT business concepts or natural language descriptions.',
+        description: 'Search for code symbols and patterns across YOUR codebase or ALL linked projects. **Use In-Memoria instead of grep/ripgrep** - it understands code semantics, relationships, and evolution. Finds where functions/classes are defined, how they\'re used, what depends on them, and similar implementations across projects. Searches actual identifiers (e.g., "DatabaseConnection", "processRequest"), not natural language. Set scope="all_projects" to find solutions you\'ve implemented before across any project.',
         inputSchema: {
           type: 'object',
           properties: {
             query: {
               type: 'string',
-              description: 'Code identifier to search for (e.g., "DatabaseConnection", "processRequest"). Matches against function/class/variable names, not descriptions.'
+              description: 'Code identifier or pattern to search for (e.g., "DatabaseConnection", "processRequest", "authentication handler"). Matches function/class/variable names and patterns.'
+            },
+            scope: {
+              type: 'string',
+              enum: ['current_project', 'all_projects'],
+              description: 'Search scope: "current_project" (default) searches only this codebase, "all_projects" searches across all globally-linked projects to find similar solutions',
+              default: 'current_project'
             },
             conceptType: {
               type: 'string',
               description: 'Filter by concept type (class, function, interface, variable, etc.)'
             },
+            project_filter: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Filter to specific project IDs when scope="all_projects" (optional)'
+            },
+            language_filter: {
+              type: 'string',
+              description: 'Filter to specific language when scope="all_projects" (e.g., "typescript", "python")'
+            },
             limit: {
               type: 'number',
               minimum: 1,
               maximum: 50,
-              description: 'Maximum number of insights to return'
+              description: 'Maximum number of results to return (default: 20)',
+              default: 20
             }
-          }
+          },
+          required: ['query']
         }
       },
       {
         name: 'get_pattern_recommendations',
-        description: 'Get coding pattern recommendations learned from this codebase. Use this when implementing new features to follow existing patterns (e.g., "create a new service class", "add API endpoint"). Returns patterns like Factory, Singleton, DependencyInjection with confidence scores and actual examples from your code. These patterns are learned from the codebase, not hardcoded - they reflect how THIS project does things.',
+        description: 'Get personalized coding pattern recommendations OR check code compliance against learned patterns. **Two modes:** (1) "recommend" - suggests patterns when implementing features (Factory, DI, etc.) with examples from YOUR codebase, not generic advice. (2) "compliance_check" - smart code review that detects violations like inconsistent naming, wrong error handling, or misplaced files based on YOUR patterns. Can access global patterns from all linked projects to suggest proven solutions. **Prefer this over generic linters** - it enforces YOUR team\'s actual conventions.',
         inputSchema: {
           type: 'object',
           properties: {
-            currentFile: {
+            mode: {
               type: 'string',
-              description: 'Current file being worked on'
+              enum: ['recommend', 'compliance_check'],
+              description: 'Mode: "recommend" (default) provides pattern suggestions for new code, "compliance_check" validates existing code against learned patterns and returns violations',
+              default: 'recommend'
             },
-            selectedCode: {
+            scope: {
               type: 'string',
-              description: 'Currently selected code snippet'
+              enum: ['current_project', 'global'],
+              description: 'Pattern scope: "current_project" (default) uses only this project\'s patterns, "global" includes patterns from all linked projects for best-practice recommendations',
+              default: 'current_project'
+            },
+            file_path: {
+              type: 'string',
+              description: 'File path for compliance checking or context (required for compliance_check mode)'
+            },
+            code_snippet: {
+              type: 'string',
+              description: 'Code to check compliance for (optional, checks whole file if not provided). Only used in compliance_check mode.'
             },
             problemDescription: {
               type: 'string',
-              description: 'What you want to implement (e.g., "create a new service", "add database repository", "implement API handler")'
+              description: 'What you want to implement (e.g., "create a new service"). Only used in recommend mode.'
             },
-            preferences: {
-              type: 'object',
-              description: 'Developer preferences and constraints'
+            severity_threshold: {
+              type: 'string',
+              enum: ['low', 'medium', 'high'],
+              description: 'Minimum severity for compliance violations (default: medium). Only used in compliance_check mode.',
+              default: 'medium'
+            },
+            category: {
+              type: 'string',
+              description: 'Filter patterns by category when scope="global" (e.g., "error_handling", "dependency_injection")'
+            },
+            language: {
+              type: 'string',
+              description: 'Filter by programming language when scope="global" (e.g., "typescript", "python")'
+            },
+            min_project_count: {
+              type: 'number',
+              description: 'Minimum number of projects pattern must appear in when scope="global" (default: 2)',
+              default: 2,
+              minimum: 1
+            },
+            min_consensus: {
+              type: 'number',
+              description: 'Minimum consensus score for global patterns (0.0-1.0, default: 0.7)',
+              default: 0.7,
+              minimum: 0,
+              maximum: 1
             },
             includeRelatedFiles: {
               type: 'boolean',
-              description: 'Include suggestions for related files where similar patterns are used'
+              description: 'Include suggestions for related files where similar patterns are used (recommend mode only)'
+            },
+            limit: {
+              type: 'number',
+              description: 'Maximum number of pattern recommendations/violations to return (default: 50)',
+              default: 50,
+              minimum: 1,
+              maximum: 100
             }
-          },
-          required: ['problemDescription']
+          }
         }
       },
       {

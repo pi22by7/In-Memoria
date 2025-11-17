@@ -40,14 +40,31 @@ export class MonitoringTools {
       },
       {
         name: 'get_intelligence_metrics',
-        description: 'Get detailed metrics about the intelligence database and learning state',
+        description: 'Get comprehensive intelligence metrics: database stats, learning history, or full portfolio view across all projects. **Three views:** (1) "metrics" - current project intelligence stats with breakdowns, (2) "learning_history" - recent incremental learning updates showing what was learned from commits, (3) "portfolio" - overview of all linked projects with aggregate statistics and insights. **Use this to understand learning progress and discover patterns across your entire codebase portfolio.**',
         inputSchema: {
           type: 'object',
           properties: {
+            view: {
+              type: 'string',
+              enum: ['metrics', 'learning_history', 'portfolio'],
+              description: 'View type: "metrics" (default) shows current project stats, "learning_history" shows recent learning deltas, "portfolio" shows all linked projects overview',
+              default: 'metrics'
+            },
             includeBreakdown: {
               type: 'boolean',
-              description: 'Include detailed breakdown by type and confidence',
+              description: 'Include detailed breakdown by type and confidence (metrics view only)',
               default: true
+            },
+            limit: {
+              type: 'number',
+              description: 'Number of recent learning deltas to retrieve (learning_history view only, default: 10)',
+              default: 10,
+              minimum: 1,
+              maximum: 100
+            },
+            since_timestamp: {
+              type: 'number',
+              description: 'Only show deltas since this Unix timestamp (learning_history view only, optional)'
             }
           }
         }
