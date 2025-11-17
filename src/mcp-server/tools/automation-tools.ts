@@ -86,6 +86,10 @@ export class AutomationTools {
     ];
   }
 
+  /**
+   * Auto-learn intelligence if needed (KISS: orchestration method)
+   * Delegates to focused helper methods for clarity
+   */
   async autoLearnIfNeeded(args: {
     path?: string;
     force?: boolean;
@@ -94,68 +98,79 @@ export class AutomationTools {
     includeSetupSteps?: boolean;
   }): Promise<any> {
     const projectPath = args.path || process.cwd();
-    const force = args.force || false;
-    const includeProgress = args.includeProgress !== false;
-    const skipLearning = args.skipLearning || false;
-    const includeSetupSteps = args.includeSetupSteps || false;
+    const setupSteps = await this.initializeSetupSteps(args.includeSetupSteps, projectPath);
 
-    // Phase 4: If includeSetupSteps is true, include quick_setup functionality
-    const setupSteps: Array<{
-      step: string;
-      status: string;
-      message: string;
-      details?: any;
-      error?: string;
-    }> | undefined = includeSetupSteps ? [] : undefined;
+    // Check if learning should be skipped
+    const status = await this.getLearningStatus({ path: projectPath });
+    const skipResult = this.shouldSkipLearning(args, status, setupSteps, projectPath);
+    if (skipResult) return skipResult;
 
-    if (includeSetupSteps) {
-      console.error(`🚀 Quick setup for: ${projectPath}`);
+    // Perform learning with progress tracking
+    const { tracker, progressRenderer, files } = await this.setupProgressTracking(projectPath, args.includeProgress);
 
-      // Step 1: Project check
-      const files = await FileTraversal.countProjectFiles(projectPath);
-      setupSteps!.push({
-        step: 'project_check',
-        status: 'completed',
-        message: `Project detected at ${projectPath}`,
-        details: files
-      });
+    try {
+      // Execute learning phases
+      const concepts = await this.executeSemanticAnalysis(projectPath, tracker);
+      const patterns = await this.executePatternLearning(projectPath, tracker, files);
+      await this.executeIndexing(tracker, files);
 
-      // Step 2: Database initialization (automatic)
-      setupSteps!.push({
-        step: 'database_init',
-        status: 'completed',
-        message: 'Database initialized and migrations applied',
-        details: {
-          version: this.database.getMigrator().getCurrentVersion(),
-          tablesReady: true
-        }
-      });
-    } else {
+      progressRenderer.stop();
+      this.printLearningSummary(concepts, patterns, files, tracker);
+
+      return this.buildLearningResult(args.includeSetupSteps, setupSteps, projectPath, concepts, patterns, files, tracker, progressRenderer, args.includeProgress);
+
+    } catch (error: unknown) {
+      progressRenderer.stop();
+      return this.handleLearningError(error, args.includeSetupSteps, setupSteps, projectPath);
+    } finally {
+      progressRenderer.stop();
+    }
+  }
+
+  /**
+   * Initialize setup steps if includeSetupSteps is true
+   */
+  private async initializeSetupSteps(includeSetupSteps?: boolean, projectPath?: string): Promise<any[] | undefined> {
+    if (!includeSetupSteps) {
       console.error(`\n🚀 Quick setup for: ${projectPath}`);
+      return undefined;
     }
 
-    // Don't show progress bars yet - wait until we actually start learning
+    console.error(`🚀 Quick setup for: ${projectPath}`);
+    const steps: any[] = [];
 
-    // Check if learning is needed
-    const status = await this.getLearningStatus({ path: projectPath });
+    // Project check
+    const files = await FileTraversal.countProjectFiles(projectPath!);
+    steps.push({
+      step: 'project_check',
+      status: 'completed',
+      message: `Project detected at ${projectPath}`,
+      details: files
+    });
 
-    // Phase 4: Handle skipLearning from quick_setup
-    if (skipLearning) {
-      if (includeSetupSteps) {
-        setupSteps!.push({
-          step: 'learning',
-          status: 'skipped',
-          message: 'Learning phase skipped as requested'
-        });
+    // Database initialization
+    steps.push({
+      step: 'database_init',
+      status: 'completed',
+      message: 'Database initialized and migrations applied',
+      details: {
+        version: this.database.getMigrator().getCurrentVersion(),
+        tablesReady: true
+      }
+    });
 
-        // Verification step
-        setupSteps!.push({
-          step: 'verification',
-          status: 'completed',
-          message: status.message,
-          details: status
-        });
+    return steps;
+  }
 
+  /**
+   * Check if learning should be skipped and return early result if so
+   */
+  private shouldSkipLearning(args: any, status: any, setupSteps: any[] | undefined, projectPath: string): any | null {
+    // Skip if explicitly requested
+    if (args.skipLearning) {
+      if (setupSteps) {
+        setupSteps.push({ step: 'learning', status: 'skipped', message: 'Learning phase skipped as requested' });
+        setupSteps.push({ step: 'verification', status: 'completed', message: status.message, details: status });
         return {
           success: true,
           action: 'setup_completed',
@@ -166,30 +181,14 @@ export class AutomationTools {
           intelligenceStatus: status
         };
       }
-
-      return {
-        action: 'skipped',
-        reason: 'Learning phase skipped',
-        status,
-        message: 'Setup completed without learning.'
-      };
+      return { action: 'skipped', reason: 'Learning phase skipped', status, message: 'Setup completed without learning.' };
     }
 
-    if (!force && status.hasIntelligence && !status.isStale) {
-      if (includeSetupSteps) {
-        setupSteps!.push({
-          step: 'learning',
-          status: 'skipped',
-          message: 'Intelligence data is up-to-date'
-        });
-
-        setupSteps!.push({
-          step: 'verification',
-          status: 'completed',
-          message: status.message,
-          details: status
-        });
-
+    // Skip if intelligence is up-to-date
+    if (!args.force && status.hasIntelligence && !status.isStale) {
+      if (setupSteps) {
+        setupSteps.push({ step: 'learning', status: 'skipped', message: 'Intelligence data is up-to-date' });
+        setupSteps.push({ step: 'verification', status: 'completed', message: status.message, details: status });
         return {
           success: true,
           action: 'setup_completed',
@@ -200,227 +199,216 @@ export class AutomationTools {
           intelligenceStatus: status
         };
       }
-
-      return {
-        action: 'skipped',
-        reason: 'Intelligence data is up-to-date',
-        status,
-        message: 'Ready to use! Intelligence data is current.'
-      };
+      return { action: 'skipped', reason: 'Intelligence data is up-to-date', status, message: 'Ready to use! Intelligence data is current.' };
     }
 
-    // Perform learning with progress tracking
+    return null; // Continue with learning
+  }
+
+  /**
+   * Setup progress tracking infrastructure
+   */
+  private async setupProgressTracking(projectPath: string, includeProgress?: boolean): Promise<{
+    tracker: ProgressTracker;
+    progressRenderer: ConsoleProgressRenderer;
+    files: { total: number; codeFiles: number };
+  }> {
     const tracker = new ProgressTracker();
     const progressRenderer = new ConsoleProgressRenderer(tracker);
+    const files = await FileTraversal.countProjectFiles(projectPath);
+
+    tracker.addPhase('discovery', files.total, 1);
+    tracker.addPhase('semantic_analysis', files.codeFiles, 3);
+    tracker.addPhase('pattern_learning', files.codeFiles, 2);
+    tracker.addPhase('indexing', files.codeFiles, 1);
+
+    console.error(`\n🧠 Starting intelligent learning...`);
+    console.error('━'.repeat(60) + '\n');
+
+    if (includeProgress) {
+      progressRenderer.start();
+    }
+
+    // Discovery phase completes immediately
+    tracker.startPhase('discovery');
+    tracker.complete('discovery');
+
+    return { tracker, progressRenderer, files };
+  }
+
+  /**
+   * Execute semantic analysis with timeout and progress tracking
+   */
+  private async executeSemanticAnalysis(projectPath: string, tracker: ProgressTracker): Promise<any[]> {
+    tracker.startPhase('semantic_analysis');
+    const start = Date.now();
 
     try {
-      // Setup progress phases
-      const files = await FileTraversal.countProjectFiles(projectPath);
-      tracker.addPhase('discovery', files.total, 1);
-      tracker.addPhase('semantic_analysis', files.codeFiles, 3);
-      tracker.addPhase('pattern_learning', files.codeFiles, 2);
-      tracker.addPhase('indexing', files.codeFiles, 1);
-
-      console.error(`\n🧠 Starting intelligent learning...`);
-      console.error('━'.repeat(60) + '\n');
-
-      // Start the progress renderer which shows all phases
-      if (includeProgress) {
-        progressRenderer.start();
-      }
-
-      // Phase 1: Discovery (fast, completes immediately)
-      tracker.startPhase('discovery');
-      tracker.complete('discovery');
-
-      // Phase 2: Semantic Analysis
-      tracker.startPhase('semantic_analysis');
-      const analysisStart = Date.now();
-      let concepts: any[] = [];
+      let timeoutId: NodeJS.Timeout | null = null;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('Semantic analysis timed out after 5 minutes. This often happens with large projects.'));
+        }, 300000);
+      });
 
       try {
-        // Create timeout promise with proper cleanup
-        let timeoutId: NodeJS.Timeout | null = null;
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          timeoutId = setTimeout(() => {
-            reject(new Error('Semantic analysis timed out after 5 minutes. This often happens with large projects.'));
-          }, 300000); // 5 minutes
-        });
-
-        try {
-          concepts = await Promise.race([
-            this.semanticEngine.learnFromCodebase(
-              projectPath,
-              (current: number, total: number, message: string) => {
-                // Update progress tracker with real-time updates from semantic engine
-                tracker.updateProgress('semantic_analysis', current, message);
-              }
-            ),
-            timeoutPromise
-          ]);
-        } finally {
-          // CRITICAL: Clear timeout to prevent hanging
-          if (timeoutId !== null) {
-            clearTimeout(timeoutId);
-          }
-        }
+        const concepts = await Promise.race([
+          this.semanticEngine.learnFromCodebase(projectPath, (current, total, message) => {
+            tracker.updateProgress('semantic_analysis', current, message);
+          }),
+          timeoutPromise
+        ]);
 
         tracker.complete('semantic_analysis');
-        const analysisTime = Date.now() - analysisStart;
-
-        if (analysisTime > 120000) { // More than 2 minutes
-          console.error(`\n⚠️  Semantic analysis took ${Math.round(analysisTime / 1000)}s. Consider excluding large generated files.`);
+        const elapsed = Date.now() - start;
+        if (elapsed > 120000) {
+          console.error(`\n⚠️  Semantic analysis took ${Math.round(elapsed / 1000)}s. Consider excluding large generated files.`);
         }
-      } catch (error) {
-        tracker.complete('semantic_analysis');
-        throw error;
+
+        return concepts;
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
       }
+    } catch (error) {
+      tracker.complete('semantic_analysis');
+      throw error;
+    }
+  }
 
-      // Phase 3: Pattern Learning
-      const patternStart = Date.now();
-      tracker.startPhase('pattern_learning');
-      tracker.updateProgress('pattern_learning', 1, 'Analyzing code patterns...');
+  /**
+   * Execute pattern learning with progress tracking
+   */
+  private async executePatternLearning(projectPath: string, tracker: ProgressTracker, files: { codeFiles: number }): Promise<any[]> {
+    tracker.startPhase('pattern_learning');
+    tracker.updateProgress('pattern_learning', 1, 'Analyzing code patterns...');
 
-      const patterns = await this.patternEngine.learnFromCodebase(
+    const patterns = await this.patternEngine.learnFromCodebase(projectPath, (current, total, message) => {
+      const mapped = Math.floor((current / 100) * files.codeFiles);
+      tracker.updateProgress('pattern_learning', Math.max(1, mapped), message);
+    });
+
+    tracker.complete('pattern_learning');
+    return patterns;
+  }
+
+  /**
+   * Execute indexing phase
+   */
+  private async executeIndexing(tracker: ProgressTracker, files: { codeFiles: number }): Promise<void> {
+    tracker.startPhase('indexing');
+    tracker.updateProgress('indexing', 1, 'Indexing concepts and patterns...');
+    tracker.updateProgress('indexing', Math.floor(files.codeFiles / 2), 'Building search structures...');
+    tracker.complete('indexing');
+  }
+
+  /**
+   * Print learning summary to console
+   */
+  private printLearningSummary(concepts: any[], patterns: any[], files: any, tracker: ProgressTracker): void {
+    const totalTime = Date.now() - tracker.getProgress()!.startTime;
+    const separator = '━'.repeat(60);
+
+    console.error(`${separator}`);
+    console.error(`📊 Concepts:  ${concepts.length.toLocaleString()}`);
+    console.error(`🔍 Patterns:  ${patterns.length.toLocaleString()}`);
+    console.error(`📁 Files:     ${files.codeFiles.toLocaleString()}`);
+    console.error(`⏱️  Time:      ${this.formatDuration(totalTime)}`);
+    console.error(separator);
+  }
+
+  /**
+   * Build final learning result based on mode
+   */
+  private async buildLearningResult(
+    includeSetupSteps: boolean | undefined,
+    setupSteps: any[] | undefined,
+    projectPath: string,
+    concepts: any[],
+    patterns: any[],
+    files: any,
+    tracker: ProgressTracker,
+    progressRenderer: ConsoleProgressRenderer,
+    includeProgress?: boolean
+  ): Promise<any> {
+    const elapsed = Date.now() - tracker.getProgress()!.startTime;
+
+    if (includeSetupSteps && setupSteps) {
+      setupSteps.push({
+        step: 'learning',
+        status: 'completed',
+        message: `Learned ${concepts.length} concepts and ${patterns.length} patterns`,
+        details: { conceptsLearned: concepts.length, patternsLearned: patterns.length, filesAnalyzed: files.codeFiles }
+      });
+
+      const finalStatus = await this.getLearningStatus({ path: projectPath });
+      setupSteps.push({ step: 'verification', status: 'completed', message: finalStatus.message, details: finalStatus });
+
+      return {
+        success: true,
+        action: 'setup_completed',
         projectPath,
-        (current: number, total: number, message: string) => {
-          // Update progress tracker with real-time updates from pattern engine
-          // Map the 0-100 range to the actual file count
-          const mapped = Math.floor((current / 100) * files.codeFiles);
-          tracker.updateProgress('pattern_learning', Math.max(1, mapped), message);
-        }
-      );
-
-      const patternTime = Date.now() - patternStart;
-      tracker.complete('pattern_learning');
-
-      // Phase 4: Indexing
-      const indexStart = Date.now();
-      tracker.startPhase('indexing');
-      tracker.updateProgress('indexing', 1, 'Indexing concepts and patterns...');
-
-      // Indexing happens in-memory, mark progress
-      tracker.updateProgress('indexing', Math.floor(files.codeFiles / 2), 'Building search structures...');
-
-      const indexTime = Date.now() - indexStart;
-      tracker.complete('indexing');
-
-      progressRenderer.stop();
-
-      // Print final summary (without duplicate completion message)
-      const totalTime = Date.now() - tracker.getProgress()!.startTime;
-      const separator = '━'.repeat(60);
-
-      console.error(`${separator}`);
-      console.error(`📊 Concepts:  ${concepts.length.toLocaleString()}`);
-      console.error(`🔍 Patterns:  ${patterns.length.toLocaleString()}`);
-      console.error(`📁 Files:     ${files.codeFiles.toLocaleString()}`);
-      console.error(`⏱️  Time:      ${this.formatDuration(totalTime)}`);
-      console.error(separator);
-
-      // Phase 4: Handle setup steps from quick_setup
-      if (includeSetupSteps) {
-        setupSteps!.push({
-          step: 'learning',
-          status: 'completed',
-          message: `Learned ${concepts.length} concepts and ${patterns.length} patterns`,
-          details: {
-            conceptsLearned: concepts.length,
-            patternsLearned: patterns.length,
-            filesAnalyzed: files.codeFiles
-          }
-        });
-
-        const finalStatus = await this.getLearningStatus({ path: projectPath });
-        setupSteps!.push({
-          step: 'verification',
-          status: 'completed',
-          message: finalStatus.message,
-          details: finalStatus
-        });
-
-        return {
-          success: true,
-          action: 'setup_completed',
-          projectPath,
-          steps: setupSteps,
-          conceptsLearned: concepts.length,
-          patternsLearned: patterns.length,
-          filesAnalyzed: files.codeFiles,
-          totalFiles: files.total,
-          timeElapsed: Date.now() - tracker.getProgress()!.startTime,
-          message: '✅ Quick setup completed! In Memoria is ready for AI agent use.',
-          readyForAgents: true,
-          intelligenceStatus: finalStatus
-        };
-      }
-
-      const result = {
-        action: 'learned',
+        steps: setupSteps,
         conceptsLearned: concepts.length,
         patternsLearned: patterns.length,
         filesAnalyzed: files.codeFiles,
         totalFiles: files.total,
-        timeElapsed: Date.now() - tracker.getProgress()!.startTime,
-        message: `✅ Learning completed! Analyzed ${files.codeFiles} code files and learned ${concepts.length} concepts and ${patterns.length} patterns.`,
-        status: await this.getLearningStatus({ path: projectPath })
+        timeElapsed: elapsed,
+        message: '✅ Quick setup completed! In Memoria is ready for AI agent use.',
+        readyForAgents: true,
+        intelligenceStatus: finalStatus
       };
+    }
 
-      if (includeProgress) {
-        (result as any).progressData = progressRenderer.getProgressData();
-      }
+    const result: any = {
+      action: 'learned',
+      conceptsLearned: concepts.length,
+      patternsLearned: patterns.length,
+      filesAnalyzed: files.codeFiles,
+      totalFiles: files.total,
+      timeElapsed: elapsed,
+      message: `✅ Learning completed! Analyzed ${files.codeFiles} code files and learned ${concepts.length} concepts and ${patterns.length} patterns.`,
+      status: await this.getLearningStatus({ path: projectPath })
+    };
 
-      return result;
+    if (includeProgress) {
+      result.progressData = progressRenderer.getProgressData();
+    }
 
-    } catch (error: unknown) {
-      progressRenderer.stop();
-      console.error('❌ Auto-learning failed:', error);
+    return result;
+  }
 
-      // Phase 4: Handle setup steps failure
-      if (includeSetupSteps) {
-        setupSteps!.push({
-          step: 'error',
-          status: 'failed',
-          message: `Setup failed: ${error instanceof Error ? error.message : String(error)}`,
-          error: error instanceof Error ? error.message : String(error)
-        });
+  /**
+   * Handle learning errors based on mode
+   */
+  private async handleLearningError(error: unknown, includeSetupSteps: boolean | undefined, setupSteps: any[] | undefined, projectPath: string): Promise<any> {
+    console.error('❌ Auto-learning failed:', error);
 
-        return {
-          success: false,
-          action: 'setup_failed',
-          projectPath,
-          steps: setupSteps,
-          message: '❌ Quick setup failed. Manual intervention may be required.',
-          readyForAgents: false,
-          error: error instanceof Error ? error.message : String(error),
-          status: await this.getLearningStatus({ path: projectPath })
-        };
-      }
+    if (includeSetupSteps && setupSteps) {
+      setupSteps.push({
+        step: 'error',
+        status: 'failed',
+        message: `Setup failed: ${error instanceof Error ? error.message : String(error)}`,
+        error: error instanceof Error ? error.message : String(error)
+      });
 
       return {
-        action: 'failed',
+        success: false,
+        action: 'setup_failed',
+        projectPath,
+        steps: setupSteps,
+        message: '❌ Quick setup failed. Manual intervention may be required.',
+        readyForAgents: false,
         error: error instanceof Error ? error.message : String(error),
-        message: 'Learning failed. The system will continue with limited intelligence.',
         status: await this.getLearningStatus({ path: projectPath })
       };
-    } finally {
-      // CRITICAL: Ensure progress renderer is stopped even if errors occur
-      if (progressRenderer) {
-        progressRenderer.stop();
-      }
-
-      // CRITICAL: Clean up engine resources to prevent hanging
-      // Note: We use the shared engines from the MCP server, so we don't close them here
-      // But we should ensure no hanging timers or intervals remain
-      if (this.semanticEngine) {
-        try {
-          // Don't call cleanup on shared engines - just ensure no hanging operations
-          // The cleanup will be handled when the MCP server shuts down
-        } catch (error) {
-          console.warn('Warning: Issue during resource cleanup:', error);
-        }
-      }
     }
+
+    return {
+      action: 'failed',
+      error: error instanceof Error ? error.message : String(error),
+      message: 'Learning failed. The system will continue with limited intelligence.',
+      status: await this.getLearningStatus({ path: projectPath })
+    };
   }
 
   async getLearningStatus(args: { path?: string }): Promise<any> {
