@@ -409,6 +409,120 @@ export class DatabaseMigrator {
         ALTER TABLE project_metadata_old RENAME TO project_metadata;
       `
     });
+
+    // Migration 8: Add incremental learning support (Phase 1 - Incremental Learning)
+    this.migrations.push({
+      version: 8,
+      name: 'add_incremental_learning_support',
+      up: `
+        -- Learning deltas table - tracks incremental learning updates
+        CREATE TABLE IF NOT EXISTS learning_deltas (
+          id TEXT PRIMARY KEY,
+          project_id TEXT NOT NULL,
+          timestamp INTEGER NOT NULL,
+          trigger_type TEXT NOT NULL,  -- 'commit', 'save', 'manual'
+          commit_sha TEXT,
+          commit_message TEXT,
+          files_changed TEXT NOT NULL,  -- JSON array
+          concepts_added INTEGER DEFAULT 0,
+          concepts_removed INTEGER DEFAULT 0,
+          concepts_modified INTEGER DEFAULT 0,
+          patterns_added INTEGER DEFAULT 0,
+          patterns_removed INTEGER DEFAULT 0,
+          patterns_modified INTEGER DEFAULT 0,
+          duration_ms INTEGER,
+          status TEXT NOT NULL DEFAULT 'pending',  -- 'pending', 'processing', 'completed', 'failed'
+          error_message TEXT,
+          FOREIGN KEY (project_id) REFERENCES project_metadata(project_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_deltas_project ON learning_deltas(project_id);
+        CREATE INDEX IF NOT EXISTS idx_deltas_timestamp ON learning_deltas(timestamp);
+        CREATE INDEX IF NOT EXISTS idx_deltas_status ON learning_deltas(status);
+
+        -- Extend file_intelligence table with commit tracking
+        ALTER TABLE file_intelligence ADD COLUMN last_learned_commit TEXT;
+        ALTER TABLE file_intelligence ADD COLUMN last_learned_timestamp INTEGER;
+
+        -- Extend semantic_concepts table with version tracking
+        ALTER TABLE semantic_concepts ADD COLUMN created_commit TEXT;
+        ALTER TABLE semantic_concepts ADD COLUMN last_modified_commit TEXT;
+        ALTER TABLE semantic_concepts ADD COLUMN is_deleted INTEGER DEFAULT 0;
+
+        -- Extend developer_patterns table with version tracking
+        ALTER TABLE developer_patterns ADD COLUMN last_updated_commit TEXT;
+        ALTER TABLE developer_patterns ADD COLUMN version INTEGER DEFAULT 1;
+      `,
+      down: `
+        DROP TABLE IF EXISTS learning_deltas;
+        DROP INDEX IF EXISTS idx_deltas_project;
+        DROP INDEX IF EXISTS idx_deltas_timestamp;
+        DROP INDEX IF EXISTS idx_deltas_status;
+
+        -- Note: SQLite doesn't support DROP COLUMN, so we leave the added columns
+        -- They will simply be ignored if rolling back
+      `
+    });
+
+    // Migration 9: Add pattern conflict detection tables (Phase 1 - Pattern Conflicts)
+    this.migrations.push({
+      version: 9,
+      name: 'add_pattern_conflict_detection',
+      up: `
+        -- Pattern violations table
+        CREATE TABLE IF NOT EXISTS pattern_violations (
+          id TEXT PRIMARY KEY,
+          project_id TEXT NOT NULL,
+          file_path TEXT NOT NULL,
+          line_number INTEGER,
+          column_number INTEGER,
+          violation_type TEXT NOT NULL,  -- 'naming', 'structural', 'implementation', etc.
+          pattern_id TEXT NOT NULL,
+          severity TEXT NOT NULL,  -- 'low', 'medium', 'high'
+          message TEXT NOT NULL,
+          code_snippet TEXT,
+          suggested_fix TEXT,
+          detected_at INTEGER NOT NULL,
+          resolved_at INTEGER,
+          resolution TEXT,  -- 'accepted_fix', 'overridden', 'ignored', 'pattern_updated'
+          commit_sha TEXT,
+          FOREIGN KEY (project_id) REFERENCES project_metadata(project_id),
+          FOREIGN KEY (pattern_id) REFERENCES developer_patterns(pattern_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_violations_project ON pattern_violations(project_id);
+        CREATE INDEX IF NOT EXISTS idx_violations_file ON pattern_violations(file_path);
+        CREATE INDEX IF NOT EXISTS idx_violations_severity ON pattern_violations(severity);
+        CREATE INDEX IF NOT EXISTS idx_violations_resolved ON pattern_violations(resolved_at);
+
+        -- Pattern exceptions table
+        CREATE TABLE IF NOT EXISTS pattern_exceptions (
+          id TEXT PRIMARY KEY,
+          project_id TEXT NOT NULL,
+          pattern_id TEXT NOT NULL,
+          file_path TEXT,  -- NULL = global exception
+          reason TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          created_by TEXT,  -- For team features
+          expires_at INTEGER,  -- NULL = permanent
+          FOREIGN KEY (project_id) REFERENCES project_metadata(project_id),
+          FOREIGN KEY (pattern_id) REFERENCES developer_patterns(pattern_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_exceptions_project ON pattern_exceptions(project_id);
+        CREATE INDEX IF NOT EXISTS idx_exceptions_pattern ON pattern_exceptions(pattern_id);
+      `,
+      down: `
+        DROP TABLE IF EXISTS pattern_violations;
+        DROP TABLE IF EXISTS pattern_exceptions;
+        DROP INDEX IF EXISTS idx_violations_project;
+        DROP INDEX IF EXISTS idx_violations_file;
+        DROP INDEX IF EXISTS idx_violations_severity;
+        DROP INDEX IF EXISTS idx_violations_resolved;
+        DROP INDEX IF EXISTS idx_exceptions_project;
+        DROP INDEX IF EXISTS idx_exceptions_pattern;
+      `
+    });
   }
 
   private loadMigrationFile(filename: string): string {
@@ -506,6 +620,20 @@ export class DatabaseMigrator {
           this.validateTableExists(['work_sessions', 'project_decisions']);
           this.validateIndexExists(['idx_work_sessions_project', 'idx_work_sessions_updated', 'idx_project_decisions_key']);
           break;
+        case 7: // Unique constraint on project_path
+          this.validateColumnExists('project_metadata', 'project_path');
+          break;
+        case 8: // Incremental learning support
+          this.validateTableExists(['learning_deltas']);
+          this.validateIndexExists(['idx_deltas_project', 'idx_deltas_timestamp', 'idx_deltas_status']);
+          this.validateColumnExists('file_intelligence', 'last_learned_commit');
+          this.validateColumnExists('semantic_concepts', 'created_commit');
+          this.validateColumnExists('developer_patterns', 'last_updated_commit');
+          break;
+        case 9: // Pattern conflict detection
+          this.validateTableExists(['pattern_violations', 'pattern_exceptions']);
+          this.validateIndexExists(['idx_violations_project', 'idx_violations_severity', 'idx_exceptions_project']);
+          break;
         default:
           // Generic validation - check migration was recorded
           break;
@@ -526,7 +654,8 @@ export class DatabaseMigrator {
         'architectural_decisions', 'shared_patterns', 'ai_insights',
         'project_metadata', 'migrations',
         'feature_map', 'entry_points', 'key_directories',
-        'work_sessions', 'project_decisions'
+        'work_sessions', 'project_decisions',
+        'learning_deltas', 'pattern_violations', 'pattern_exceptions'
       ];
 
       for (const table of requiredTables) {
