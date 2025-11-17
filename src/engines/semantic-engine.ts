@@ -186,7 +186,14 @@ export class SemanticEngine {
     });
   }
 
-  async learnFromCodebase(path: string, progressCallback?: (current: number, total: number, message: string) => void): Promise<Array<{
+  /**
+   * Learn semantic concepts from a codebase
+   * Orchestrates the learning process: analysis, storage, and indexing
+   */
+  async learnFromCodebase(
+    path: string,
+    progressCallback?: (current: number, total: number, message: string) => void
+  ): Promise<Array<{
     id: string;
     name: string;
     type: string;
@@ -198,149 +205,232 @@ export class SemanticEngine {
     try {
       console.error(`🧠 Starting semantic learning for: ${path}`);
 
-      // Ensure Rust analyzer is initialized
+      // Initialize Rust analyzer
       await this.initializeRustAnalyzer();
 
-      // Estimate file count for progress reporting
-      let estimatedFiles = 0;
-      try {
-        const glob = (await import('glob')).glob;
-        const files = await glob('**/*.{ts,tsx,js,jsx,py,rs,go,java,c,cpp,svelte,vue,php,phtml,inc}', {
-          cwd: path,
-          ignore: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.git/**'],
-          nodir: true
-        });
-        estimatedFiles = files.length;
-        if (progressCallback && estimatedFiles > 0) {
-          progressCallback(0, estimatedFiles, 'Starting semantic analysis...');
-        }
-      } catch (error) {
-        console.warn('Failed to estimate file count for progress tracking');
-      }
+      // Setup progress tracking
+      const estimatedFiles = await this.setupProgressEstimation(path, progressCallback);
 
-      // Add timeout protection for the entire learning process with periodic progress updates
-      let progressTimer: NodeJS.Timeout | null = null;
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        let elapsed = 0;
-        const timeoutDuration = 300000; // 5 minutes
-        const progressInterval = 2000; // Update every 2 seconds
-        
-        progressTimer = setInterval(() => {
-          elapsed += progressInterval;
-          
-          if (elapsed >= timeoutDuration) {
-            if (progressTimer) clearInterval(progressTimer);
-            reject(new Error('Learning process timed out after 5 minutes. This can happen with very large Svelte/Vue codebases.'));
-          } else if (progressCallback && estimatedFiles > 0) {
-            // Provide estimated progress based on time (rough heuristic)
-            const estimatedProgress = Math.min(Math.floor((elapsed / timeoutDuration) * estimatedFiles), estimatedFiles - 1);
-            progressCallback(estimatedProgress, estimatedFiles, `Analyzing codebase... (${Math.floor(elapsed / 1000)}s elapsed)`);
-          }
-        }, progressInterval);
-      });
+      // Execute Rust analyzer with timeout protection
+      const rawConcepts = await this.executeAnalysisWithTimeout(
+        path,
+        estimatedFiles,
+        progressCallback
+      );
 
-      let concepts: any[];
-      try {
-        concepts = await Promise.race([
-          this.rustAnalyzer!.learnFromCodebase(path),
-          timeoutPromise
-        ]);
-      } finally {
-        // CRITICAL: Clear progress timer to prevent hanging
-        if (progressTimer !== null) {
-          clearInterval(progressTimer);
-        }
-      }
-
+      // Report completion
       if (progressCallback && estimatedFiles > 0) {
         progressCallback(estimatedFiles, estimatedFiles, 'Semantic analysis complete');
       }
 
-      console.error(`✅ Learned ${concepts.length} concepts from codebase`);
+      console.error(`✅ Learned ${rawConcepts.length} concepts from codebase`);
 
-      // Store in vector database for semantic search
+      // Transform and store results
       await this.vectorDB.initialize();
+      const concepts = this.transformRawConcepts(rawConcepts);
+      await this.storeConceptsWithProgress(concepts, progressCallback);
 
-      const result = concepts.map((c: any) => ({
-        id: c.id,
-        name: c.name,
-        type: c.conceptType,
-        confidence: c.confidence,
-        filePath: c.filePath,
-        lineRange: {
-          start: c.lineRange.start,
-          end: c.lineRange.end
-        },
-        relationships: c.relationships
-      }));
-
-      // Store concepts for persistence (with error handling and progress updates)
-      const totalToStore = result.length;
-      let stored = 0;
-      
-      for (const concept of result) {
-        try {
-          this.database.insertSemanticConcept({
-            id: concept.id,
-            conceptName: concept.name,
-            conceptType: concept.type,
-            confidenceScore: concept.confidence,
-            relationships: concept.relationships,
-            evolutionHistory: {},
-            filePath: concept.filePath,
-            lineRange: concept.lineRange
-          });
-
-          stored++;
-          
-          // Report progress every 50 concepts or at the end
-          if (progressCallback && (stored % 50 === 0 || stored === totalToStore)) {
-            progressCallback(stored, totalToStore, `Storing concepts in database...`);
-          }
-
-          // Store in vector DB if it's a significant concept
-          if (concept.confidence > 0.5) {
-            try {
-              await this.vectorDB.storeCodeEmbedding(
-                concept.name,
-                {
-                  id: concept.id,
-                  filePath: concept.filePath,
-                  functionName: concept.type === 'function' ? concept.name : undefined,
-                  className: concept.type === 'class' ? concept.name : undefined,
-                  language: this.detectLanguageFromPath(concept.filePath),
-                  complexity: Math.floor(concept.confidence * 10),
-                  lineCount: concept.lineRange.end - concept.lineRange.start + 1,
-                  lastModified: new Date()
-                }
-              );
-            } catch (vectorError) {
-              console.warn('Failed to store vector embedding:', vectorError);
-            }
-          }
-        } catch (conceptError) {
-          console.warn(`Failed to store concept ${concept.name}:`, conceptError);
-          // Continue processing other concepts
-        }
-      }
-
-      return result;
+      return concepts;
     } catch (error: unknown) {
       console.error('Learning error:', error);
+      return this.handleLearningError(error);
+    }
+  }
 
-      // Provide more specific error messages for common issues
-      if ((error instanceof Error && error.message.includes('timeout')) || (error instanceof Error && error.message.includes('timed out'))) {
-        throw new Error('Learning process timed out. This commonly happens with:\n' +
-          '  • Large projects with many files\n' +
-          '  • Projects with very large files (>1MB)\n' +
-          '  • Complex nested directory structures\n' +
-          '  • Malformed or corrupted source files\n\n' +
-          'Try running on a smaller subset of your codebase first.'
-        );
+  /**
+   * Setup progress estimation by counting files
+   */
+  private async setupProgressEstimation(
+    path: string,
+    progressCallback?: (current: number, total: number, message: string) => void
+  ): Promise<number> {
+    try {
+      const glob = (await import('glob')).glob;
+      const files = await glob('**/*.{ts,tsx,js,jsx,py,rs,go,java,c,cpp,svelte,vue,php,phtml,inc}', {
+        cwd: path,
+        ignore: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.git/**'],
+        nodir: true
+      });
+
+      const estimatedFiles = files.length;
+      if (progressCallback && estimatedFiles > 0) {
+        progressCallback(0, estimatedFiles, 'Starting semantic analysis...');
       }
 
-      return [];
+      return estimatedFiles;
+    } catch (error) {
+      console.warn('Failed to estimate file count for progress tracking');
+      return 0;
     }
+  }
+
+  /**
+   * Execute Rust analyzer with timeout protection and progress updates
+   */
+  private async executeAnalysisWithTimeout(
+    path: string,
+    estimatedFiles: number,
+    progressCallback?: (current: number, total: number, message: string) => void
+  ): Promise<any[]> {
+    let progressTimer: NodeJS.Timeout | null = null;
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      let elapsed = 0;
+      const timeoutDuration = 300000; // 5 minutes
+      const progressInterval = 2000; // Update every 2 seconds
+
+      progressTimer = setInterval(() => {
+        elapsed += progressInterval;
+
+        if (elapsed >= timeoutDuration) {
+          if (progressTimer) clearInterval(progressTimer);
+          reject(new Error('Learning process timed out after 5 minutes. This can happen with very large Svelte/Vue codebases.'));
+        } else if (progressCallback && estimatedFiles > 0) {
+          // Provide estimated progress based on time (rough heuristic)
+          const estimatedProgress = Math.min(
+            Math.floor((elapsed / timeoutDuration) * estimatedFiles),
+            estimatedFiles - 1
+          );
+          progressCallback(estimatedProgress, estimatedFiles, `Analyzing codebase... (${Math.floor(elapsed / 1000)}s elapsed)`);
+        }
+      }, progressInterval);
+    });
+
+    try {
+      return await Promise.race([
+        this.rustAnalyzer!.learnFromCodebase(path),
+        timeoutPromise
+      ]);
+    } finally {
+      // CRITICAL: Clear progress timer to prevent hanging
+      if (progressTimer !== null) {
+        clearInterval(progressTimer);
+      }
+    }
+  }
+
+  /**
+   * Transform raw Rust analyzer output to standard format
+   */
+  private transformRawConcepts(rawConcepts: any[]): Array<{
+    id: string;
+    name: string;
+    type: string;
+    confidence: number;
+    filePath: string;
+    lineRange: { start: number; end: number };
+    relationships: Record<string, any>;
+  }> {
+    return rawConcepts.map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      type: c.conceptType,
+      confidence: c.confidence,
+      filePath: c.filePath,
+      lineRange: {
+        start: c.lineRange.start,
+        end: c.lineRange.end
+      },
+      relationships: c.relationships
+    }));
+  }
+
+  /**
+   * Store concepts in database and vector DB with progress updates
+   */
+  private async storeConceptsWithProgress(
+    concepts: Array<{
+      id: string;
+      name: string;
+      type: string;
+      confidence: number;
+      filePath: string;
+      lineRange: { start: number; end: number };
+      relationships: Record<string, any>;
+    }>,
+    progressCallback?: (current: number, total: number, message: string) => void
+  ): Promise<void> {
+    const totalToStore = concepts.length;
+    let stored = 0;
+
+    for (const concept of concepts) {
+      try {
+        // Store in SQLite database
+        this.database.insertSemanticConcept({
+          id: concept.id,
+          conceptName: concept.name,
+          conceptType: concept.type,
+          confidenceScore: concept.confidence,
+          relationships: concept.relationships,
+          evolutionHistory: {},
+          filePath: concept.filePath,
+          lineRange: concept.lineRange
+        });
+
+        stored++;
+
+        // Report progress every 50 concepts or at the end
+        if (progressCallback && (stored % 50 === 0 || stored === totalToStore)) {
+          progressCallback(stored, totalToStore, `Storing concepts in database...`);
+        }
+
+        // Store in vector DB if it's a significant concept
+        if (concept.confidence > 0.5) {
+          await this.storeConceptInVectorDB(concept);
+        }
+      } catch (conceptError) {
+        console.warn(`Failed to store concept ${concept.name}:`, conceptError);
+        // Continue processing other concepts
+      }
+    }
+  }
+
+  /**
+   * Store a single concept in vector database
+   */
+  private async storeConceptInVectorDB(concept: {
+    id: string;
+    name: string;
+    type: string;
+    confidence: number;
+    filePath: string;
+    lineRange: { start: number; end: number };
+  }): Promise<void> {
+    try {
+      await this.vectorDB.storeCodeEmbedding(
+        concept.name,
+        {
+          id: concept.id,
+          filePath: concept.filePath,
+          functionName: concept.type === 'function' ? concept.name : undefined,
+          className: concept.type === 'class' ? concept.name : undefined,
+          language: this.detectLanguageFromPath(concept.filePath),
+          complexity: Math.floor(concept.confidence * 10),
+          lineCount: concept.lineRange.end - concept.lineRange.start + 1,
+          lastModified: new Date()
+        }
+      );
+    } catch (vectorError) {
+      console.warn('Failed to store vector embedding:', vectorError);
+    }
+  }
+
+  /**
+   * Handle learning errors with user-friendly messages
+   */
+  private handleLearningError(error: unknown): never[] {
+    if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('timed out'))) {
+      throw new Error(
+        'Learning process timed out. This commonly happens with:\n' +
+        '  • Large projects with many files\n' +
+        '  • Projects with very large files (>1MB)\n' +
+        '  • Complex nested directory structures\n' +
+        '  • Malformed or corrupted source files\n\n' +
+        'Try running on a smaller subset of your codebase first.'
+      );
+    }
+
+    return [];
   }
 
   async updateFromAnalysis(analysisData: any): Promise<void> {
