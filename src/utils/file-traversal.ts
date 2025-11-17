@@ -11,7 +11,11 @@
 import { glob } from 'glob';
 
 export interface TraversalOptions {
-  /** Maximum recursion depth (default: unlimited) */
+  /**
+   * Maximum recursion depth (default: unlimited)
+   * IMPORTANT: Set this for safety/performance when scanning untrusted directories
+   * Recommended: maxDepth=5 for most use cases
+   */
   maxDepth?: number;
 
   /** File extensions to include (e.g., ['ts', 'js', 'py']) */
@@ -185,6 +189,11 @@ export class FileTraversal {
    *   extensions: ['js'],
    *   ignorePatterns: ['**/test/**', '**/*.spec.js']
    * });
+   *
+   * // Collect with depth limit for safety/performance
+   * const files = await FileTraversal.collectFiles('/path/to/project', {
+   *   maxDepth: 5
+   * });
    */
   static async collectFiles(
     dirPath: string,
@@ -194,6 +203,7 @@ export class FileTraversal {
       extensions = [],
       ignorePatterns = [],
       useStandardIgnores = true,
+      maxDepth,
     } = options;
 
     try {
@@ -217,6 +227,14 @@ export class FileTraversal {
         ignore: allIgnores,
         nodir: true,
       });
+
+      // Apply maxDepth filter if specified
+      if (maxDepth !== undefined) {
+        return files.filter((file) => {
+          const depth = file.split('/').length - 1;
+          return depth <= maxDepth;
+        });
+      }
 
       return files;
     } catch (error) {

@@ -715,8 +715,8 @@ export class SemanticEngine {
             const stats = await stat(resolved);
 
             if (stats.isDirectory()) {
-              // Count files in directory
-              const files = await FileTraversal.collectFiles(resolved);
+              // Count files in directory with depth limit for safety/performance
+              const files = await FileTraversal.collectFiles(resolved, { maxDepth: 5 });
               keyDirectories.push({
                 path: dir.pattern,
                 type: dir.type,
