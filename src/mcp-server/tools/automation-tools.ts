@@ -666,51 +666,22 @@ export class AutomationTools {
    */
   private async getMostRecentFileModificationTime(projectPath: string): Promise<number | null> {
     try {
-      // Use glob to find all source files
-      const sourcePatterns = [
-        '**/*.ts',
-        '**/*.tsx',
-        '**/*.js',
-        '**/*.jsx',
-        '**/*.py',
-        '**/*.rs',
-        '**/*.go',
-        '**/*.java',
-        '**/*.c',
-        '**/*.cpp',
-        '**/*.cs'
-      ];
+      // Use FileTraversal to find all code files
+      const files = await FileTraversal.collectCodeFiles(projectPath);
 
       let mostRecentTime = 0;
 
-      for (const pattern of sourcePatterns) {
-        const files = await glob(pattern, {
-          cwd: projectPath,
-          ignore: [
-            'node_modules/**',
-            '.git/**',
-            'target/**',
-            'dist/**',
-            'build/**',
-            '.next/**',
-            '__pycache__/**',
-            '**/*.min.js',
-            '**/*.min.css'
-          ],
-          absolute: true
-        });
-
-        for (const file of files) {
-          try {
-            if (existsSync(file)) {
-              const stats = statSync(file);
-              const modTime = stats.mtime.getTime();
-              mostRecentTime = Math.max(mostRecentTime, modTime);
-            }
-          } catch (fileError) {
-            // Skip files that can't be accessed
-            continue;
+      for (const file of files) {
+        try {
+          const absolutePath = join(projectPath, file);
+          if (existsSync(absolutePath)) {
+            const stats = statSync(absolutePath);
+            const modTime = stats.mtime.getTime();
+            mostRecentTime = Math.max(mostRecentTime, modTime);
           }
+        } catch (fileError) {
+          // Skip files that can't be accessed
+          continue;
         }
       }
 
