@@ -24,7 +24,7 @@ Every new session, follow this pattern:
 | `search_codebase` | Finding code | Semantic (meaning), text (keywords), or pattern search |
 | `analyze_codebase` | Understanding files/dirs | Token-efficient analysis with top concepts/patterns |
 
-### 📊 Complete Tool List (10 Core + 3 Monitoring)
+### 📊 Complete Tool List (16 Core + 3 Monitoring + 6 Phase 1)
 
 #### Core Intelligence Tools (10)
 
@@ -93,6 +93,44 @@ Every new session, follow this pattern:
 11. **`get_system_status`** - System health check
 12. **`get_intelligence_metrics`** - Concept/pattern metrics
 13. **`get_performance_status`** - Performance diagnostics
+
+#### 🆕 Phase 1 Tools (6 - Incremental Learning & Cross-Project)
+
+14. **`check_pattern_compliance`** - Smart code review against learned patterns ⭐
+    ```typescript
+    { file_path: string, code_snippet?: string, severity_threshold?: 'low'|'medium'|'high', auto_fix?: boolean }
+    ```
+    Returns: Violations, warnings, suggestions, quick fixes, overall score
+
+15. **`get_learning_history`** - View recent incremental learning updates
+    ```typescript
+    { limit?: number, since_timestamp?: number }
+    ```
+    Returns: Learning deltas with concepts/patterns added/removed/modified
+
+16. **`link_project`** - Connect project to global intelligence
+    ```typescript
+    { project_path: string, project_name?: string, description?: string, auto_sync?: boolean }
+    ```
+    Returns: Project ID, sync status, patterns/concepts synced
+
+17. **`search_all_projects`** - Search code across ALL linked projects ⭐
+    ```typescript
+    { query: string, mode?: 'semantic'|'text'|'pattern', project_filter?: string[], language_filter?: string, limit?: number }
+    ```
+    Returns: Scored results from all projects with context
+
+18. **`get_global_patterns`** - Get patterns learned across all projects
+    ```typescript
+    { category?: string, min_project_count?: number, min_consensus?: number, language?: string, limit?: number }
+    ```
+    Returns: Patterns shared across multiple projects with consensus scores
+
+19. **`get_portfolio_view`** - Overview of all linked projects
+    ```typescript
+    {}
+    ```
+    Returns: Total projects, patterns, concepts, top languages/frameworks
 
 ## Common Use Cases
 
@@ -197,6 +235,97 @@ const similar = await mcp.search_codebase({
 // Now you can: validate consistency + suggest improvements
 ```
 
+### 🆕 Use Case 5: Pattern Compliance Check (Before Committing)
+
+```typescript
+// Step 1: Check code against learned patterns
+const compliance = await mcp.check_pattern_compliance({
+  file_path: 'src/services/new-feature.ts',
+  severity_threshold: 'medium',  // Only show medium+ violations
+  auto_fix: true  // Generate quick fixes
+});
+
+console.log('Overall Score:', compliance.overallScore);  // 0-100
+console.log('Violations:', compliance.violations);
+console.log('Suggested Fixes:', compliance.violations[0].suggestedFix);
+
+// Step 2: If violations found, review and fix
+if (!compliance.passed) {
+  for (const violation of compliance.violations) {
+    console.log(`${violation.severity.toUpperCase()}: ${violation.message}`);
+    if (violation.suggestedFix) {
+      console.log(`Fix: ${violation.suggestedFix}`);
+    }
+  }
+}
+
+// Now you can: fix violations before committing
+```
+
+### 🆕 Use Case 6: Cross-Project Code Search
+
+```typescript
+// Step 1: Link your projects (once)
+await mcp.link_project({
+  project_path: '/path/to/project-a',
+  project_name: 'Frontend App',
+  auto_sync: true
+});
+
+await mcp.link_project({
+  project_path: '/path/to/project-b',
+  project_name: 'Backend API'
+});
+
+// Step 2: View your portfolio
+const portfolio = await mcp.get_portfolio_view({});
+console.log(`${portfolio.summary.totalProjects} projects linked`);
+console.log(`${portfolio.summary.totalPatterns} patterns shared`);
+
+// Step 3: Search across ALL projects
+const results = await mcp.search_all_projects({
+  query: 'JWT token validation',
+  mode: 'semantic',
+  limit: 10
+});
+
+// Results include matches from both projects
+results.results.forEach(r => {
+  console.log(`${r.projectName}: ${r.filePath} (score: ${r.match.score})`);
+});
+
+// Step 4: Get global patterns (patterns used in multiple projects)
+const globalPatterns = await mcp.get_global_patterns({
+  category: 'error_handling',
+  min_project_count: 2,  // Must appear in 2+ projects
+  min_consensus: 0.7  // 70% consistency
+});
+
+// Now you can: apply patterns that work across all your projects
+```
+
+### 🆕 Use Case 7: Monitoring Incremental Learning
+
+```typescript
+// View recent learning updates
+const history = await mcp.get_learning_history({
+  limit: 5,  // Last 5 learning deltas
+  since_timestamp: Date.now() - 86400000  // Last 24 hours
+});
+
+history.deltas.forEach(delta => {
+  console.log(`Commit: ${delta.commitSha}`);
+  console.log(`  +${delta.summary.conceptsAdded} concepts`);
+  console.log(`  ~${delta.summary.conceptsModified} modified`);
+  console.log(`  +${delta.summary.patternsAdded} patterns`);
+  console.log(`  Duration: ${delta.durationMs}ms`);
+});
+
+console.log('Total:', history.summary);
+
+// Now you know: what the system learned from recent changes
+```
+
 ## 🎯 Decision Tree: Which Tool to Use?
 
 ```
@@ -228,6 +357,24 @@ Need coding style/conventions?
 
 Made an architectural decision?
   → contribute_insights()
+
+🆕 Need to check code for pattern violations?
+  → check_pattern_compliance()
+
+🆕 Need to search across ALL your projects?
+  → search_all_projects()
+
+🆕 Need patterns that work across multiple projects?
+  → get_global_patterns()
+
+🆕 Want to view recent learning updates?
+  → get_learning_history()
+
+🆕 Want to link a new project for cross-project intelligence?
+  → link_project()
+
+🆕 Want to see all your linked projects?
+  → get_portfolio_view()
 
 Debugging In Memoria?
   → get_system_status() / get_intelligence_metrics() / get_performance_status()
@@ -300,6 +447,51 @@ await mcp.contribute_insights({
   confidence: 0.95,
   sourceAgent: 'github-copilot'  // or 'claude-code', 'cursor', etc.
 });
+```
+
+### 🆕 7. Check Pattern Compliance Before Committing
+```typescript
+// Before committing new code:
+const compliance = await mcp.check_pattern_compliance({
+  file_path: 'src/new-feature.ts',
+  severity_threshold: 'medium'  // Filter noise
+});
+
+if (!compliance.passed) {
+  console.log(`Pattern violations found (score: ${compliance.overallScore}/100)`);
+  // Review and fix violations before committing
+}
+```
+
+### 🆕 8. Leverage Cross-Project Intelligence
+```typescript
+// Link all your projects once:
+await mcp.link_project({ project_path: '/path/to/project1', project_name: 'Frontend' });
+await mcp.link_project({ project_path: '/path/to/project2', project_name: 'Backend' });
+
+// Now search across ALL projects:
+const results = await mcp.search_all_projects({
+  query: 'error handling pattern',
+  mode: 'pattern'  // Find how you handle errors across all projects
+});
+
+// Get patterns that appear in multiple projects (stronger patterns):
+const globalPatterns = await mcp.get_global_patterns({
+  min_project_count: 2,  // Appears in 2+ projects
+  min_consensus: 0.8  // 80% consistency
+});
+```
+
+### 🆕 9. Monitor What's Being Learned
+```typescript
+// Check what the system learned from recent commits:
+const history = await mcp.get_learning_history({ limit: 3 });
+
+history.deltas.forEach(delta => {
+  console.log(`Commit ${delta.commitSha}: +${delta.summary.conceptsAdded} concepts, +${delta.summary.patternsAdded} patterns`);
+});
+
+// Useful for understanding if changes are being tracked
 ```
 
 ## 🚫 Common Mistakes to Avoid
