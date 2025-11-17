@@ -761,14 +761,6 @@ export class SQLiteDatabase {
     };
   }
 
-  /**
-   * Get the underlying better-sqlite3 database instance
-   * Useful for custom SQL queries in Phase 1 services
-   */
-  getDB(): Database.Database {
-    return this.db;
-  }
-
   close(): void {
     this.db.close();
   }

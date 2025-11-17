@@ -495,7 +495,6 @@ export class PatternConflictDetector {
     structural: any[];
     implementation: any[];
   }> {
-      .getDB()
     const naming = this.db.getDB()
       .prepare(
         `
@@ -506,7 +505,6 @@ export class PatternConflictDetector {
       )
       .all();
 
-      .getDB()
     const structural = this.db.getDB()
       .prepare(
         `
@@ -517,7 +515,6 @@ export class PatternConflictDetector {
       )
       .all();
 
-      .getDB()
     const implementation = this.db.getDB()
       .prepare(
         `
@@ -541,7 +538,6 @@ export class PatternConflictDetector {
       return;
     }
 
-      .getDB()
     this.db.getDB()
       .prepare(
         `
@@ -572,7 +568,6 @@ export class PatternConflictDetector {
    * Check if pattern is excepted for this file
    */
   async isExcepted(patternId: string, filePath: string): Promise<boolean> {
-      .getDB()
     const exception = this.db.getDB()
       .prepare(
         `
@@ -673,7 +668,6 @@ export class PatternConflictDetector {
     violationId: string,
     resolution: 'accepted_fix' | 'overridden' | 'ignored' | 'pattern_updated'
   ): Promise<void> {
-      .getDB()
     this.db.getDB()
       .prepare(
         `
@@ -686,13 +680,11 @@ export class PatternConflictDetector {
 
     // If pattern was updated, adjust confidence
     if (resolution === 'pattern_updated') {
-        .getDB()
       const violation = this.db.getDB()
         .prepare('SELECT pattern_id FROM pattern_violations WHERE id = ?')
         .get(violationId) as any;
 
       if (violation) {
-          .getDB()
         this.db.getDB()
           .prepare(
             `
