@@ -227,6 +227,7 @@ export class FileTraversal {
       // Apply maxDepth filter if specified
       if (maxDepth !== undefined) {
         return files.filter((file) => {
+          // glob library normalizes to forward slashes on all platforms
           const depth = file.split('/').length - 1;
           return depth <= maxDepth;
         });

@@ -25,7 +25,7 @@ export async function withTimeout<T>(
   timeoutMs: number,
   message?: string
 ): Promise<T> {
-  let timeoutId: NodeJS.Timeout;
+  let timeoutId: NodeJS.Timeout | undefined;
 
   try {
     return await Promise.race([
@@ -41,7 +41,7 @@ export async function withTimeout<T>(
       }),
     ]);
   } finally {
-    clearTimeout(timeoutId!);
+    if (timeoutId) clearTimeout(timeoutId);
   }
 }
 

@@ -250,7 +250,7 @@ export class PatternConflictDetector {
     type: string
   ): PatternViolation | null {
     const expectedConvention = patternData.convention; // e.g., "camelCase", "PascalCase", "snake_case"
-    const actualConvention = this.detectNamingConvention(identifier.name);
+    const actualConvention = NamingConventions.detect(identifier.name);
 
     if (actualConvention !== expectedConvention) {
       const suggestedName = NamingConventions.convert(
@@ -728,15 +728,6 @@ export class PatternConflictDetector {
     });
 
     return { variables, functions, classes };
-  }
-
-  private detectNamingConvention(name: string): string {
-    if (/^[A-Z][a-zA-Z0-9]*$/.test(name)) return 'PascalCase';
-    if (/^[a-z][a-zA-Z0-9]*$/.test(name)) return 'camelCase';
-    if (/^[a-z][a-z0-9]*(_[a-z0-9]+)*$/.test(name)) return 'snake_case';
-    if (/^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$/.test(name)) return 'SCREAMING_SNAKE_CASE';
-    if (/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/.test(name)) return 'kebab-case';
-    return 'unknown';
   }
 
   private getFileLocation(filePath: string): string {
