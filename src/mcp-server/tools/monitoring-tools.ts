@@ -158,13 +158,63 @@ export class MonitoringTools {
   }
 
   async getIntelligenceMetrics(args: {
+    view?: 'metrics' | 'learning_history' | 'portfolio';
     includeBreakdown?: boolean;
+    limit?: number;
+    since_timestamp?: number;
   }): Promise<any> {
+    const view = args.view || 'metrics';
     const includeBreakdown = args.includeBreakdown !== false;
 
-    Logger.info('🧠 Analyzing intelligence metrics...');
+    Logger.info(`🧠 Analyzing intelligence metrics (view: ${view})...`);
 
     try {
+      // Handle learning_history view
+      if (view === 'learning_history') {
+        const { IncrementalLearner } = await import('../../services/incremental-learner.js');
+        const learner = new IncrementalLearner(this.database, this.semanticEngine, this.patternEngine);
+
+        const deltas = await learner.getRecentDeltas({
+          limit: args.limit || 10,
+          since: args.since_timestamp,
+        });
+
+        return {
+          success: true,
+          view: 'learning_history',
+          deltas,
+          summary: `Retrieved ${deltas.length} recent learning deltas`,
+        };
+      }
+
+      // Handle portfolio view
+      if (view === 'portfolio') {
+        const { GlobalDatabase } = await import('../../storage/global-db.js');
+        const { CrossProjectService } = await import('../../services/cross-project-service.js');
+
+        try {
+          const globalDb = GlobalDatabase.getInstance();
+          const crossProjectService = new CrossProjectService(globalDb);
+
+          const portfolioView = await crossProjectService.getPortfolioView();
+
+          return {
+            success: true,
+            view: 'portfolio',
+            ...portfolioView,
+            summary: `Portfolio: ${portfolioView.totalProjects} projects, ${portfolioView.totalConcepts} concepts, ${portfolioView.totalPatterns} patterns`,
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            view: 'portfolio',
+            error: 'No global database found. Link projects with learn_codebase_intelligence(link_globally=true)',
+            message: 'Portfolio view requires globally-linked projects',
+          };
+        }
+      }
+
+      // Handle metrics view (original logic)
       const concepts = this.database.getSemanticConcepts();
       const patterns = this.database.getDeveloperPatterns();
 

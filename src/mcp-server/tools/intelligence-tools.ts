@@ -15,6 +15,8 @@ import { SQLiteDatabase } from '../../storage/sqlite-db.js';
 import { SemanticVectorDB } from '../../storage/vector-db.js';
 import { config } from '../../config/config.js';
 import { PathValidator } from '../../utils/path-validator.js';
+import { GlobalDatabase } from '../../storage/global-db.js';
+import { CrossProjectService } from '../../services/cross-project-service.js';
 
 export class IntelligenceTools {
   constructor(
@@ -287,7 +289,13 @@ export class IntelligenceTools {
     ];
   }
 
-  async learnCodebaseIntelligence(args: { path: string; force?: boolean }): Promise<{
+  async learnCodebaseIntelligence(args: {
+    path: string;
+    force?: boolean;
+    link_globally?: boolean;
+    project_name?: string;
+    project_description?: string;
+  }): Promise<{
     success: boolean;
     conceptsLearned: number;
     patternsLearned: number;
@@ -300,25 +308,102 @@ export class IntelligenceTools {
       keyDirectories: Record<string, string>;
       architecture: string;
     };
+    linkedGlobally?: boolean;
+    projectId?: string;
   }> {
     // Use shared learning service to ensure consistency between CLI and MCP
     const { LearningService } = await import('../../services/learning-service.js');
-    return await LearningService.learnFromCodebase(args.path, {
+    const result = await LearningService.learnFromCodebase(args.path, {
       force: args.force
     });
+
+    // Handle global linking if requested
+    if (args.link_globally && result.success) {
+      try {
+        const globalDb = GlobalDatabase.getInstance();
+        const crossProjectService = new CrossProjectService(globalDb);
+
+        // Determine project name (use provided or directory name)
+        const projectName = args.project_name || args.path.split('/').pop() || 'Unknown Project';
+
+        // Link project to global database
+        const projectId = await crossProjectService.linkProject(
+          args.path,
+          projectName,
+          args.project_description
+        );
+
+        return {
+          ...result,
+          linkedGlobally: true,
+          projectId,
+        };
+      } catch (error: any) {
+        // Don't fail the whole operation if global linking fails
+        console.error('Failed to link project globally:', error);
+        return {
+          ...result,
+          linkedGlobally: false,
+        };
+      }
+    }
+
+    return result;
   }
 
   async getSemanticInsights(args: {
     query?: string;
+    scope?: 'current_project' | 'all_projects';
     conceptType?: string;
+    project_filter?: string[];
+    language_filter?: string;
     limit?: number
   }): Promise<{
     insights: SemanticInsight[];
     totalAvailable: number;
   }> {
+    const scope = args.scope || 'current_project';
+    const limit = args.limit || 20;
+
+    // Handle cross-project search
+    if (scope === 'all_projects') {
+      try {
+        const globalDb = GlobalDatabase.getInstance();
+        const crossProjectService = new CrossProjectService(globalDb);
+
+        const results = await crossProjectService.searchAcrossProjects(args.query || '', {
+          projectIds: args.project_filter,
+          language: args.language_filter,
+          type: 'concept',
+          limit: limit,
+        });
+
+        const insights: SemanticInsight[] = results.map((result: any) => ({
+          concept: result.name || result.conceptName,
+          relationships: result.relationships || [],
+          usage: {
+            frequency: result.frequency || 0,
+            contexts: result.projects || [result.projectId],
+          },
+          evolution: {
+            firstSeen: result.createdAt || new Date(),
+            lastModified: result.updatedAt || new Date(),
+            changeCount: 0,
+          },
+        }));
+
+        return {
+          insights,
+          totalAvailable: results.length,
+        };
+      } catch (error: any) {
+        console.error('Cross-project search failed:', error);
+        // Fall back to current project search
+      }
+    }
+
+    // Current project search (original logic)
     const concepts = this.database.getSemanticConcepts();
-    // console.error(`🔍 getSemanticInsights: Retrieved ${concepts.length} concepts from database`);
-    // console.error(`   Query: "${args.query}", ConceptType: ${args.conceptType}`);
 
     const filtered = concepts.filter(concept => {
       if (args.conceptType && concept.conceptType !== args.conceptType) return false;
@@ -326,16 +411,13 @@ export class IntelligenceTools {
       return true;
     });
 
-    // console.error(`   Filtered to ${filtered.length} concepts`);
-
-    const limit = args.limit || 10;
     const limited = filtered.slice(0, limit);
 
     const insights: SemanticInsight[] = limited.map(concept => ({
       concept: concept.conceptName,
       relationships: Object.keys(concept.relationships),
       usage: {
-        frequency: concept.confidenceScore * 100, // Convert to frequency approximation
+        frequency: concept.confidenceScore * 100,
         contexts: [concept.filePath]
       },
       evolution: {
@@ -351,44 +433,118 @@ export class IntelligenceTools {
     };
   }
 
-  async getPatternRecommendations(args: CodingContext & {
+  async getPatternRecommendations(args: {
+    mode?: 'recommend' | 'compliance_check';
+    scope?: 'current_project' | 'global';
+    file_path?: string;
+    code_snippet?: string;
+    problemDescription?: string;
+    severity_threshold?: 'low' | 'medium' | 'high';
+    category?: string;
+    language?: string;
+    min_project_count?: number;
+    min_consensus?: number;
     includeRelatedFiles?: boolean;
-  }): Promise<{
-    recommendations: PatternRecommendation[];
+    limit?: number;
+  } & Partial<CodingContext>): Promise<{
+    recommendations?: PatternRecommendation[];
+    violations?: any[];
     reasoning: string;
     relatedFiles?: string[];
   }> {
-    const context = CodingContextSchema.parse(args);
-    // Limit patterns fetched to prevent token overflow
-    const patterns = this.database.getDeveloperPatterns(undefined, 100);
+    const mode = args.mode || 'recommend';
+    const scope = args.scope || 'current_project';
+    const limit = args.limit || 50;
 
-    // Get relevant patterns based on context
+    // Compliance check mode
+    if (mode === 'compliance_check') {
+      if (!args.file_path) {
+        throw new Error('file_path is required for compliance_check mode');
+      }
+
+      const { PatternConflictDetector } = await import('../../services/pattern-conflict-detector.js');
+      const detector = new PatternConflictDetector(
+        this.database,
+        this.semanticEngine,
+        this.patternEngine,
+        'current-project' // TODO: Get actual project ID
+      );
+
+      const { readFileSync, existsSync } = await import('fs');
+      if (!existsSync(args.file_path)) {
+        throw new Error(`File not found: ${args.file_path}`);
+      }
+
+      const code = args.code_snippet || readFileSync(args.file_path, 'utf-8');
+      const report = await detector.checkCompliance(code, args.file_path, {
+        severityThreshold: args.severity_threshold || 'medium',
+      });
+
+      return {
+        violations: report.violations.slice(0, limit),
+        reasoning: `Found ${report.violations.length} compliance violations in ${args.file_path}`,
+      };
+    }
+
+    // Recommend mode
+    // Handle global scope
+    if (scope === 'global') {
+      try {
+        const globalDb = GlobalDatabase.getInstance();
+        const crossProjectService = new CrossProjectService(globalDb);
+
+        const globalPatterns = await crossProjectService.getGlobalPatterns({
+          category: args.category,
+          language: args.language,
+          minProjectCount: args.min_project_count || 2,
+          minConsensus: args.min_consensus || 0.7,
+          limit: limit,
+        });
+
+        const recommendations: PatternRecommendation[] = globalPatterns.map((pattern: any) => ({
+          pattern: pattern.category,
+          description: pattern.description || `Pattern from ${pattern.projectCount} projects`,
+          confidence: pattern.consensusScore,
+          examples: pattern.examples?.slice(0, 2) || [],
+          reasoning: `Used in ${pattern.projectCount} projects with ${Math.round(pattern.consensusScore * 100)}% consensus`,
+        }));
+
+        return {
+          recommendations,
+          reasoning: `Found ${recommendations.length} global patterns from ${globalPatterns.length} projects`,
+        };
+      } catch (error: any) {
+        console.error('Failed to fetch global patterns:', error);
+        // Fall back to current project patterns
+      }
+    }
+
+    // Current project recommend mode (original logic)
+    const context = args.problemDescription ? { problemDescription: args.problemDescription, currentFile: args.file_path || '', selectedCode: args.code_snippet || '' } : null;
+    if (!context) {
+      throw new Error('problemDescription is required for recommend mode');
+    }
+
     const relevantPatterns = await this.patternEngine.findRelevantPatterns(
       context.problemDescription,
       context.currentFile,
       context.selectedCode
     );
 
-    // Truncate code examples to prevent token overflow
     const truncateCode = (code: string, maxLength: number = 150): string => {
       if (code.length <= maxLength) return code;
       return code.substring(0, maxLength) + '...';
     };
 
-    const recommendations: PatternRecommendation[] = relevantPatterns.map(pattern => ({
+    const recommendations: PatternRecommendation[] = relevantPatterns.slice(0, limit).map(pattern => ({
       pattern: pattern.patternId,
       description: pattern.patternContent.description || 'Pattern recommendation',
       confidence: pattern.confidence,
-      // Limit to 2 examples per pattern, truncate each to 150 chars
       examples: pattern.examples.slice(0, 2).map(ex => truncateCode(ex.code || '')),
       reasoning: `Based on ${pattern.frequency} similar occurrences in your codebase`
     }));
 
-    const result: {
-      recommendations: PatternRecommendation[];
-      reasoning: string;
-      relatedFiles?: string[];
-    } = {
+    const result: any = {
       recommendations,
       reasoning: `Found ${recommendations.length} relevant patterns based on your coding history and current context`
     };
