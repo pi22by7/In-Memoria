@@ -184,14 +184,10 @@ export class FileTraversal {
    *   extensions: ['ts', 'tsx']
    * });
    *
-   * // Collect with custom ignores
+   * // Collect with custom ignores and depth limit
    * const files = await FileTraversal.collectFiles('/path/to/project', {
    *   extensions: ['js'],
-   *   ignorePatterns: ['**/test/**', '**/*.spec.js']
-   * });
-   *
-   * // Collect with depth limit for safety/performance
-   * const files = await FileTraversal.collectFiles('/path/to/project', {
+   *   ignorePatterns: ['test', '*.spec.js'],
    *   maxDepth: 5
    * });
    */
