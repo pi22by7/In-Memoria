@@ -3,6 +3,7 @@ import { getLogger } from '../utils/logger.js';
 import type { SqliteDatabase } from '../storage/sqlite-db.js';
 import type { SemanticEngine } from '../engines/semantic-engine.js';
 import type { PatternEngine } from '../engines/pattern-engine.js';
+import { NamingConventions } from '../utils/naming-conventions.js';
 
 const logger = getLogger();
 
@@ -253,7 +254,7 @@ export class PatternConflictDetector {
     const actualConvention = this.detectNamingConvention(identifier.name);
 
     if (actualConvention !== expectedConvention) {
-      const suggestedName = this.convertNamingConvention(
+      const suggestedName = NamingConventions.convert(
         identifier.name,
         expectedConvention
       );
@@ -737,31 +738,6 @@ export class PatternConflictDetector {
     if (/^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$/.test(name)) return 'SCREAMING_SNAKE_CASE';
     if (/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/.test(name)) return 'kebab-case';
     return 'unknown';
-  }
-
-  private convertNamingConvention(name: string, targetConvention: string): string {
-    // Split name into words
-    const words = name
-      .replace(/([A-Z])/g, ' $1')
-      .replace(/[_-]/g, ' ')
-      .trim()
-      .toLowerCase()
-      .split(/\s+/);
-
-    switch (targetConvention) {
-      case 'camelCase':
-        return words[0] + words.slice(1).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('');
-      case 'PascalCase':
-        return words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('');
-      case 'snake_case':
-        return words.join('_');
-      case 'SCREAMING_SNAKE_CASE':
-        return words.join('_').toUpperCase();
-      case 'kebab-case':
-        return words.join('-');
-      default:
-        return name;
-    }
   }
 
   private getFileLocation(filePath: string): string {

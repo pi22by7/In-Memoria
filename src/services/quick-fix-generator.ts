@@ -1,5 +1,6 @@
 import { getLogger } from '../utils/logger.js';
 import type { PatternViolation } from './pattern-conflict-detector.js';
+import { NamingConventions } from '../utils/naming-conventions.js';
 
 const logger = getLogger();
 
@@ -370,7 +371,7 @@ export class QuickFixGenerator {
 
     for (const convention of conventions) {
       if (convention !== violation.expectedPattern) {
-        const convertedName = this.convertNamingConvention(originalName, convention);
+        const convertedName = NamingConventions.convert(originalName, convention);
 
         fixes.push({
           description: `Alternative: Use ${convention} convention`,
@@ -397,36 +398,6 @@ export class QuickFixGenerator {
     }
 
     return fixes;
-  }
-
-  /**
-   * Convert naming convention
-   */
-  private convertNamingConvention(name: string, targetConvention: string): string {
-    // Split name into words
-    const words = name
-      .replace(/([A-Z])/g, ' $1')
-      .replace(/[_-]/g, ' ')
-      .trim()
-      .toLowerCase()
-      .split(/\s+/);
-
-    switch (targetConvention) {
-      case 'camelCase':
-        return (
-          words[0] + words.slice(1).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('')
-        );
-      case 'PascalCase':
-        return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('');
-      case 'snake_case':
-        return words.join('_');
-      case 'SCREAMING_SNAKE_CASE':
-        return words.join('_').toUpperCase();
-      case 'kebab-case':
-        return words.join('-');
-      default:
-        return name;
-    }
   }
 
   /**
