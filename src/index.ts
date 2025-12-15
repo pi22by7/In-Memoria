@@ -136,19 +136,39 @@ async function main() {
       await debugTools.runDiagnostics(debugPath);
       break;
 
-    default:
-      // Check if command is an MCP tool
-      try {
-        const { VALIDATION_SCHEMAS } = await import('./mcp-server/validation.js');
-        if (command && command in VALIDATION_SCHEMAS) {
-          const toolArgs = args.slice(1);
-          await executeTool(command, toolArgs);
-          break;
+    case 'run':
+      const toolName = args[1];
+      
+      if (!toolName || toolName === '--help' || toolName === '-h' || toolName === 'help') {
+        console.log('Usage: in-memoria run <tool_name> [options]');
+        console.log('\nAvailable MCP Tools:');
+        try {
+          const { VALIDATION_SCHEMAS } = await import('./mcp-server/validation.js');
+          Object.keys(VALIDATION_SCHEMAS).forEach(name => console.log(`  - ${name}`));
+        } catch (e) {
+          console.error('  (Error loading tool list)');
         }
-      } catch (e) {
-        // Ignore import errors, fallback to help
+        process.exit(0);
       }
 
+      try {
+        const { VALIDATION_SCHEMAS } = await import('./mcp-server/validation.js');
+        if (toolName in VALIDATION_SCHEMAS) {
+          const toolArgs = args.slice(2);
+          await executeTool(toolName, toolArgs);
+        } else {
+          console.error(`❌ Error: Unknown tool '${toolName}'`);
+          console.log('Available tools:');
+          Object.keys(VALIDATION_SCHEMAS).forEach(name => console.log(`  - ${name}`));
+          process.exit(1);
+        }
+      } catch (e) {
+        console.error(`❌ Error loading tools: ${(e as Error).message}`);
+        process.exit(1);
+      }
+      break;
+
+    default:
       showHelp();
       break;
   }
@@ -489,7 +509,7 @@ Commands:
   learn [path]             Learn from codebase and build intelligence
   analyze [path]           Analyze codebase and show insights
   init [path]              Initialize In Memoria for a project (basic)
-  <mcp_tool> [args]        Execute any MCP tool directly (e.g. analyze_codebase --path .)
+  run <mcp_tool> [args]    Execute any MCP tool directly (e.g. run health_check)
   version, --version, -v    Show version information
 
 Diagnostic Options (for 'check' command):
@@ -501,19 +521,22 @@ Diagnostic Options (for 'check' command):
   --no-filesystem          Skip filesystem diagnostics
 
 Available MCP Tools (partial list):
-  analyze_codebase --path <path>
-  search_codebase --query <query>
-  learn_codebase_intelligence --path <path>
-  get_semantic_insights --query <query>
-  get_project_blueprint --path <path>
-  health_check
+  run analyze_codebase --path <path>
+  run search_codebase --query <query>
+  run learn_codebase_intelligence --path <path>
+  run get_semantic_insights --query <query>
+  run get_project_blueprint --path <path>
+  run health_check
   
 Examples:
-  in-memoria setup --interactive
+  in-memoria setup --interactive    # Recommended for first-time setup
   in-memoria server
+  in-memoria check --verbose       # Full diagnostics with details
+  in-memoria check --validate      # Check data integrity
+  in-memoria watch ./src
   in-memoria learn ./my-project
-  in-memoria analyze_codebase --path ./src
-  in-memoria search_codebase --query "database connection"
+  in-memoria run analyze_codebase --path ./src
+  in-memoria run search_codebase --query "database connection"
 
 For more information, visit: https://github.com/pi22by7/in-memoria
 `);
