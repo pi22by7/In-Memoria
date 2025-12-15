@@ -86,16 +86,43 @@ export class SemanticVectorDB {
       });
 
       // Define the code documents table with full-text search capabilities
-      await this.db.query(`
-        DEFINE ANALYZER code_analyzer TOKENIZERS blank FILTERS lowercase,ascii;
-        DEFINE TABLE code_documents SCHEMAFULL;
-        DEFINE FIELD code ON code_documents TYPE string;
-        DEFINE FIELD embedding ON code_documents TYPE array;
-        DEFINE FIELD metadata ON code_documents TYPE object;
-        DEFINE FIELD created ON code_documents TYPE datetime DEFAULT time::now();
-        DEFINE FIELD updated ON code_documents TYPE datetime DEFAULT time::now();
-        DEFINE INDEX code_content ON code_documents COLUMNS code SEARCH ANALYZER code_analyzer BM25(1.2,0.75) HIGHLIGHTS;
-      `);
+      // We split the definitions to handle re-runs where they might already exist
+      try {
+        await this.db.query('DEFINE ANALYZER code_analyzer TOKENIZERS blank FILTERS lowercase,ascii;');
+      } catch (error: any) {
+        if (!error.message?.includes('already exists')) {
+          Logger.warn(`Warning during analyzer definition: ${error.message}`);
+        }
+      }
+
+      try {
+        await this.db.query('DEFINE TABLE code_documents SCHEMAFULL;');
+      } catch (error: any) {
+        if (!error.message?.includes('already exists')) {
+          Logger.warn(`Warning during table definition: ${error.message}`);
+        }
+      }
+
+      // Fields are usually idempotent
+      try {
+        await this.db.query(`
+          DEFINE FIELD code ON code_documents TYPE string;
+          DEFINE FIELD embedding ON code_documents TYPE array;
+          DEFINE FIELD metadata ON code_documents TYPE object;
+          DEFINE FIELD created ON code_documents TYPE datetime DEFAULT time::now();
+          DEFINE FIELD updated ON code_documents TYPE datetime DEFAULT time::now();
+        `);
+      } catch (error: any) {
+        Logger.warn(`Warning during field definitions: ${error.message}`);
+      }
+
+      try {
+        await this.db.query('DEFINE INDEX code_content ON code_documents COLUMNS code SEARCH ANALYZER code_analyzer BM25(1.2,0.75) HIGHLIGHTS;');
+      } catch (error: any) {
+        if (!error.message?.includes('already exists')) {
+          Logger.warn(`Warning during index definition: ${error.message}`);
+        }
+      }
 
       this.initialized = true;
     } catch (error) {

@@ -63,7 +63,8 @@ async function main() {
 
       // Accept optional path argument to set working directory
       // If no path provided, server runs globally and tools receive project paths
-      const serverPath = args[1];
+      const serverArgs = args.slice(1);
+      const serverPath = serverArgs.find(arg => !arg.startsWith('-'));
 
       if (serverPath) {
         const { resolve } = await import('path');
@@ -86,22 +87,26 @@ async function main() {
       break;
 
     case 'watch':
-      const watchPath = args[1] || process.cwd();
+      const watchArgs = args.slice(1);
+      const watchPath = watchArgs.find(arg => !arg.startsWith('-')) || process.cwd();
       await startWatcher(watchPath);
       break;
 
     case 'learn':
-      const learnPath = args[1] || process.cwd();
+      const learnArgs = args.slice(1);
+      const learnPath = learnArgs.find(arg => !arg.startsWith('-')) || process.cwd();
       await learnCodebase(learnPath);
       break;
 
     case 'analyze':
-      const analyzePath = args[1] || process.cwd();
+      const analyzeArgs = args.slice(1);
+      const analyzePath = analyzeArgs.find(arg => !arg.startsWith('-')) || process.cwd();
       await analyzeCodebase(analyzePath);
       break;
 
     case 'init':
-      const initPath = args[1] || process.cwd();
+      const initArgs = args.slice(1);
+      const initPath = initArgs.find(arg => !arg.startsWith('-')) || process.cwd();
       await initializeProject(initPath);
       break;
 
@@ -116,7 +121,8 @@ async function main() {
 
     case 'debug':
     case 'check':
-      const debugPath = args.find(arg => !arg.startsWith('--')) || process.cwd();
+      const checkArgs = args.slice(1);
+      const debugPath = checkArgs.find(arg => !arg.startsWith('-')) || process.cwd();
       const debugOptions = {
         verbose: args.includes('--verbose'),
         checkDatabase: !args.includes('--no-database'),
