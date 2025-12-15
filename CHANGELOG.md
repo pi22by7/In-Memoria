@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ✨ **Added**
+
+- **Configurable Database Storage Location**
+  - Added `IN_MEMORIA_STORAGE_DIR` environment variable to specify an alternative directory for storing database files (`in-memoria.db` and `in-memoria-vectors.db`).
+  - Allows users to keep project repositories clean and consolidate data for backup strategies. (Issue: [#24](https://github.com/pi22by7/In-Memoria/issues/24))
+- **CLI Tool Execution via `run` command**
+  - All MCP tools are now executable as CLI subcommands under `in-memoria run <tool_name> [args]`.
+  - Dynamic help (`in-memoria run --help`) lists all available tools.
+  - Improves flexibility for users to fine-tune context usage and integrate with custom scripts/skills. (Issue: [#27](https://github.com/pi22by7/In-Memoria/issues/27))
+
+### 🐛 **Fixed**
+
+- **CLI Argument Parsing & Re-learning Bugs**
+  - Corrected `check` command to properly identify project paths instead of using "check" as the directory.
+  - Improved argument parsing across all commands to correctly handle flags placed before positional arguments (e.g., `in-memoria learn --force .`).
+  - Made SurrealDB initialization idempotent, preventing "analyzer already exists" and "table already exists" errors during re-runs of the learning process. (Issue: [#25](https://github.com/pi22by7/In-Memoria/issues/25))
+
+### 🛠️ **Changed**
+
+- **CLI Tool Command Namespacing**
+  - Moved direct MCP tool execution from top-level commands to a dedicated `run` subcommand to prevent potential naming collisions.
+
 ## [0.6.0] - 2025-11-12
 
 ### 🐛 **Fixed**
@@ -18,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Applied limits across all pattern-fetching methods in pattern engine
   - Issue: [#21](https://github.com/anthropics/in-memoria/issues/21)
 - **Interactive setup password input** – Fixed password masking in terminal
-  - Clear terminal echo before writing asterisk to prevent double display (e.g., 'y*')
+  - Clear terminal echo before writing asterisk to prevent double display (e.g., 'y\*')
   - Issue: [#21](https://github.com/anthropics/in-memoria/issues/21)
 
 ### ✨ **Added**
@@ -82,7 +104,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - README now highlights PHP as a supported language alongside the existing stack.
 
-
 ## [0.5.6] - 2025-10-30
 
 ### 🐛 **Fixed**
@@ -102,7 +123,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Now returns top 10 relevant patterns based on problem description
 - **Feature mapping coverage** - Enhanced feature maps to include Rust code and language-specific patterns
   - Added 4 new feature categories: language-support, rust-core, mcp-server, cli (blueprint.rs)
-  - Added nested directory search for mono-repo structures (checks rust-core/src/* paths)
+  - Added nested directory search for mono-repo structures (checks rust-core/src/\* paths)
   - Feature maps now cover both TypeScript and Rust code
 
 ### ✨ **Added**
