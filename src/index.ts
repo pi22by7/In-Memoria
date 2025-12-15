@@ -61,10 +61,7 @@ async function main() {
       // Set MCP server mode BEFORE any logging
       process.env.MCP_SERVER = 'true';
 
-      // Accept optional path argument to set working directory
-      // If no path provided, server runs globally and tools receive project paths
-      const serverArgs = args.slice(1);
-      const serverPath = serverArgs.find(arg => !arg.startsWith('-'));
+      const serverPath = getArgPath(args, false);
 
       if (serverPath) {
         const { resolve } = await import('path');
@@ -87,27 +84,19 @@ async function main() {
       break;
 
     case 'watch':
-      const watchArgs = args.slice(1);
-      const watchPath = watchArgs.find(arg => !arg.startsWith('-')) || process.cwd();
-      await startWatcher(watchPath);
+      await startWatcher(getArgPath(args)!);
       break;
 
     case 'learn':
-      const learnArgs = args.slice(1);
-      const learnPath = learnArgs.find(arg => !arg.startsWith('-')) || process.cwd();
-      await learnCodebase(learnPath);
+      await learnCodebase(getArgPath(args)!);
       break;
 
     case 'analyze':
-      const analyzeArgs = args.slice(1);
-      const analyzePath = analyzeArgs.find(arg => !arg.startsWith('-')) || process.cwd();
-      await analyzeCodebase(analyzePath);
+      await analyzeCodebase(getArgPath(args)!);
       break;
 
     case 'init':
-      const initArgs = args.slice(1);
-      const initPath = initArgs.find(arg => !arg.startsWith('-')) || process.cwd();
-      await initializeProject(initPath);
+      await initializeProject(getArgPath(args)!);
       break;
 
     case 'setup':
@@ -121,8 +110,7 @@ async function main() {
 
     case 'debug':
     case 'check':
-      const checkArgs = args.slice(1);
-      const debugPath = checkArgs.find(arg => !arg.startsWith('-')) || process.cwd();
+      const debugPath = getArgPath(args)!;
       const debugOptions = {
         verbose: args.includes('--verbose'),
         checkDatabase: !args.includes('--no-database'),
@@ -172,6 +160,19 @@ async function main() {
       showHelp();
       break;
   }
+}
+
+/**
+ * Extracts the project path from CLI arguments.
+ * Ignores flags (starting with -) and returns the first positional argument.
+ * 
+ * @param args The full argument list (including command)
+ * @param defaultToCwd Whether to return process.cwd() if no path is found
+ */
+function getArgPath(args: string[], defaultToCwd: boolean = true): string | undefined {
+  const commandArgs = args.slice(1);
+  const path = commandArgs.find(arg => !arg.startsWith('-'));
+  return path || (defaultToCwd ? process.cwd() : undefined);
 }
 
 async function executeTool(toolName: string, args: string[]): Promise<void> {
