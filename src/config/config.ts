@@ -12,6 +12,7 @@ export interface InMemoriaConfig {
   database: {
     filename: string;
     path?: string; // Optional override for project path
+    storageDir?: string; // Optional override for storage directory
     connectionPoolSize?: number;
     busyTimeout?: number;
   };
@@ -113,7 +114,7 @@ export class ConfigManager {
    * Always places the database within the analyzed project directory
    */
   getDatabasePath(projectPath?: string): string {
-    const basePath = projectPath || process.cwd();
+    const basePath = this.config.database.storageDir || projectPath || process.cwd();
     const filename = this.config.database.filename;
     
     // Warn if filename contains path separators (indicates misconfiguration)
@@ -130,6 +131,20 @@ export class ConfigManager {
     const dbPath = join(basePath, filename);
     Logger.info(`📁 Database path resolved to: ${dbPath}`);
     return dbPath;
+  }
+
+  /**
+   * Get vector database path
+   * Supports environment override or defaults to storage dir / project path
+   */
+  getVectorDatabasePath(projectPath?: string): string {
+    // Environment variable takes precedence (legacy support)
+    if (process.env.IN_MEMORIA_VECTOR_DB_PATH) {
+      return process.env.IN_MEMORIA_VECTOR_DB_PATH;
+    }
+
+    const basePath = this.config.database.storageDir || projectPath || process.cwd();
+    return join(basePath, 'in-memoria-vectors.db');
   }
   
   /**
@@ -184,6 +199,10 @@ export class ConfigManager {
       this.config.database.filename = process.env.IN_MEMORIA_DB_FILENAME;
     }
     
+    if (process.env.IN_MEMORIA_STORAGE_DIR) {
+      this.config.database.storageDir = process.env.IN_MEMORIA_STORAGE_DIR;
+    }
+    
     // Performance configuration
     if (process.env.IN_MEMORIA_BATCH_SIZE) {
       this.config.performance.batchSize = parseInt(process.env.IN_MEMORIA_BATCH_SIZE, 10);
@@ -218,6 +237,7 @@ export class ConfigManager {
     return [
       'Environment Variables:',
       '  IN_MEMORIA_DB_FILENAME - Database filename (default: in-memoria.db)',
+      '  IN_MEMORIA_STORAGE_DIR - Directory to store database files (default: project directory)',
       '  IN_MEMORIA_BATCH_SIZE - File processing batch size (default: 50)',
       '  IN_MEMORIA_MAX_CONCURRENT - Max concurrent file operations (default: 10)',
       '  IN_MEMORIA_REQUEST_TIMEOUT - API request timeout in ms (default: 30000)',
