@@ -137,9 +137,81 @@ async function main() {
       break;
 
     default:
+      // Check if command is an MCP tool
+      try {
+        const { VALIDATION_SCHEMAS } = await import('./mcp-server/validation.js');
+        if (command && command in VALIDATION_SCHEMAS) {
+          const toolArgs = args.slice(1);
+          await executeTool(command, toolArgs);
+          break;
+        }
+      } catch (e) {
+        // Ignore import errors, fallback to help
+      }
+
       showHelp();
       break;
   }
+}
+
+async function executeTool(toolName: string, args: string[]): Promise<void> {
+  const { CodeCartographerMCP } = await import('./mcp-server/server.js');
+  const server = new CodeCartographerMCP();
+  
+  // Parse arguments
+  const toolArgs = parseToolArgs(args);
+  
+  try {
+    // Initialize components (db, etc.)
+    await server.initializeForTesting();
+    
+    // Execute
+    const result = await server.routeToolCall(toolName, toolArgs);
+    
+    // Output
+    console.log(JSON.stringify(result, null, 2));
+  } catch (error: any) {
+     console.error(`❌ Tool execution failed: ${error.message}`);
+     process.exit(1);
+  } finally {
+     await server.stop(); 
+  }
+}
+
+function parseToolArgs(args: string[]): Record<string, any> {
+  const parsed: Record<string, any> = {};
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg.startsWith('--')) {
+      const key = arg.slice(2);
+      const nextArg = args[i + 1];
+      
+      if (nextArg && !nextArg.startsWith('--')) {
+        // It's a key-value pair
+        parsed[key] = parseValue(nextArg);
+        i++; // Skip next arg
+      } else {
+        // It's a boolean flag
+        parsed[key] = true;
+      }
+    }
+  }
+  return parsed;
+}
+
+function parseValue(val: string): any {
+  if (val === 'true') return true;
+  if (val === 'false') return false;
+  const num = Number(val);
+  if (!isNaN(num)) return num;
+  try {
+    if (val.startsWith('{') || val.startsWith('[')) {
+        return JSON.parse(val);
+    }
+  } catch (e) {
+    // ignore
+  }
+  return val;
 }
 
 async function startWatcher(path: string): Promise<void> {
@@ -417,6 +489,7 @@ Commands:
   learn [path]             Learn from codebase and build intelligence
   analyze [path]           Analyze codebase and show insights
   init [path]              Initialize In Memoria for a project (basic)
+  <mcp_tool> [args]        Execute any MCP tool directly (e.g. analyze_codebase --path .)
   version, --version, -v    Show version information
 
 Diagnostic Options (for 'check' command):
@@ -427,15 +500,20 @@ Diagnostic Options (for 'check' command):
   --no-intelligence        Skip intelligence diagnostics
   --no-filesystem          Skip filesystem diagnostics
 
+Available MCP Tools (partial list):
+  analyze_codebase --path <path>
+  search_codebase --query <query>
+  learn_codebase_intelligence --path <path>
+  get_semantic_insights --query <query>
+  get_project_blueprint --path <path>
+  health_check
+  
 Examples:
-  in-memoria setup --interactive    # Recommended for first-time setup
+  in-memoria setup --interactive
   in-memoria server
-  in-memoria check --verbose       # Full diagnostics with details
-  in-memoria check --validate      # Check data integrity
-  in-memoria watch ./src
   in-memoria learn ./my-project
-  in-memoria analyze ./src
-  in-memoria init
+  in-memoria analyze_codebase --path ./src
+  in-memoria search_codebase --query "database connection"
 
 For more information, visit: https://github.com/pi22by7/in-memoria
 `);
