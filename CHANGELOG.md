@@ -22,7 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CLI Argument Parsing & Re-learning Bugs**
   - Corrected `check` command to properly identify project paths instead of using "check" as the directory.
   - Improved argument parsing across all commands to correctly handle flags placed before positional arguments (e.g., `in-memoria learn --force .`).
-  - Made SurrealDB initialization idempotent, preventing "analyzer already exists" and "table already exists" errors during re-runs of the learning process. (Issue: [#25](https://github.com/pi22by7/In-Memoria/issues/25))
+  - **SurrealDB Initialization Idempotency**
+    - Enhanced SurrealDB initialization by replacing error-suppressing `try-catch` blocks with native `DEFINE ... OVERWRITE` syntax. This ensures robust and clean idempotency, preventing "analyzer already exists" and "table already exists" errors during re-runs of the learning process, and correctly updates schema definitions. (Addresses: [#25](https://github.com/pi22by7/In-Memoria/issues/25), Contributed via: [#26](https://github.com/pi22by7/In-Memoria/pull/26))
 
 ### 🛠️ **Changed**
 
