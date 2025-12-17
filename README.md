@@ -335,15 +335,12 @@ inmemoria-feature.chatmode.md → inmemoria-feature.agent.md
 ### Using Agents in VS Code
 
 1. Open **Copilot Chat**
-2. Switch the chat to **Agent** mode
-3. Open the **Agents dropdown** at the top of the chat panel
-4. Select one of the `inmemoria-*` agents
+2. Select the custom agent (e.g., inmemoria-featurename) directly from the dropdown.
 
 If agents do not appear:
 
 * Reload the window
 * Ensure files are in `.github/agents/`
-* Ensure Copilot Chat (not just inline Copilot) is enabled
 
 ---
 
