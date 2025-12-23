@@ -239,24 +239,155 @@ This repository includes:
   - 🚀 **inmemoria-feature** - Feature implementation with patterns
   - 🔎 **inmemoria-review** - Code review with consistency checking
 
-To use in VS Code:
+## GitHub Copilot Integration (VS Code)
 
-1. Command Palette → "Chat: Configure Chat Modes..."
-2. Select a mode from `.github/chatmodes/`
+In Memoria integrates with **GitHub Copilot Chat** using **MCP + Custom Agents** (formerly called *Chat Modes*).
+These agents allow Copilot to query In Memoria’s persistent intelligence when working in **Agent mode**.
 
-### Example
+> ⚠️ **Important**: Copilot will only call MCP tools when the chat is in **Agent** mode (not Ask or Edit).
 
-```typescript
-// In Copilot chat:
-@workspace "Where is the authentication logic?"
-// → Copilot uses In Memoria's semantic search
+### Requirements
 
-"Add password reset functionality"
-// → Copilot gets approach + file routing + patterns
+* **VS Code 1.106+**
+* **GitHub Copilot Chat** enabled
+* In Memoria MCP server configured and running
 
-"Review this code for consistency"
-// → Copilot checks against project patterns
+---
+
+### MCP Server Setup (Required)
+
+Create or edit the following file in your workspace:
+
+**`.vscode/mcp.json`**
+
+```json
+{
+  "servers": {
+    "in-memoria": {
+      "command": "npx",
+      "args": ["in-memoria", "server"]
+    }
+  }
+}
 ```
+
+Open this file in VS Code and click **Start** when prompted, or start it manually.
+
+---
+
+### Copilot Instructions (Automatic)
+
+This repository includes:
+
+* **`.github/copilot-instructions.md`**
+
+VS Code automatically loads this file and applies guidance to Copilot Chat.
+No additional setup is required.
+
+---
+
+### Custom Agents (formerly “Chat Modes”)
+
+This repository provides **three Custom Agents** for Copilot:
+
+| Agent                     | Purpose                                       |
+| ------------------------- | --------------------------------------------- |
+| 🔍 **inmemoria-explorer** | Intelligent codebase navigation               |
+| 🚀 **inmemoria-feature**  | Feature implementation using learned patterns |
+| 🔎 **inmemoria-review**   | Consistency & pattern-based code review       |
+
+#### Agent File Location
+
+> ⚠️ VS Code has renamed *Chat Modes* → **Custom Agents**
+
+To ensure compatibility with current VS Code versions:
+
+1. Create the folder:
+
+   ```
+   .github/agents/
+   ```
+2. Move or copy files from:
+
+   ```
+   .github/chatmodes/
+   ```
+
+   into:
+
+   ```
+   .github/agents/
+   ```
+3. Rename each file:
+
+   ```
+   *.chatmode.md → *.agent.md
+   ```
+
+Example:
+
+```
+inmemoria-feature.chatmode.md → inmemoria-feature.agent.md
+```
+
+---
+
+### Using Agents in VS Code
+
+1. Open **Copilot Chat**
+2. Select the custom agent (e.g., inmemoria-featurename) directly from the dropdown.
+
+If agents do not appear:
+
+* Reload the window
+* Ensure files are in `.github/agents/`
+
+---
+
+### Example Usage
+
+```text
+Where is the authentication logic?
+```
+
+→ Copilot queries In Memoria’s semantic index
+
+```text
+Add password reset functionality
+```
+
+→ Copilot retrieves:
+
+* file routing
+* architectural patterns
+* prior auth decisions
+
+```text
+Review this code for consistency
+```
+
+→ Copilot compares against learned conventions
+
+---
+
+### Common Pitfalls
+
+* ❌ Using **Ask/Edit mode** → MCP tools are ignored
+* ❌ MCP server not running
+* ❌ Agent files left in `.github/chatmodes/` only
+* ❌ VS Code version < 1.106
+
+---
+
+### Notes on VS Code Terminology
+
+| Old Name                      | Current Name                    |
+| ----------------------------- | ------------------------------- |
+| Chat Modes                    | Custom Agents                   |
+| `Chat: Configure Chat Modes…` | `Chat: Configure Custom Agents` |
+| `.github/chatmodes/`          | `.github/agents/`               |
+
+VS Code still recognizes legacy files, but **`.github/agents/*.agent.md` is the recommended format going forward**.
 
 ## Language Support
 
