@@ -115,6 +115,10 @@ npx in-memoria learn ./my-project
 npx in-memoria server
 ```
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/pi22by7-in-memoria).
+
 ## How It Works
 
 In Memoria is built on Rust + TypeScript, using the Model Context Protocol to connect AI tools to persistent codebase intelligence.
